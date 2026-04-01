@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Relay MQTT Controller</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 16px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            padding: 16px;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            border-left: 4px solid #2196f3;
+            padding-left: 12px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .relay-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+        }
+        button {
+            background: #e0e0e0;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button.primary {
+            background: #2196f3;
+            color: white;
+        }
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        button.warning {
+            background: #ff9800;
+            color: white;
+        }
+        button.success {
+            background: #4caf50;
+            color: white;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        .relay-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .relay-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .relay-state {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .state-on {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .state-off {
+            color: #f44336;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 6px 0;
+            border: 1px solid #ccc;
+            border-radius: 24px;
+            font-size: 0.9rem;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #e0e0e0;
+            font-size: 0.8rem;
+        }
+        .status-connected {
+            background: #4caf50;
+            color: white;
+        }
+        .status-disconnected {
+            background: #f44336;
+            color: white;
+        }
+        .log-area {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: monospace;
+            font-size: 0.8rem;
+            height: 200px;
+            overflow-y: auto;
+            padding: 8px;
+            border-radius: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        hr {
+            margin: 16px 0;
+        }
+        .flex-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .small-text {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .health-item {
+            display: inline-block;
+            margin-right: 16px;
+            background: #e3f2fd;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        @media (max-width: 600px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <!-- Koneksi MQTT -->
+    <div class="card">
+        <h2>🔌 Koneksi MQTT</h2>
+        <div class="grid-2">
+            <div>
+                <label>Device ID</label>
+                <input type="text" id="deviceId" placeholder="dmarch_relay_001" value="dmarch_relay_001">
+            </div>
+            <div>
+                <label>Broker WebSocket</label>
+                <input type="text" id="broker" placeholder="test.mosquitto.org">
+            </div>
+            <div>
+                <label>Port (ws/wss)</label>
+                <input type="text" id="port" placeholder="8083 atau 8084" value="8083">
+            </div>
+            <div>
+                <label>Username (opsional)</label>
+                <input type="text" id="mqttUser" placeholder="username">
+            </div>
+            <div>
+                <label>Password (opsional)</label>
+                <input type="password" id="mqttPass" placeholder="password">
+            </div>
+            <div class="flex-row" style="align-items: flex-end;">
+                <button id="connectBtn" class="primary" style="flex:1">▶️ Connect</button>
+                <button id="disconnectBtn" class="danger" style="flex:1">⏹️ Disconnect</button>
+            </div>
+        </div>
+        <div class="flex-row" style="justify-content: space-between; margin-top: 8px;">
+            <span>Status: <span id="connStatus" class="status-badge status-disconnected">Disconnected</span></span>
+            <span id="clientIdInfo" class="small-text"></span>
+        </div>
+    </div>
+
+    <!-- Kontrol Relay -->
+    <div class="card">
+        <h2>📟 Relay</h2>
+        <div class="relay-grid" id="relayButtons">
+            <!-- akan diisi JS -->
+        </div>
+        <div class="flex-row" style="margin-top: 12px;">
+            <button id="allOnBtn" class="success">🔛 All ON</button>
+            <button id="allOffBtn" class="danger">🔚 All OFF</button>
+        </div>
+    </div>
+
+    <!-- Timer & Jadwal -->
+    <div class="card">
+        <h2>⏱️ Timer & Jadwal</h2>
+        <div id="timerScheduleContainer">
+            <!-- akan diisi JS -->
+        </div>
+    </div>
+
+    <!-- Perintah Sistem -->
+    <div class="card">
+        <h2>⚙️ Perintah Sistem</h2>
+        <div class="grid-2">
+            <button id="sysRestart" class="warning">Restart Device</button>
+            <button id="wifiReset" class="danger">Reset WiFi</button>
+            <button id="otaTrigger" class="primary">OTA Update</button>
+            <button id="clearTerminal" class="secondary">Clear Terminal</button>
+        </div>
+    </div>
+
+    <!-- Konfigurasi Lanjutan -->
+    <div class="card">
+        <h2>🔧 Konfigurasi Lanjutan</h2>
+        <div class="grid-2">
+            <div>
+                <label>GPIO Pins (5 pin, comma separated)</label>
+                <input type="text" id="gpioPins" placeholder="contoh: 5,4,14,12,13">
+                <button id="updateGpio" class="primary" style="margin-top: 4px;">Update GPIO & Restart</button>
+            </div>
+            <div>
+                <label>NTP Server</label>
+                <input type="text" id="ntpServer" placeholder="id.pool.ntp.org">
+                <button id="updateNtp" class="primary" style="margin-top: 4px;">Set NTP</button>
+            </div>
+            <div>
+                <label>Timezone (jam offset, misal 7 untuk WIB)</label>
+                <input type="number" id="tzOffset" placeholder="7">
+                <button id="updateTz" class="primary" style="margin-top: 4px;">Set Timezone</button>
+            </div>
+            <div>
+                <label>MQTT Config (broker,port,user,pass)</label>
+                <input type="text" id="mqttConfig" placeholder="192.168.1.100,1883,user,pass">
+                <button id="updateMqttConfig" class="warning" style="margin-top: 4px;">Update MQTT & Restart</button>
+                <div class="small-text">Format: host,port,user,pass (user/pass optional)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Perangkat -->
+    <div class="card">
+        <h2>📊 Status Perangkat</h2>
+        <div id="healthDisplay" class="flex-row" style="gap: 8px;">
+            <span class="health-item">📶 WiFi: --%</span>
+            <span class="health-item">⏱️ Uptime: --</span>
+            <span class="health-item">🌡️ Suhu: --°C</span>
+        </div>
+    </div>
+
+    <!-- Terminal Log -->
+    <div class="card">
+        <h2>📜 Terminal Log</h2>
+        <div id="logArea" class="log-area">Menungu koneksi MQTT...</div>
+        <div class="small-text" style="margin-top: 4px;">Pesan dari device akan muncul di sini</div>
+    </div>
+</div>
+
+<script>
+    // Variabel global
+    let client = null;
+    let deviceId = "dmarch_relay_001";
+    let broker = "";
+    let port = "8083";
+    let mqttUser = "";
+    let mqttPass = "";
+    let isConnected = false;
+
+    // Elemen DOM
+    const deviceIdInput = document.getElementById('deviceId');
+    const brokerInput = document.getElementById('broker');
+    const portInput = document.getElementById('port');
+    const mqttUserInput = document.getElementById('mqttUser');
+    const mqttPassInput = document.getElementById('mqttPass');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const connStatusSpan = document.getElementById('connStatus');
+    const clientIdInfo = document.getElementById('clientIdInfo');
+    const relayButtonsDiv = document.getElementById('relayButtons');
+    const timerScheduleDiv = document.getElementById('timerScheduleContainer');
+    const healthDisplay = document.getElementById('healthDisplay');
+    const logArea = document.getElementById('logArea');
+
+    // Simpan status relay
+    let relayState = {1:0,2:0,3:0,4:0,5:0};
+
+    // Helper: tambah log di terminal web
+    function addLog(msg) {
+        const div = document.createElement('div');
+        div.textContent = msg;
+        logArea.appendChild(div);
+        logArea.scrollTop = logArea.scrollHeight;
+        // batasi jumlah baris
+        while(logArea.children.length > 200) logArea.removeChild(logArea.firstChild);
+    }
+
+    // Publish ke MQTT
+    function publish(topic, payload, retain = false) {
+        if (!client || !isConnected) {
+            addLog("⚠️ Tidak terhubung MQTT");
+            return;
+        }
+        const message = new Paho.MQTT.Message(payload);
+        message.destinationName = topic;
+        message.retained = retain;
+        client.send(message);
+        // tidak perlu log semua publish
+    }
+
+    // Fungsi kontrol relay
+    function setRelay(num, state) {
+        const topic = `${deviceId}/relay/${num}/cmd`;
+        publish(topic, state.toString());
+    }
+
+    function allOn() { publish(`${deviceId}/all/on`, "1"); }
+    function allOff() { publish(`${deviceId}/all/off`, "1"); }
+
+    function setTimer(relay, minutes) {
+        if (minutes > 0) publish(`${deviceId}/timer/${relay}`, minutes.toString());
+    }
+
+    function setSchedule(relay, startSec, stopSec) {
+        if (startSec >= 0 && stopSec >= 0 && startSec !== stopSec) {
+            publish(`${deviceId}/schedule/${relay}`, `${startSec},${stopSec}`);
+        } else {
+            addLog("❌ Jadwal tidak valid (start dan stop harus berbeda)");
+        }
+    }
+
+    // Perintah sistem
+    function systemRestart() { publish(`${deviceId}/system/restart`, "1"); }
+    function wifiReset() { publish(`${deviceId}/system/wifi-reset`, "1"); }
+    function otaTrigger() { publish(`${deviceId}/system/ota`, "1"); }
+    function clearTerminalCmd() { publish(`${deviceId}/system/clear-terminal`, "1"); }
+    function updateGpio(pinsStr) { publish(`${deviceId}/gpio/update`, pinsStr); }
+    function setNtp(server) { publish(`${deviceId}/ntp/set`, server); }
+    function setTimezone(offsetHours) { publish(`${deviceId}/timezone/set`, offsetHours.toString()); }
+    function setMqttConfig(configStr) { publish(`${deviceId}/mqtt/config`, configStr); }
+
+    // Update UI relay state
+    function updateRelayUI() {
+        for (let i=1; i<=5; i++) {
+            const stateSpan = document.getElementById(`relayState${i}`);
+            if (stateSpan) {
+                stateSpan.innerText = relayState[i] ? "ON" : "OFF";
+                stateSpan.className = relayState[i] ? "relay-state state-on" : "relay-state state-off";
+            }
+            const btnOn = document.getElementById(`btnOn${i}`);
+            const btnOff = document.getElementById(`btnOff${i}`);
+            if (btnOn) btnOn.disabled = (relayState[i] === 1);
+            if (btnOff) btnOff.disabled = (relayState[i] === 0);
+        }
+    }
+
+    // Render relay UI
+    function renderRelayButtons() {
+        let html = '';
+        for (let i=1; i<=5; i++) {
+            html += `
+                <div class="relay-btn">
+                    <div class="relay-name">Relay ${i}</div>
+                    <div id="relayState${i}" class="relay-state ${relayState[i] ? 'state-on' : 'state-off'}">${relayState[i] ? "ON" : "OFF"}</div>
+                    <div class="flex-row" style="justify-content: center;">
+                        <button id="btnOn${i}" class="success" style="padding:6px 12px;">ON</button>
+                        <button id="btnOff${i}" class="danger" style="padding:6px 12px;">OFF</button>
+                    </div>
+                </div>
+            `;
+        }
+        relayButtonsDiv.innerHTML = html;
+        for (let i=1; i<=5; i++) {
+            document.getElementById(`btnOn${i}`).onclick = () => setRelay(i, 1);
+            document.getElementById(`btnOff${i}`).onclick = () => setRelay(i, 0);
+        }
+        updateRelayUI();
+    }
+
+    // Render timer & schedule fields
+    function renderTimerSchedule() {
+        let html = '';
+        for (let i=1; i<=5; i++) {
+            html += `
+                <div style="border-bottom:1px solid #eee; margin-bottom:12px; padding-bottom:8px;">
+                    <strong>Relay ${i}</strong>
+                    <div class="grid-2">
+                        <div>
+                            <label>Timer (menit)</label>
+                            <div class="flex-row">
+                                <input type="number" id="timerMin${i}" placeholder="menit" style="flex:2;">
+                                <button id="setTimer${i}" class="primary">Set Timer</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label>Jadwal (detik dari 00:00)</label>
+                            <div class="flex-row">
+                                <input type="number" id="startSec${i}" placeholder="mulai (detik)" style="flex:1;">
+                                <input type="number" id="stopSec${i}" placeholder="berhenti (detik)" style="flex:1;">
+                                <button id="setSched${i}" class="primary">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        timerScheduleDiv.innerHTML = html;
+        for (let i=1; i<=5; i++) {
+            document.getElementById(`setTimer${i}`).onclick = () => {
+                let val = parseInt(document.getElementById(`timerMin${i}`).value);
+                if (!isNaN(val) && val > 0) setTimer(i, val);
+                else addLog("Timer harus angka positif");
+            };
+            document.getElementById(`setSched${i}`).onclick = () => {
+                let start = parseInt(document.getElementById(`startSec${i}`).value);
+                let stop = parseInt(document.getElementById(`stopSec${i}`).value);
+                if (!isNaN(start) && !isNaN(stop)) setSchedule(i, start, stop);
+                else addLog("Jadwal harus angka");
+            };
+        }
+    }
+
+    // Update health display dari payload JSON
+    function updateHealth(payload) {
+        try {
+            const data = JSON.parse(payload);
+            const rssi = data.rssi !== undefined ? data.rssi : "--";
+            const uptime = data.uptime || "--";
+            const temp = data.temp !== undefined ? data.temp : "--";
+            healthDisplay.innerHTML = `
+                <span class="health-item">📶 WiFi: ${rssi}%</span>
+                <span class="health-item">⏱️ Uptime: ${uptime}</span>
+                <span class="health-item">🌡️ Suhu: ${temp}°C</span>
+            `;
+        } catch(e) {
+            // jika bukan json, abaikan
+        }
+    }
+
+    // MQTT message handler
+    function onMessageArrived(message) {
+        const topic = message.destinationName;
+        const payload = message.payloadString;
+        // Relay state
+        for (let i=1; i<=5; i++) {
+            if (topic === `${deviceId}/relay/${i}/state`) {
+                relayState[i] = parseInt(payload);
+                updateRelayUI();
+                return;
+            }
+        }
+        // Status perangkat
+        if (topic === `${deviceId}/status`) {
+            updateHealth(payload);
+            return;
+        }
+        // Terminal log
+        if (topic === `${deviceId}/terminal`) {
+            addLog(payload);
+            return;
+        }
+        // Untuk topik lain, bisa ditampilkan di terminal
+        // addLog(`📩 ${topic}: ${payload}`);
+    }
+
+    function onConnectionLost(response) {
+        isConnected = false;
+        connStatusSpan.innerText = "Disconnected";
+        connStatusSpan.className = "status-badge status-disconnected";
+        addLog("🔌 Koneksi MQTT terputus");
+    }
+
+    function connectMqtt() {
+        // Ambil nilai dari input
+        deviceId = deviceIdInput.value.trim();
+        if (deviceId === "") deviceId = "dmarch_relay_001";
+        broker = brokerInput.value.trim();
+        if (broker === "") {
+            addLog("❌ Broker tidak boleh kosong");
+            return;
+        }
+        port = portInput.value.trim();
+        mqttUser = mqttUserInput.value.trim();
+        mqttPass = mqttPassInput.value.trim();
+
+        // Simpan ke localStorage untuk下次
+        localStorage.setItem('mqttDeviceId', deviceId);
+        localStorage.setItem('mqttBroker', broker);
+        localStorage.setItem('mqttPort', port);
+        localStorage.setItem('mqttUser', mqttUser);
+        localStorage.setItem('mqttPass', mqttPass);
+
+        const wsUrl = `ws://${broker}:${port}`;
+        const clientId = `web_${Math.random().toString(16).substr(2,8)}`;
+        client = new Paho.MQTT.Client(wsUrl, clientId);
+        client.onMessageArrived = onMessageArrived;
+        client.onConnectionLost = onConnectionLost;
+
+        const options = {
+            timeout: 10,
+            onSuccess: () => {
+                isConnected = true;
+                connStatusSpan.innerText = "Connected";
+                connStatusSpan.className = "status-badge status-connected";
+                addLog(`✅ Terhubung ke broker ${broker}:${port}`);
+                clientIdInfo.innerText = `Client ID: ${clientId}`;
+
+                // Subscribe ke semua topik yang dibutuhkan
+                client.subscribe(`${deviceId}/relay/+/state`);
+                client.subscribe(`${deviceId}/status`);
+                client.subscribe(`${deviceId}/terminal`);
+
+                // Minta state awal dengan publish? Tidak perlu, karena retain state di broker? Kita tunggu saja state akan dikirim saat subscribe (retained).
+            },
+            onFailure: (err) => {
+                addLog(`❌ Gagal koneksi: ${err.errorMessage}`);
+                isConnected = false;
+                connStatusSpan.innerText = "Disconnected";
+                connStatusSpan.className = "status-badge status-disconnected";
+            }
+        };
+        if (mqttUser !== "") {
+            options.userName = mqttUser;
+            options.password = mqttPass;
+        }
+        client.connect(options);
+    }
+
+    function disconnectMqtt() {
+        if (client && isConnected) {
+            client.disconnect();
+        }
+    }
+
+    // Load konfigurasi dari localStorage
+    function loadConfig() {
+        const savedDeviceId = localStorage.getItem('mqttDeviceId');
+        const savedBroker = localStorage.getItem('mqttBroker');
+        const savedPort = localStorage.getItem('mqttPort');
+        const savedUser = localStorage.getItem('mqttUser');
+        const savedPass = localStorage.getItem('mqttPass');
+        if (savedDeviceId) deviceIdInput.value = savedDeviceId;
+        if (savedBroker) brokerInput.value = savedBroker;
+        if (savedPort) portInput.value = savedPort;
+        if (savedUser) mqttUserInput.value = savedUser;
+        if (savedPass) mqttPassInput.value = savedPass;
+    }
+
+    // Event listeners untuk tombol sistem
+    document.getElementById('allOnBtn').onclick = allOn;
+    document.getElementById('allOffBtn').onclick = allOff;
+    document.getElementById('sysRestart').onclick = systemRestart;
+    document.getElementById('wifiReset').onclick = wifiReset;
+    document.getElementById('otaTrigger').onclick = otaTrigger;
+    document.getElementById('clearTerminal').onclick = clearTerminalCmd;
+    document.getElementById('updateGpio').onclick = () => {
+        const pins = document.getElementById('gpioPins').value.trim();
+        if (pins) updateGpio(pins);
+        else addLog("Masukkan pin GPIO (contoh: 5,4,14,12,13)");
+    };
+    document.getElementById('updateNtp').onclick = () => {
+        const server = document.getElementById('ntpServer').value.trim();
+        if (server) setNtp(server);
+        else addLog("Masukkan NTP server");
+    };
+    document.getElementById('updateTz').onclick = () => {
+        const tz = parseInt(document.getElementById('tzOffset').value);
+        if (!isNaN(tz)) setTimezone(tz);
+        else addLog("Masukkan offset jam (contoh 7)");
+    };
+    document.getElementById('updateMqttConfig').onclick = () => {
+        const cfg = document.getElementById('mqttConfig').value.trim();
+        if (cfg) setMqttConfig(cfg);
+        else addLog("Masukkan konfigurasi (host,port,user,pass)");
+    };
+
+    connectBtn.onclick = connectMqtt;
+    disconnectBtn.onclick = disconnectMqtt;
+
+    // Inisialisasi UI
+    renderRelayButtons();
+    renderTimerSchedule();
+
+    // Muat konfigurasi dari localStorage
+    loadConfig();
+
+    // Jika ingin auto connect (optional)
+    // connectMqtt();
+</script>
+</body>
+</html>
