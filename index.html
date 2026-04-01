@@ -506,35 +506,43 @@
         }
 
         function onMessageArrived(message) {
-            const topic = message.destinationName;
-            const payload = message.payloadString;
-            const deviceId = document.getElementById('deviceId').value.trim();
+    const topic = message.destinationName;
+    const payload = message.payloadString;
+    const deviceId = document.getElementById('deviceId').value.trim();
 
-            logToTerminal(`📩 ${topic}: ${payload}`);
-
-            // Handle relay state update
-            if (topic.match(`${deviceId}/relay/\\d+/state`)) {
-                const match = topic.match(/relay\/(\d+)\/state/);
-                if (match) {
-                    const relayNum = parseInt(match[1]);
-                    const state = parseInt(payload);
-                    updateRelayUI(relayNum, state);
-                }
-            }
-            // Handle system health
-            else if (topic === `${deviceId}/status`) {
-                try {
-                    const data = JSON.parse(payload);
-                    updateSystemHealth(data);
-                } catch (e) {
-                    logToTerminal('⚠️ Failed to parse status JSON');
-                }
-            }
-            // Handle terminal log from device
-            else if (topic === `${deviceId}/terminal`) {
-                // Log dari device sudah otomatis tampil
-            }
+    // ==========================================
+    // ✅ FILTER: Jangan tampilkan topik /status di Terminal Log
+    // ==========================================
+    if (topic === `${deviceId}/status`) {
+        // Tetap proses data untuk update panel System Health
+        try {
+            const data = JSON.parse(payload);
+            updateSystemHealth(data);
+        } catch (e) {
+            console.log('Failed to parse status JSON');
         }
+        // ⛔ RETURN: Keluar dari fungsi tanpa mencetak ke terminal
+        return; 
+    }
+    // ==========================================
+
+    // Tampilkan log HANYA untuk topik selain /status
+    logToTerminal(`📩 ${topic}: ${payload}`);
+
+    // Handle relay state update
+    if (topic.match(`${deviceId}/relay/\\d+/state`)) {
+        const match = topic.match(/relay\/(\d+)\/state/);
+        if (match) {
+            const relayNum = parseInt(match[1]);
+            const state = parseInt(payload);
+            updateRelayUI(relayNum, state);
+        }
+    }
+    // Handle terminal log from device
+    else if (topic === `${deviceId}/terminal`) {
+        // Log dari device sudah otomatis tampil di atas
+    }
+}
 
         function disconnectMQTT() {
             if (client && client.isConnected()) {
