@@ -381,10 +381,13 @@
         function updateRelayUI(relayNum, state) {
             const idx = relayNum - 1;
             relayStates[idx] = state;
+            
+            // ✅ BENAR - Gunakan parameter 'relayNum':
             const card = document.getElementById(`relay-${relayNum}`);
+            
             const statusEl = card.querySelector('.status');
             const toggleBtn = card.querySelector('.btn-toggle');
-
+        
             if (state === 1) {
                 card.classList.add('active');
                 statusEl.textContent = 'ON';
@@ -398,7 +401,7 @@
                 toggleBtn.textContent = '⚡ NYALAKAN';
                 toggleBtn.className = 'btn btn-success btn-toggle';
             }
-
+        
             // Enable timer button
             const timerBtn = card.querySelector('.timer-section .btn');
             if (timerBtn) {
