@@ -95,6 +95,27 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: #dc2626; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-toggle {
+    width: 100%;
+    padding: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.relay-card.active .btn-toggle {
+    background: #ef4444; /* Merah saat Relay ON (tombol untuk OFF) */
+    color: white;
+}
+.relay-card.active .btn-toggle:hover {
+    background: #dc2626;
+}
+.relay-card:not(.active) .btn-toggle {
+    background: #22c55e; /* Hijau saat Relay OFF (tombol untuk ON) */
+    color: white;
+}
+.relay-card:not(.active) .btn-toggle:hover {
+    background: #16a34a;
+}
         
         .relay-grid {
             display: grid;
@@ -357,52 +378,60 @@
         }
 
         function updateRelayUI(relayNum, state) {
-            const idx = relayNum - 1;
-            relayStates[idx] = state;
-            const card = document.getElementById(`relay-${relayNum}`);
-            const statusEl = card.querySelector('.status');
-            const onBtn = card.querySelector('.btn-on');
-            const offBtn = card.querySelector('.btn-off');
+    const idx = relayNum - 1;
+    relayStates[idx] = state;
+    const card = document.getElementById(`relay-${i}`); // Note: ensure 'i' is defined or use relayNum
+    const statusEl = card.querySelector('.status');
+    const toggleBtn = card.querySelector('.btn-toggle');
 
-            if (state === 1) {
-                card.classList.add('active');
-                statusEl.textContent = 'ON';
-                statusEl.className = 'status on';
-                onBtn.disabled = true;
-                offBtn.disabled = false;
-            } else {
-                card.classList.remove('active');
-                statusEl.textContent = 'OFF';
-                statusEl.className = 'status off';
-                onBtn.disabled = false;
-                offBtn.disabled = true;
-            }
-        }
+    if (state === 1) {
+        card.classList.add('active');
+        statusEl.textContent = 'ON';
+        statusEl.className = 'status on';
+        // ✅ Tombol jadi merah untuk OFF (klik untuk matikan)
+        toggleBtn.textContent = '🛑 MATIKAN';
+        toggleBtn.className = 'btn btn-danger btn-toggle';
+    } else {
+        card.classList.remove('active');
+        statusEl.textContent = 'OFF';
+        statusEl.className = 'status off';
+        // ✅ Tombol jadi hijau untuk ON (klik untuk nyalakan)
+        toggleBtn.textContent = '⚡ NYALAKAN';
+        toggleBtn.className = 'btn btn-success btn-toggle';
+    }
+    
+    // Enable tombol timer juga
+    const timerBtn = card.querySelector('.timer-section .btn');
+    if(timerBtn) timerBtn.disabled = !isConnected;
+}
 
         function generateRelayCards() {
-            const grid = document.getElementById('relayGrid');
-            grid.innerHTML = '';
+    const grid = document.getElementById('relayGrid');
+    grid.innerHTML = '';
 
-            for (let i = 1; i <= 5; i++) {
-                const card = document.createElement('div');
-                card.className = 'relay-card';
-                card.id = `relay-${i}`;
-                card.innerHTML = `
-                    <div class="name">${relayLabels[i-1]}</div>
-                    <div class="status off">OFF</div>
-                    <div class="controls">
-                        <button class="btn btn-success btn-on" onclick="publishRelay(${i}, 1)" disabled>ON</button>
-                        <button class="btn btn-danger btn-off" onclick="publishRelay(${i}, 0)" disabled>OFF</button>
-                    </div>
-                    <div class="timer-section">
-                        <input type="number" id="timer-${i}" placeholder="mnt" min="1" max="240">
-                        <button class="btn" style="padding:8px 12px; font-size:0.85rem;" 
-                                onclick="publishTimer(${i})" disabled>⏱️ Timer</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            }
-        }
+    for (let i = 1; i <= 5; i++) {
+        const card = document.createElement('div');
+        card.className = 'relay-card';
+        card.id = `relay-${i}`;
+        card.innerHTML = `
+            <div class="name">${relayLabels[i-1]}</div>
+            <div class="status off">OFF</div>
+            <div class="controls">
+                <!-- ✅ SATU TOMBOL TOGGLE -->
+                <button class="btn btn-toggle" id="btn-toggle-${i}" 
+                        onclick="toggleRelay(${i})" disabled>
+                    ⚡ TOGGLE
+                </button>
+            </div>
+            <div class="timer-section">
+                <input type="number" id="timer-${i}" placeholder="mnt" min="1" max="240">
+                <button class="btn" style="padding:8px 12px; font-size:0.85rem;" 
+                        onclick="publishTimer(${i})" disabled>⏱️ Timer</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    }
+}
 
         // ==========================================
         // FUNGSI MQTT - PAHO LIBRARY (PENTING!)
@@ -572,6 +601,13 @@
             const deviceId = document.getElementById('deviceId').value.trim();
             publish(`${deviceId}/relay/${relayNum}/cmd`, state.toString());
         }
+
+        // ✅ FUNGSI TOGGLE BARU
+function toggleRelay(relayNum) {
+    // Kebalikan dari state saat ini
+    const newState = relayStates[relayNum - 1] === 1 ? 0 : 1;
+    publishRelay(relayNum, newState);
+}
 
         function publishAll(state) {
             const deviceId = document.getElementById('deviceId').value.trim();
