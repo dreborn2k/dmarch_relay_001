@@ -95,27 +95,6 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: #dc2626; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .btn-toggle {
-		    width: 100%;
-		    padding: 12px;
-		    font-weight: 600;
-		    transition: all 0.2s;
-		}
-		.relay-card.active .btn-toggle {
-		    background: #ef4444; /* Merah saat Relay ON (tombol untuk OFF) */
-		    color: white;
-		}
-		.relay-card.active .btn-toggle:hover {
-		    background: #dc2626;
-		}
-		.relay-card:not(.active) .btn-toggle {
-		    background: #22c55e; /* Hijau saat Relay OFF (tombol untuk ON) */
-		    color: white;
-		}
-		.relay-card:not(.active) .btn-toggle:hover {
-		    background: #16a34a;
-		}
         
         .relay-grid {
             display: grid;
@@ -147,6 +126,28 @@
         .relay-card .status.off { background: var(--gray); color: white; }
         .relay-card .controls { display: flex; gap: 8px; justify-content: center; }
         .relay-card .btn { padding: 8px 16px; font-size: 0.9rem; }
+        
+        /* ✅ TOGGLE BUTTON STYLE */
+        .btn-toggle {
+            width: 100%;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .relay-card.active .btn-toggle {
+            background: #ef4444;
+            color: white;
+        }
+        .relay-card.active .btn-toggle:hover {
+            background: #dc2626;
+        }
+        .relay-card:not(.active) .btn-toggle {
+            background: #22c55e;
+            color: white;
+        }
+        .relay-card:not(.active) .btn-toggle:hover {
+            background: #16a34a;
+        }
         
         .timer-section {
             display: flex;
@@ -244,11 +245,11 @@
                 </div>
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="mqttUser" value="dmarchFF">
+                    <input type="text" id="mqttUser" value="dmarchff">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="mqttPass" value="dmarchFF2205">
+                    <input type="password" id="mqttPass" value="dmrchff2205">
                 </div>
             </div>
             <button id="connectBtn" class="btn btn-primary" onclick="connectMQTT()">🔗 Connect</button>
@@ -307,10 +308,10 @@
         const DEFAULT_CONFIG = {
             deviceId: 'dmarch_relay_001',
             broker: 'ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud',
-            port: 8884,           // ✅ Port WebSocket HiveMQ Cloud
-            path: '/mqtt',        // ✅ Path wajib untuk HiveMQ Cloud
-            username: 'dmarchFF',
-            password: 'dmarchFF2205'
+            port: 8884,
+            path: '/mqtt',
+            username: 'dmarchff',
+            password: 'dmrchff2205'
         };
 
         // ==========================================
@@ -378,73 +379,70 @@
         }
 
         function updateRelayUI(relayNum, state) {
-		    const idx = relayNum - 1;
-		    relayStates[idx] = state;
-		    const card = document.getElementById(`relay-${i}`); // Note: ensure 'i' is defined or use relayNum
-		    const statusEl = card.querySelector('.status');
-		    const toggleBtn = card.querySelector('.btn-toggle');
-		
-		    if (state === 1) {
-		        card.classList.add('active');
-		        statusEl.textContent = 'ON';
-		        statusEl.className = 'status on';
-		        // ✅ Tombol jadi merah untuk OFF (klik untuk matikan)
-		        toggleBtn.textContent = '🛑 MATIKAN';
-		        toggleBtn.className = 'btn btn-danger btn-toggle';
-		    } else {
-		        card.classList.remove('active');
-		        statusEl.textContent = 'OFF';
-		        statusEl.className = 'status off';
-		        // ✅ Tombol jadi hijau untuk ON (klik untuk nyalakan)
-		        toggleBtn.textContent = '⚡ NYALAKAN';
-		        toggleBtn.className = 'btn btn-success btn-toggle';
-		    }
-		    
-		    // Enable tombol timer juga
-		    const timerBtn = card.querySelector('.timer-section .btn');
-		    if(timerBtn) timerBtn.disabled = !isConnected;
-		}
+            const idx = relayNum - 1;
+            relayStates[idx] = state;
+            const card = document.getElementById(`relay-${relayNum}`);
+            const statusEl = card.querySelector('.status');
+            const toggleBtn = card.querySelector('.btn-toggle');
+
+            if (state === 1) {
+                card.classList.add('active');
+                statusEl.textContent = 'ON';
+                statusEl.className = 'status on';
+                toggleBtn.textContent = '🛑 MATIKAN';
+                toggleBtn.className = 'btn btn-danger btn-toggle';
+            } else {
+                card.classList.remove('active');
+                statusEl.textContent = 'OFF';
+                statusEl.className = 'status off';
+                toggleBtn.textContent = '⚡ NYALAKAN';
+                toggleBtn.className = 'btn btn-success btn-toggle';
+            }
+
+            // Enable timer button
+            const timerBtn = card.querySelector('.timer-section .btn');
+            if (timerBtn) {
+                timerBtn.disabled = !isConnected;
+            }
+        }
 
         function generateRelayCards() {
-		    const grid = document.getElementById('relayGrid');
-		    grid.innerHTML = '';
-		
-		    for (let i = 1; i <= 5; i++) {
-		        const card = document.createElement('div');
-		        card.className = 'relay-card';
-		        card.id = `relay-${i}`;
-		        card.innerHTML = `
-		            <div class="name">${relayLabels[i-1]}</div>
-		            <div class="status off">OFF</div>
-		            <div class="controls">
-		                <!-- ✅ SATU TOMBOL TOGGLE -->
-		                <button class="btn btn-toggle" id="btn-toggle-${i}" 
-		                        onclick="toggleRelay(${i})" disabled>
-		                    ⚡ TOGGLE
-		                </button>
-		            </div>
-		            <div class="timer-section">
-		                <input type="number" id="timer-${i}" placeholder="mnt" min="1" max="240">
-		                <button class="btn" style="padding:8px 12px; font-size:0.85rem;" 
-		                        onclick="publishTimer(${i})" disabled>⏱️ Timer</button>
-		            </div>
-		        `;
-		        grid.appendChild(card);
-		    }
-		}
+            const grid = document.getElementById('relayGrid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 5; i++) {
+                const card = document.createElement('div');
+                card.className = 'relay-card';
+                card.id = `relay-${i}`;
+                card.innerHTML = `
+                    <div class="name">${relayLabels[i-1]}</div>
+                    <div class="status off">OFF</div>
+                    <div class="controls">
+                        <button class="btn btn-toggle" id="btn-toggle-${i}" 
+                                onclick="toggleRelay(${i})" disabled>
+                            ⚡ NYALAKAN
+                        </button>
+                    </div>
+                    <div class="timer-section">
+                        <input type="number" id="timer-${i}" placeholder="mnt" min="1" max="240">
+                        <button class="btn" style="padding:8px 12px; font-size:0.85rem;" 
+                                onclick="publishTimer(${i})" disabled>⏱️ Timer</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
 
         // ==========================================
-        // FUNGSI MQTT - PAHO LIBRARY (PENTING!)
+        // FUNGSI MQTT - PAHO LIBRARY
         // ==========================================
         function connectMQTT() {
-            // Ambil nilai dari form
             const deviceId = document.getElementById('deviceId').value.trim();
             const broker = document.getElementById('broker').value.trim();
             const port = parseInt(document.getElementById('port').value);
             const username = document.getElementById('mqttUser').value.trim();
             const password = document.getElementById('mqttPass').value.trim();
 
-            // Validasi input
             if (!broker || !port || !username) {
                 alert('Mohon lengkapi konfigurasi broker!');
                 return;
@@ -452,35 +450,30 @@
 
             logToTerminal(`🔗 Connecting to ${broker}:${port}...`);
 
-            // Generate Client ID unik untuk Web UI
             const clientId = 'web_ui_' + Math.random().toString(16).substr(2, 8);
 
-            // ✅ INISIALISASI PAHO MQTT - PARAMETER TERPISAH
-            // Format: new Paho.MQTT.Client(host, port, path, clientId)
+            // ✅ PAHO MQTT - Parameter terpisah
             client = new Paho.MQTT.Client(
-                broker,              // ✅ Hostname saja (TANPA ws:// atau wss://)
-                port,                // ✅ Port sebagai INTEGER (8884)
-                '/mqtt',            // ✅ Path WebSocket untuk HiveMQ Cloud
-                clientId            // ✅ Client ID unik
+                broker,
+                port,
+                '/mqtt',
+                clientId
             );
 
-            // Konfigurasi callback
             client.onConnectionLost = onConnectionLost;
             client.onMessageArrived = onMessageArrived;
 
-            // Opsi koneksi
             const connectOptions = {
                 onSuccess: onConnect,
                 onFailure: onConnectFailure,
                 userName: username,
                 password: password,
-                useSSL: true,        // ✅ WAJIB true untuk port 8884 (WSS)
+                useSSL: true,
                 timeout: 10,
                 keepAliveInterval: 60,
                 cleanSession: true
             };
 
-            // Lakukan koneksi
             client.connect(connectOptions);
         }
 
@@ -488,7 +481,6 @@
             logToTerminal('✅ MQTT Connected!');
             updateConnectionStatus(true);
 
-            // Subscribe ke semua topic yang diperlukan
             const deviceId = document.getElementById('deviceId').value.trim();
             const topics = [
                 `${deviceId}/relay/+/state`,
@@ -500,16 +492,12 @@
                 client.subscribe(topic, { qos: 1 });
                 logToTerminal(`📥 Subscribe: ${topic}`);
             });
-
-            // Request status awal
-            publishSystemHealthRequest();
         }
 
         function onConnectFailure(response) {
             logToTerminal(`❌ Connection failed: ${response.errorMessage}`);
             updateConnectionStatus(false);
             
-            // Tampilkan error spesifik
             if (response.errorMessage.includes('AMQJS0013E')) {
                 alert('Error: Pastikan host tanpa ws://, port integer, dan path /mqtt');
             } else if (response.errorMessage.includes('AMQJS0007E')) {
@@ -525,7 +513,6 @@
             }
             updateConnectionStatus(false);
             
-            // Auto-reconnect setelah 5 detik
             setTimeout(() => {
                 if (!isConnected) {
                     logToTerminal('🔄 Attempting reconnect...');
@@ -535,43 +522,38 @@
         }
 
         function onMessageArrived(message) {
-    const topic = message.destinationName;
-    const payload = message.payloadString;
-    const deviceId = document.getElementById('deviceId').value.trim();
+            const topic = message.destinationName;
+            const payload = message.payloadString;
+            const deviceId = document.getElementById('deviceId').value.trim();
 
-    // ==========================================
-    // ✅ FILTER: Jangan tampilkan topik /status di Terminal Log
-    // ==========================================
-    if (topic === `${deviceId}/status`) {
-        // Tetap proses data untuk update panel System Health
-        try {
-            const data = JSON.parse(payload);
-            updateSystemHealth(data);
-        } catch (e) {
-            console.log('Failed to parse status JSON');
+            // ✅ FILTER: Jangan tampilkan /status di Terminal Log
+            if (topic === `${deviceId}/status`) {
+                try {
+                    const data = JSON.parse(payload);
+                    updateSystemHealth(data);
+                } catch (e) {
+                    console.log('Failed to parse status JSON');
+                }
+                return; // ⛔ Jangan log ke terminal
+            }
+
+            // Tampilkan log untuk topik lainnya
+            logToTerminal(`📩 ${topic}: ${payload}`);
+
+            // Handle relay state update
+            if (topic.match(`${deviceId}/relay/\\d+/state`)) {
+                const match = topic.match(/relay\/(\d+)\/state/);
+                if (match) {
+                    const relayNum = parseInt(match[1]);
+                    const state = parseInt(payload);
+                    updateRelayUI(relayNum, state);
+                }
+            }
+            // Handle terminal log from device
+            else if (topic === `${deviceId}/terminal`) {
+                // Log dari device sudah otomatis tampil
+            }
         }
-        // ⛔ RETURN: Keluar dari fungsi tanpa mencetak ke terminal
-        return; 
-    }
-    // ==========================================
-
-    // Tampilkan log HANYA untuk topik selain /status
-    logToTerminal(`📩 ${topic}: ${payload}`);
-
-    // Handle relay state update
-    if (topic.match(`${deviceId}/relay/\\d+/state`)) {
-        const match = topic.match(/relay\/(\d+)\/state/);
-        if (match) {
-            const relayNum = parseInt(match[1]);
-            const state = parseInt(payload);
-            updateRelayUI(relayNum, state);
-        }
-    }
-    // Handle terminal log from device
-    else if (topic === `${deviceId}/terminal`) {
-        // Log dari device sudah otomatis tampil di atas
-    }
-}
 
         function disconnectMQTT() {
             if (client && client.isConnected()) {
@@ -603,11 +585,10 @@
         }
 
         // ✅ FUNGSI TOGGLE BARU
-function toggleRelay(relayNum) {
-    // Kebalikan dari state saat ini
-    const newState = relayStates[relayNum - 1] === 1 ? 0 : 1;
-    publishRelay(relayNum, newState);
-}
+        function toggleRelay(relayNum) {
+            const newState = relayStates[relayNum - 1] === 1 ? 0 : 1;
+            publishRelay(relayNum, newState);
+        }
 
         function publishAll(state) {
             const deviceId = document.getElementById('deviceId').value.trim();
@@ -625,41 +606,17 @@ function toggleRelay(relayNum) {
             document.getElementById(`timer-${relayNum}`).value = '';
         }
 
-        function publishSystemHealthRequest() {
-            // Device akan auto-publish health setiap 2 menit
-            // Ini hanya untuk trigger awal
-        }
-
-        function publishOTA() {
-            const deviceId = document.getElementById('deviceId').value.trim();
-            if (confirm('Start OTA Update? Device will restart after download.')) {
-                publish(`${deviceId}/system/ota`, '1');
-            }
-        }
-
-        function publishRestart() {
-            const deviceId = document.getElementById('deviceId').value.trim();
-            if (confirm('Restart device?')) {
-                publish(`${deviceId}/system/restart`, '1');
-            }
-        }
-
         // ==========================================
         // INITIALIZATION
         // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Load config dari DEFAULT_CONFIG
             document.getElementById('deviceId').value = DEFAULT_CONFIG.deviceId;
             document.getElementById('broker').value = DEFAULT_CONFIG.broker;
             document.getElementById('port').value = DEFAULT_CONFIG.port;
             document.getElementById('mqttUser').value = DEFAULT_CONFIG.username;
             document.getElementById('mqttPass').value = DEFAULT_CONFIG.password;
 
-            // Generate UI relay
             generateRelayCards();
-
-            // Auto-connect jika config sudah diisi (opsional)
-            // connectMQTT();
 
             logToTerminal('🚀 Web UI Loaded. Klik Connect untuk mulai.');
         });
