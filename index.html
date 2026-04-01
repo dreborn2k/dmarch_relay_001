@@ -23,10 +23,7 @@
             padding: 20px;
             color: var(--dark);
         }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
+        .container { max-width: 900px; margin: 0 auto; }
         .card {
             background: white;
             border-radius: 16px;
@@ -34,59 +31,32 @@
             padding: 24px;
             margin-bottom: 20px;
         }
-        .header {
-            text-align: center;
-            padding: 20px;
-            color: white;
-        }
+        .header { text-align: center; padding: 20px; color: white; }
         .header h1 { font-size: 1.8rem; margin-bottom: 5px; }
         .header p { opacity: 0.9; font-size: 0.95rem; }
-        .status-bar {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
+        .status-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .status-item {
-            flex: 1;
-            min-width: 120px;
-            background: var(--light);
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
+            flex: 1; min-width: 120px; background: var(--light);
+            padding: 12px; border-radius: 10px; text-align: center;
         }
         .status-item .label { font-size: 0.8rem; color: var(--gray); }
         .status-item .value { font-weight: 600; font-size: 1.1rem; }
         .status-item .value.good { color: var(--success); }
         .status-item .value.bad { color: var(--danger); }
-        
         .connection-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; margin-bottom: 20px;
         }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 0.85rem; font-weight: 500; color: var(--gray); }
         .form-group input {
-            padding: 10px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.2s;
+            padding: 10px 14px; border: 2px solid #e2e8f0;
+            border-radius: 8px; font-size: 1rem; transition: border-color 0.2s;
         }
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
         .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 1rem;
+            padding: 12px 24px; border: none; border-radius: 10px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 1rem;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: #1d4ed8; }
@@ -95,118 +65,46 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: #dc2626; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        
         .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; margin-top: 15px;
         }
         .relay-card {
-            background: var(--light);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-            border: 3px solid transparent;
-            transition: all 0.2s;
+            background: var(--light); border-radius: 12px; padding: 16px;
+            text-align: center; border: 3px solid transparent; transition: all 0.2s;
         }
-        .relay-card.active {
-            border-color: var(--success);
-            background: #f0fdf4;
-        }
+        .relay-card.active { border-color: var(--success); background: #f0fdf4; }
         .relay-card .name { font-weight: 600; margin-bottom: 8px; }
         .relay-card .status {
-            font-size: 0.85rem;
-            padding: 4px 12px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-bottom: 12px;
+            font-size: 0.85rem; padding: 4px 12px; border-radius: 20px;
+            display: inline-block; margin-bottom: 12px;
         }
         .relay-card .status.on { background: var(--success); color: white; }
         .relay-card .status.off { background: var(--gray); color: white; }
         .relay-card .controls { display: flex; gap: 8px; justify-content: center; }
-        .relay-card .btn { padding: 8px 16px; font-size: 0.9rem; }
-        
-        /* ✅ TOGGLE BUTTON STYLE */
-        .btn-toggle {
-            width: 100%;
-            padding: 12px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .relay-card.active .btn-toggle {
-            background: #ef4444;
-            color: white;
-        }
-        .relay-card.active .btn-toggle:hover {
-            background: #dc2626;
-        }
-        .relay-card:not(.active) .btn-toggle {
-            background: #22c55e;
-            color: white;
-        }
-        .relay-card:not(.active) .btn-toggle:hover {
-            background: #16a34a;
-        }
-        
-        .timer-section {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-top: 10px;
-        }
-        .timer-section input {
-            width: 70px;
-            padding: 8px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            text-align: center;
-        }
-        
-        .bulk-controls {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
+        .btn-toggle { width: 100%; padding: 12px; font-weight: 600; transition: all 0.2s; }
+        .relay-card.active .btn-toggle { background: #ef4444; color: white; }
+        .relay-card.active .btn-toggle:hover { background: #dc2626; }
+        .relay-card:not(.active) .btn-toggle { background: #22c55e; color: white; }
+        .relay-card:not(.active) .btn-toggle:hover { background: #16a34a; }
+        .bulk-controls { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
         .terminal {
-            background: #1e293b;
-            color: #22c55e;
-            font-family: 'Monaco', 'Consolas', monospace;
-            padding: 15px;
-            border-radius: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-            line-height: 1.5;
+            background: #1e293b; color: #22c55e; font-family: 'Monaco', 'Consolas', monospace;
+            padding: 15px; border-radius: 10px; max-height: 200px;
+            overflow-y: auto; font-size: 0.85rem; line-height: 1.5;
         }
         .terminal .log-time { color: #94a3b8; }
-        
         .connection-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;
         }
-        .connection-status.connected {
-            background: #dcfce7;
-            color: #166534;
-        }
-        .connection-status.disconnected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
+        .connection-status.connected { background: #dcfce7; color: #166534; }
+        .connection-status.disconnected { background: #fee2e2; color: #991b1b; }
         .connection-status .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: currentColor;
+            width: 10px; height: 10px; border-radius: 50%; background: currentColor;
         }
-        
+        .settings-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0; }
+        .settings-section h4 { margin-bottom: 15px; color: var(--gray); }
         @media (max-width: 600px) {
             .header h1 { font-size: 1.4rem; }
             .connection-form { grid-template-columns: 1fr; }
@@ -222,8 +120,7 @@
             <h1>🔌 dMarch Relay Pro</h1>
             <p>Web Control Panel - HiveMQ Cloud</p>
             <div id="connectionStatus" class="connection-status disconnected">
-                <span class="dot"></span>
-                <span>Disconnected</span>
+                <span class="dot"></span><span>Disconnected</span>
             </div>
         </div>
 
@@ -282,14 +179,55 @@
         <!-- Relay Controls -->
         <div class="card">
             <h3 style="margin-bottom:15px;">⚡ Relay Control</h3>
-            
             <div class="bulk-controls">
                 <button class="btn btn-success" onclick="publishAll(1)" id="allOnBtn" disabled>▶️ ALL ON</button>
                 <button class="btn btn-danger" onclick="publishAll(0)" id="allOffBtn" disabled>⏹️ ALL OFF</button>
             </div>
+            <div class="relay-grid" id="relayGrid"></div>
+        </div>
 
-            <div class="relay-grid" id="relayGrid">
-                <!-- Relay cards will be generated by JavaScript -->
+        <!-- Settings Section (NTP, GPIO, OTA) -->
+        <div class="card">
+            <h3 style="margin-bottom:15px;">⚙️ Settings</h3>
+            
+            <div class="settings-section">
+                <h4>🕐 NTP Server</h4>
+                <div class="connection-form" style="grid-template-columns: 2fr 1fr auto;">
+                    <div class="form-group">
+                        <label>Server NTP</label>
+                        <input type="text" id="ntpServer" value="id.pool.ntp.org" placeholder="id.pool.ntp.org">
+                    </div>
+                    <div class="form-group">
+                        <label>Timezone (Jam)</label>
+                        <input type="number" id="tzOffset" value="7" placeholder="7">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="publishNTP()" id="ntpBtn" disabled>💾 Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>🔌 GPIO Pin Mapping</h4>
+                <div class="connection-form" style="grid-template-columns: 2fr auto;">
+                    <div class="form-group">
+                        <label>Pin (comma separated, e.g., 12,14,27,26,25)</label>
+                        <input type="text" id="gpioPins" value="12,14,27,26,25" placeholder="12,14,27,26,25">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-warning" onclick="publishGPIO()" id="gpioBtn" disabled>💾 Update</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>🔄 System</h4>
+                <div class="bulk-controls">
+                    <button class="btn btn-primary" onclick="publishOTA()" id="otaBtn" disabled>⬇️ Check OTA</button>
+                    <button class="btn btn-warning" onclick="publishRestart()" id="restartBtn" disabled>🔄 Restart</button>
+                </div>
             </div>
         </div>
 
@@ -344,7 +282,11 @@
             const disconnectBtn = document.getElementById('disconnectBtn');
             const allOnBtn = document.getElementById('allOnBtn');
             const allOffBtn = document.getElementById('allOffBtn');
-        
+            const ntpBtn = document.getElementById('ntpBtn');
+            const gpioBtn = document.getElementById('gpioBtn');
+            const otaBtn = document.getElementById('otaBtn');
+            const restartBtn = document.getElementById('restartBtn');
+
             if (connected) {
                 statusEl.className = 'connection-status connected';
                 statusEl.innerHTML = '<span class="dot"></span><span>Connected ✓</span>';
@@ -352,8 +294,12 @@
                 disconnectBtn.disabled = false;
                 allOnBtn.disabled = false;
                 allOffBtn.disabled = false;
+                ntpBtn.disabled = false;
+                gpioBtn.disabled = false;
+                otaBtn.disabled = false;
+                restartBtn.disabled = false;
                 
-                // ✅ TAMBAHAN: Enable semua tombol toggle relay
+                // Enable all relay toggle buttons
                 for (let i = 1; i <= 5; i++) {
                     const toggleBtn = document.getElementById(`btn-toggle-${i}`);
                     if (toggleBtn) toggleBtn.disabled = false;
@@ -367,8 +313,12 @@
                 disconnectBtn.disabled = true;
                 allOnBtn.disabled = true;
                 allOffBtn.disabled = true;
+                ntpBtn.disabled = true;
+                gpioBtn.disabled = true;
+                otaBtn.disabled = true;
+                restartBtn.disabled = true;
                 
-                // ✅ TAMBAHAN: Disable semua tombol toggle relay
+                // Disable all relay toggle buttons
                 for (let i = 1; i <= 5; i++) {
                     const toggleBtn = document.getElementById(`btn-toggle-${i}`);
                     if (toggleBtn) toggleBtn.disabled = true;
@@ -394,12 +344,10 @@
         function updateRelayUI(relayNum, state) {
             const idx = relayNum - 1;
             relayStates[idx] = state;
-            
-            // ✅ Gunakan relayNum, bukan 'i'
             const card = document.getElementById(`relay-${relayNum}`);
             const statusEl = card.querySelector('.status');
             const toggleBtn = card.querySelector('.btn-toggle');
-        
+
             if (state === 1) {
                 card.classList.add('active');
                 statusEl.textContent = 'ON';
@@ -413,15 +361,6 @@
                 toggleBtn.textContent = '⚡ NYALAKAN';
                 toggleBtn.className = 'btn btn-success btn-toggle';
             }
-        
-            // Enable timer button (jangan sentuh toggleBtn.disabled di sini)
-            const timerBtn = card.querySelector('.timer-section .btn');
-            if (timerBtn) {
-                timerBtn.disabled = !isConnected;
-            }
-            
-            // ✅ PASTIKAN toggleBtn tidak di-disable di sini
-            // (karena sudah di-handle di updateConnectionStatus)
         }
 
         function generateRelayCards() {
@@ -440,11 +379,6 @@
                                 onclick="toggleRelay(${i})" disabled>
                             ⚡ NYALAKAN
                         </button>
-                    </div>
-                    <div class="timer-section">
-                        <input type="number" id="timer-${i}" placeholder="mnt" min="1" max="240">
-                        <button class="btn" style="padding:8px 12px; font-size:0.85rem;" 
-                                onclick="publishTimer(${i})" disabled>⏱️ Timer</button>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -470,13 +404,7 @@
 
             const clientId = 'web_ui_' + Math.random().toString(16).substr(2, 8);
 
-            // ✅ PAHO MQTT - Parameter terpisah
-            client = new Paho.MQTT.Client(
-                broker,
-                port,
-                '/mqtt',
-                clientId
-            );
+            client = new Paho.MQTT.Client(broker, port, '/mqtt', clientId);
 
             client.onConnectionLost = onConnectionLost;
             client.onMessageArrived = onMessageArrived;
@@ -552,13 +480,11 @@
                 } catch (e) {
                     console.log('Failed to parse status JSON');
                 }
-                return; // ⛔ Jangan log ke terminal
+                return;
             }
 
-            // Tampilkan log untuk topik lainnya
             logToTerminal(`📩 ${topic}: ${payload}`);
 
-            // Handle relay state update
             if (topic.match(`${deviceId}/relay/\\d+/state`)) {
                 const match = topic.match(/relay\/(\d+)\/state/);
                 if (match) {
@@ -566,10 +492,6 @@
                     const state = parseInt(payload);
                     updateRelayUI(relayNum, state);
                 }
-            }
-            // Handle terminal log from device
-            else if (topic === `${deviceId}/terminal`) {
-                // Log dari device sudah otomatis tampil
             }
         }
 
@@ -602,7 +524,6 @@
             publish(`${deviceId}/relay/${relayNum}/cmd`, state.toString());
         }
 
-        // ✅ FUNGSI TOGGLE BARU
         function toggleRelay(relayNum) {
             const newState = relayStates[relayNum - 1] === 1 ? 0 : 1;
             publishRelay(relayNum, newState);
@@ -613,15 +534,43 @@
             publish(`${deviceId}/all/${state === 1 ? 'on' : 'off'}`, '1');
         }
 
-        function publishTimer(relayNum) {
-            const minutes = document.getElementById(`timer-${relayNum}`).value;
-            if (!minutes || minutes < 1) {
-                alert('Masukkan durasi timer (1-240 menit)');
-                return;
-            }
+        // ✅ SETTINGS FUNCTIONS
+        function publishNTP() {
             const deviceId = document.getElementById('deviceId').value.trim();
-            publish(`${deviceId}/timer/${relayNum}`, minutes);
-            document.getElementById(`timer-${relayNum}`).value = '';
+            const ntpServer = document.getElementById('ntpServer').value.trim();
+            const tzOffset = document.getElementById('tzOffset').value.trim();
+            
+            if (ntpServer) {
+                publish(`${deviceId}/ntp/set`, ntpServer);
+            }
+            if (tzOffset) {
+                publish(`${deviceId}/timezone/set`, tzOffset);
+            }
+        }
+
+        function publishGPIO() {
+            const deviceId = document.getElementById('deviceId').value.trim();
+            const gpioPins = document.getElementById('gpioPins').value.trim();
+            
+            if (gpioPins) {
+                if (confirm('Update GPIO pins? Device will restart after saving.')) {
+                    publish(`${deviceId}/gpio/update`, gpioPins);
+                }
+            }
+        }
+
+        function publishOTA() {
+            const deviceId = document.getElementById('deviceId').value.trim();
+            if (confirm('Check for firmware update?')) {
+                publish(`${deviceId}/system/ota`, '1');
+            }
+        }
+
+        function publishRestart() {
+            const deviceId = document.getElementById('deviceId').value.trim();
+            if (confirm('Restart device?')) {
+                publish(`${deviceId}/system/restart`, '1');
+            }
         }
 
         // ==========================================
@@ -635,7 +584,6 @@
             document.getElementById('mqttPass').value = DEFAULT_CONFIG.password;
 
             generateRelayCards();
-
             logToTerminal('🚀 Web UI Loaded. Klik Connect untuk mulai.');
         });
     </script>
