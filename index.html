@@ -195,7 +195,14 @@
                 <div class="connection-form" style="grid-template-columns: 2fr 1fr auto;">
                     <div class="form-group">
                         <label>Server NTP</label>
-                        <input type="text" id="ntpServer" value="id.pool.ntp.org" placeholder="id.pool.ntp.org">
+                        <select id="ntpServer" style="padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; width: 100%;">
+                            <option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option>
+                            <option value="pool.ntp.org">pool.ntp.org (Global)</option>
+                            <option value="time.google.com">time.google.com (Google)</option>
+                            <option value="time.cloudflare.com">time.cloudflare.com (Cloudflare)</option>
+                            <option value="time.windows.com">time.windows.com (Windows)</option>
+                            <option value="time.apple.com">time.apple.com (Apple)</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Timezone (Jam)</label>
@@ -537,7 +544,7 @@
         // ✅ SETTINGS FUNCTIONS
         function publishNTP() {
             const deviceId = document.getElementById('deviceId').value.trim();
-            const ntpServer = document.getElementById('ntpServer').value.trim();
+            const ntpServer = document.getElementById('ntpServer').value;  // Tanpa .trim()
             const tzOffset = document.getElementById('tzOffset').value.trim();
             
             if (ntpServer) {
@@ -582,6 +589,10 @@
             document.getElementById('port').value = DEFAULT_CONFIG.port;
             document.getElementById('mqttUser').value = DEFAULT_CONFIG.username;
             document.getElementById('mqttPass').value = DEFAULT_CONFIG.password;
+
+            // ✅ TAMBAHKAN ini untuk set default NTP dropdown
+            document.getElementById('ntpServer').value = 'id.pool.ntp.org';
+            document.getElementById('tzOffset').value = '7';
 
             generateRelayCards();
             logToTerminal('🚀 Web UI Loaded. Klik Connect untuk mulai.');
