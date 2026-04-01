@@ -344,7 +344,7 @@
             const disconnectBtn = document.getElementById('disconnectBtn');
             const allOnBtn = document.getElementById('allOnBtn');
             const allOffBtn = document.getElementById('allOffBtn');
-
+        
             if (connected) {
                 statusEl.className = 'connection-status connected';
                 statusEl.innerHTML = '<span class="dot"></span><span>Connected ✓</span>';
@@ -352,6 +352,13 @@
                 disconnectBtn.disabled = false;
                 allOnBtn.disabled = false;
                 allOffBtn.disabled = false;
+                
+                // ✅ TAMBAHAN: Enable semua tombol toggle relay
+                for (let i = 1; i <= 5; i++) {
+                    const toggleBtn = document.getElementById(`btn-toggle-${i}`);
+                    if (toggleBtn) toggleBtn.disabled = false;
+                }
+                
                 logToTerminal('✅ Terhubung ke MQTT Broker');
             } else {
                 statusEl.className = 'connection-status disconnected';
@@ -360,6 +367,12 @@
                 disconnectBtn.disabled = true;
                 allOnBtn.disabled = true;
                 allOffBtn.disabled = true;
+                
+                // ✅ TAMBAHAN: Disable semua tombol toggle relay
+                for (let i = 1; i <= 5; i++) {
+                    const toggleBtn = document.getElementById(`btn-toggle-${i}`);
+                    if (toggleBtn) toggleBtn.disabled = true;
+                }
             }
         }
 
@@ -382,9 +395,8 @@
             const idx = relayNum - 1;
             relayStates[idx] = state;
             
-            // ✅ BENAR - Gunakan parameter 'relayNum':
+            // ✅ Gunakan relayNum, bukan 'i'
             const card = document.getElementById(`relay-${relayNum}`);
-            
             const statusEl = card.querySelector('.status');
             const toggleBtn = card.querySelector('.btn-toggle');
         
@@ -402,11 +414,14 @@
                 toggleBtn.className = 'btn btn-success btn-toggle';
             }
         
-            // Enable timer button
+            // Enable timer button (jangan sentuh toggleBtn.disabled di sini)
             const timerBtn = card.querySelector('.timer-section .btn');
             if (timerBtn) {
                 timerBtn.disabled = !isConnected;
             }
+            
+            // ✅ PASTIKAN toggleBtn tidak di-disable di sini
+            // (karena sudah di-handle di updateConnectionStatus)
         }
 
         function generateRelayCards() {
