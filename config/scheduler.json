@@ -9,7 +9,7 @@
       "connected": true
     },
     "gotify": {
-      "url": "192.168.18.190:8080",
+      "url": "http://192.168.18.190:8080",
       "token": "••••••••••••••••",
       "enabled": true,
       "connected": false
@@ -19,5 +19,5 @@
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:52:15.047Z"
+  "updatedAt": "2026-04-02T18:52:34.752Z"
 }
