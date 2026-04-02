@@ -391,7 +391,7 @@
       }
     }
 
-    // ✅ NOTIFICATION UI INIT - REVISED
+    // ✅ NOTIFICATION UI INIT - FIXED TOGGLE SYNC
     function initNotifUI() {
       // Telegram init
       const tgConfig = notifConfig.tg || {};
@@ -400,8 +400,10 @@
         document.getElementById('tgChatId').value = tgConfig.chatId;
         document.getElementById('tgChatDisplay').textContent = tgConfig.chatId;
         tgConnected = tgConfig.connected || false;
-        updateTgUI();
       }
+      // ✅ PENTING: Sinkronkan toggle visual dengan nilai saved
+      document.getElementById('tgToggle').classList.toggle('active', tgEnabled);
+      updateTgUI();
       
       // WhatsApp init
       const waConfig = notifConfig.wa || {};
@@ -410,10 +412,12 @@
         document.getElementById('waPhone').value = waConfig.phone || '628551291055';
         document.getElementById('waWebhookDisplay').textContent = shortenUrl(waConfig.webhook);
         waConnected = waConfig.connected || false;
-        updateWaUI();
       }
+      // ✅ PENTING: Sinkronkan toggle visual dengan nilai saved
+      document.getElementById('waToggle').classList.toggle('active', waEnabled);
+      updateWaUI();
       
-      // Toggle handlers
+      // Toggle handlers (tetap sama)
       document.getElementById('tgToggle').onclick = function() {
         tgEnabled = !tgEnabled;
         this.classList.toggle('active', tgEnabled);
@@ -430,6 +434,7 @@
         log(`💬 WhatsApp: ${waEnabled ? 'ENABLED' : 'DISABLED'}`);
       };
     }
+    
 
     function updateTgUI() {
       const badge = document.getElementById('tgStatusBadge');
