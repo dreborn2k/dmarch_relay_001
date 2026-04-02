@@ -74,18 +74,36 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔌 dMarch Relay Pro</h1>
+    <h1>🔌 dMarchFF Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
-        <div class="form-group"><label>Device ID</label><input type="text" id="deviceId" value="dmarch_relay_001" readonly></div>
-        <div class="form-group"><label>Broker</label><input type="text" id="broker" placeholder="broker.hivemq.cloud"></div>
-        <div class="form-group"><label>Port (WSS)</label><input type="number" id="port" placeholder="8884"></div>
-        <div class="form-group"><label>Client ID</label><input type="text" id="clientId" placeholder="Auto-generated" readonly></div>
-        <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="mqtt_user"></div>
-        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="mqtt_pass"></div>
+        <div class="form-group">
+          <label for="deviceId">Device ID</label>
+          <input type="text" id="deviceId" value="dmarch_relay_001" readonly autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="broker">Broker</label>
+          <input type="text" id="broker" placeholder="broker.hivemq.cloud" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="port">Port (WSS)</label>
+          <input type="number" id="port" placeholder="8884" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="clientId">Client ID</label>
+          <input type="text" id="clientId" placeholder="Auto-generated" readonly autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="mqtt_user" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="mqtt_pass" autocomplete="current-password">
+        </div>
       </div>
       <button class="btn-qr" onclick="openQR()">📷 Scan QR / 📁 Upload Gambar</button>
       <button class="btn-primary" id="btnConnect" style="margin-top:10px;">🔗 Connect</button>
@@ -102,21 +120,29 @@
     <div class="card app-card hidden" id="schedulerCard">
       <h3>⏰ Relay Scheduler</h3>
       <div class="grid-2">
-        <div class="form-group"><label>🔌 Relay Target</label>
-          <select id="schRelay"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select>
+        <div class="form-group"><label for="schRelay">🔌 Relay Target</label>
+          <select id="schRelay" autocomplete="off">
+            <option value="1">Relay 1</option><option value="2">Relay 2</option>
+            <option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option>
+          </select>
         </div>
-        <div class="form-group"><label>⚡ Aksi</label>
-          <select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select>
+        <div class="form-group"><label for="schAction">⚡ Aksi</label>
+          <select id="schAction" autocomplete="off">
+            <option value="1">ON</option><option value="0">OFF</option>
+          </select>
         </div>
       </div>
       <div class="grid-2">
-        <div class="form-group"><label>🕐 Waktu</label><input type="time" id="schTime" value="12:00"></div>
+        <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
         <div class="form-group"><label>📅 Hari Aktif</label>
-          <div class="day-grid" id="daySelector">
-            <button class="day-btn" data-day="1">Sen</button><button class="day-btn" data-day="2">Sel</button>
-            <button class="day-btn" data-day="3">Rab</button><button class="day-btn" data-day="4">Kam</button>
-            <button class="day-btn" data-day="5">Jum</button><button class="day-btn" data-day="6">Sab</button>
-            <button class="day-btn" data-day="0">Min</button>
+          <div class="day-grid" id="daySelector" role="group" aria-label="Pilih hari aktif">
+            <button class="day-btn" data-day="1" type="button" aria-label="Senin">Sen</button>
+            <button class="day-btn" data-day="2" type="button" aria-label="Selasa">Sel</button>
+            <button class="day-btn" data-day="3" type="button" aria-label="Rabu">Rab</button>
+            <button class="day-btn" data-day="4" type="button" aria-label="Kamis">Kam</button>
+            <button class="day-btn" data-day="5" type="button" aria-label="Jumat">Jum</button>
+            <button class="day-btn" data-day="6" type="button" aria-label="Sabtu">Sab</button>
+            <button class="day-btn" data-day="0" type="button" aria-label="Minggu">Min</button>
           </div>
         </div>
       </div>
@@ -134,39 +160,83 @@
         <!-- Input Form (hidden when online) -->
         <div id="ghInputForm" class="gh-input">
           <div class="grid-2">
-            <input type="text" id="ghOwner" placeholder="GitHub Username" value="dreborn2k">
-            <input type="text" id="ghRepo" placeholder="Repo Name" value="dmarch_relay_001">
+            <div class="form-group">
+              <label for="ghOwner">GitHub Username</label>
+              <input type="text" id="ghOwner" value="dreborn2k" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="ghRepo">Repo Name</label>
+              <input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off">
+            </div>
           </div>
-          <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (scope: repo)" style="margin-top:8px;">
+          <div class="form-group">
+            <label for="ghToken">GitHub Personal Access Token</label>
+            <input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;">
+          </div>
           <div class="gh-actions">
-            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn">🔗 Aktifkan Sync</button>
-            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn">🔄 Pull Data</button>
-            <button class="btn-danger btn-gh hidden" id="ghDisableBtn" onclick="disableGitHubSync()">🔌 Nonaktifkan</button>
+            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan Sync</button>
+            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull Data</button>
+            <button class="btn-danger btn-gh hidden" id="ghDisableBtn" onclick="disableGitHubSync()" type="button">🔌 Nonaktifkan</button>
           </div>
         </div>
       </div>
 
-      <button class="btn-primary" onclick="addSchedule()" style="margin-top:12px;">➕ Tambah Jadwal</button>
+      <button class="btn-primary" onclick="addSchedule()" style="margin-top:12px;" type="button">➕ Tambah Jadwal</button>
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
     
-    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3>
+      <div class="form-group">
+        <label for="ntpSelect">🕐 NTP Server</label>
+        <select id="ntpSelect" autocomplete="off">
+          <option value="id.pool.ntp.org">id.pool.ntp.org</option>
+          <option value="pool.ntp.org">pool.ntp.org</option>
+          <option value="time.google.com">time.google.com</option>
+          <option value="time.cloudflare.com">time.cloudflare.com</option>
+          <option value="time.windows.com">time.windows.com</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="tzInput">Timezone (Jam)</label>
+        <input type="number" id="tzInput" value="7" autocomplete="off">
+      </div>
+      <button class="btn-primary" id="saveNTPBtn" type="button">💾 Save NTP & TZ</button>
+      <div class="form-group" style="margin-top:15px;">
+        <label for="gpioInput">🔌 GPIO Mapping</label>
+        <input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25" autocomplete="off">
+      </div>
+      <button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update GPIO</button>
+    </div>
     
-    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID"></div><div class="form-group"><label>Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP)</button></div>
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3>
+      <div class="form-group">
+        <label for="netSsid">SSID WiFi Baru</label>
+        <input type="text" id="netSsid" placeholder="Masukkan SSID" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="netPass">Password WiFi</label>
+        <input type="password" id="netPass" placeholder="Masukkan Password" autocomplete="new-password">
+      </div>
+      <button class="btn-success" id="updateNetBtn" type="button">💾 Update Network</button>
+      <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;" type="button">🔄 Reset WiFi (AP)</button>
+    </div>
     
-    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2">
+      <button class="btn-primary" id="otaBtn" type="button">⬇️ Check OTA</button>
+      <button class="btn-danger" id="restartBtn" type="button">🔄 Restart</button>
+    </div></div>
     
-    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
+    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal" role="log" aria-live="polite"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn" type="button">🗑️ Clear Log</button></div>
   </div>
 
-  <div id="qrModal">
+  <div id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
     <div class="modal-box">
-      <h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3>
+      <h3 id="qrTitle" style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3>
       <div id="reader"></div>
       <div class="qr-actions">
-        <button class="btn-primary" id="startCameraBtn">📷 Buka Kamera</button>
+        <button class="btn-primary" id="startCameraBtn" type="button">📷 Buka Kamera</button>
         <label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Pilih Gambar</label>
-        <input type="file" id="qrFileInput" accept="image/*">
+        <input type="file" id="qrFileInput" accept="image/*" aria-label="Pilih gambar QR">
       </div>
       <p class="qr-msg" id="qrMsg">Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}</p>
     </div>
@@ -257,6 +327,7 @@
         btn.dataset.state = 'off';
         btn.textContent = `Relay ${i} (OFF)`;
         btn.onclick = () => sendRelayCommand(i);
+        btn.type = 'button';
         rBox.appendChild(btn);
       }
     }
@@ -446,11 +517,10 @@
       const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b => parseInt(b.dataset.day));
       if(!time || activeDays.length === 0) return alert('⚠️ Waktu & minimal 1 hari wajib dipilih!');
       
-      // ✅ Tambahkan _modified timestamp untuk merge yang lebih akurat
       const newSch = { 
         id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4), 
         time, relay, action, days: activeDays, enabled: true,
-        _modified: new Date().toISOString() // ✅ Timestamp untuk conflict resolution
+        _modified: new Date().toISOString()
       };
       schedules.push(newSch); 
       saveSchedules(); 
@@ -462,7 +532,7 @@
       const sch = schedules.find(s => s.id === id); 
       if(sch) { 
         sch.enabled = !sch.enabled; 
-        sch._modified = new Date().toISOString(); // ✅ Update timestamp saat edit
+        sch._modified = new Date().toISOString();
         saveSchedules(); renderSchedules(); 
       } 
     }
@@ -475,16 +545,11 @@
     // ✅✅✅ MERGE HELPER: ROBUST ID-BASED MERGE ✅✅✅
     function mergeScheduleArrays(localArr, serverArr) {
       const result = new Map();
-      
-      // 1. Masukkan semua dari server dulu
       (serverArr || []).forEach(s => {
-        // Hapus metadata internal jika ada
         const clean = { ...s };
         delete clean._source;
         result.set(clean.id, clean);
       });
-      
-      // 2. Timpa dengan lokal HANYA jika _modified lokal lebih baru (atau tidak ada di server)
       (localArr || []).forEach(s => {
         const existing = result.get(s.id);
         if(!existing || (s._modified && (!existing._modified || s._modified > existing._modified))) {
@@ -493,23 +558,16 @@
           result.set(s.id, clean);
         }
       });
-      
-      // 3. Return array sorted by time
       return Array.from(result.values()).sort((a, b) => {
         if(a.time === b.time) return (a.relay||'').localeCompare(b.relay||'');
         return a.time.localeCompare(b.time);
       });
     }
 
-    // ✅ SAVE SCHEDULES: LocalStorage + Debounced GitHub Push dengan Random Jitter
     function saveSchedules() {
-      // 1. Selalu simpan ke localStorage
       try { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); } catch(e) {}
-      
-      // 2. Jika GitHub sync aktif, jadwalkan push dengan random jitter (hindari collision)
       if(ghSyncEnabled && navigator.onLine && ghConfig?.token) {
         clearTimeout(ghSyncTimeout);
-        // ✅ Random jitter 50-200ms untuk mengurangi kemungkinan 2 device push bersamaan
         const jitter = Math.floor(Math.random() * 150) + 50;
         ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000 + jitter);
       }
@@ -531,7 +589,7 @@
         const daysStr = sch.days.map(d => dayNames[d]).join(', ');
         const item = document.createElement('div');
         item.className = 'schedule-item';
-        item.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled ? 'active' : ''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`;
+        item.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled ? 'active' : ''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')" type="button">🗑️</button></div>`;
         list.appendChild(item);
       });
     }
@@ -599,7 +657,6 @@
         const content = JSON.parse(atob(data.content));
         
         if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
-          // ✅ Merge dengan data lokal (hindari overwrite jadwal yang baru dibuat lokal)
           schedules = mergeScheduleArrays(schedules, content.schedules);
           saveSchedulesLocal();
           renderSchedules();
@@ -612,7 +669,6 @@
       }
     }
 
-    // ✅✅✅ PUSH KE GITHUB DENGAN CONFLICT RESOLUTION ROBUST ✅✅✅
     async function pushToGitHub(retryCount = 0) {
       if(!ghSyncEnabled || !ghConfig?.token) return;
       if(retryCount >= 3) { 
@@ -623,7 +679,6 @@
       try {
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
         
-        // 🔁 SELALU fetch SHA terbaru SEBELUM push
         let sha = null;
         let serverSchedules = null;
         const getRes = await fetch(url, { 
@@ -633,7 +688,6 @@
         if(getRes.ok) { 
           const getData = await getRes.json(); 
           sha = getData.sha;
-          // Parse content untuk merge jika nanti conflict
           try {
             const content = JSON.parse(atob(getData.content));
             if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
@@ -643,7 +697,6 @@
         }
         else if(getRes.status !== 404) throw new Error(`SHA fetch: ${getRes.status}`);
 
-        // Prepare payload - hapus metadata internal sebelum upload
         const cleanSchedules = schedules.map(s => {
           const { _source, ...clean } = s;
           return clean;
@@ -674,11 +727,9 @@
           return; 
         }
 
-        // 🔴 Conflict (409/422) → Auto-merge & retry
         if(putRes.status === 409 || putRes.status === 422) {
           log(`⚠️ Conflict terdeteksi (retry ${retryCount+1}/3). Merging...`);
           
-          // Jika belum punya serverSchedules, fetch ulang
           if(!serverSchedules) {
             const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
             if(freshRes.ok) {
@@ -690,19 +741,14 @@
           }
           
           if(serverSchedules) {
-            // ✅ Merge: gabungkan semua jadwal unik dari lokal + server
             const merged = mergeScheduleArrays(schedules, serverSchedules);
             log(`🔄 Merge: ${serverSchedules.length} server + ${schedules.length} lokal → ${merged.length} total`);
             
             schedules = merged;
-            saveSchedulesLocal(); // Update localStorage
-            renderSchedules();    // Update UI
-            
-            // ✅ Retry dengan data yang sudah di-merge (AWAIT agar tidak race condition)
+            saveSchedulesLocal();
+            renderSchedules();
             return await pushToGitHub(retryCount + 1);
           }
-          
-          // Jika gagal fetch server, tetap retry dengan SHA baru
           log('⚠️ Gagal fetch server untuk merge, retry dengan SHA baru...');
           return await pushToGitHub(retryCount + 1);
         }
@@ -716,7 +762,6 @@
       }
     }
 
-    // ✅ Online event listener untuk auto-retry
     window.addEventListener('online', () => {
       if(ghSyncEnabled && ghConfig?.token) {
         log('🌐 Online detected, syncing...');
