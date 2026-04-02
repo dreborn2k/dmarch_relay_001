@@ -546,14 +546,17 @@
       if(!ghSyncEnabled || !ghConfig?.token) return;
       try {
         const btn = document.getElementById('ghLoadBtn');
-        if(btn) btn.textContent = '⏳...';
+        if(btn) { btn.textContent = '⏳...'; btn.disabled = true; }
         
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
         const res = await fetch(url, {
           headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
         
-        if(res.status === 404) { log('📁 File belum ada, akan dibuat saat save pertama'); return; }
+        if(res.status === 404) { 
+          console.log('📁 File belum ada di GitHub'); 
+          return; 
+        }
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         
         const data = await res.json();
@@ -561,12 +564,18 @@
         
         if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
           schedules = content.schedules;
-          saveSchedulesLocal(); // Sync ke localStorage
+          // ✅ Gunakan localStorage.setItem langsung, JANGAN panggil saveSchedules()
+          localStorage.setItem('dm_schedules', JSON.stringify(schedules));
           renderSchedules();
-          log('✅ Pull dari GitHub sukses');
+          console.log('✅ Pull dari GitHub sukses');
         }
-      } catch(err) { log('❌ Pull failed: ' + err.message); }
-      finally { const btn = document.getElementById('ghLoadBtn'); if(btn) btn.textContent = '🔄 Pull'; }
+      } catch(err) { 
+        console.warn('❌ Pull failed:', err.message); 
+      }
+      finally { 
+        const btn = document.getElementById('ghLoadBtn'); 
+        if(btn) { btn.textContent = '🔄 Pull'; btn.disabled = false; } 
+      }
     }
     
     async function pushToGitHub() {
@@ -604,16 +613,6 @@
     function saveSchedulesLocal() {
       localStorage.setItem('dm_schedules', JSON.stringify(schedules));
     }
-    
-    // Override saveSchedules() yang sudah ada agar auto-sync
-    const _originalSaveSchedules = saveSchedules;
-    function saveSchedules() {
-      _originalSaveSchedules(); // Jalankan fungsi lama (simpan localStorage)
-      if(ghSyncEnabled && navigator.onLine) {
-        clearTimeout(window._ghDebounce);
-        window._ghDebounce = setTimeout(() => pushToGitHub(), 800); // Debounce 800ms
-      }
-    }
 
     function renderSchedules() {
       const list = document.getElementById('scheduleList');
@@ -641,6 +640,68 @@
         `;
         list.appendChild(item);
       });
+    }
+
+    // ✅ SAVE SCHEDULES - VERSI AMAN (NO RECURSION)
+    function saveSchedules() {
+      // 1. Simpan ke localStorage (langsung, tanpa trigger sync)
+      try {
+        localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+      } catch(e) {
+        console.warn('⚠️ Gagal simpan ke localStorage:', e);
+      }
+      
+      // 2. Jika GitHub sync aktif & online, jadwalkan push (debounced)
+      if(ghSyncEnabled && navigator.onLine && ghConfig?.token) {
+        clearTimeout(window._ghDebounce);
+        window._ghDebounce = setTimeout(() => {
+          _pushToGitHubSafe(); // Pakai fungsi internal, bukan yang bisa trigger recursion
+        }, 800);
+      }
+    }
+    
+    // ✅ Helper: Push ke GitHub tanpa memicu saveSchedules lagi
+    async function _pushToGitHubSafe() {
+      if(!ghConfig?.token) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        
+        // Get SHA dulu
+        let sha = null;
+        try {
+          const getRes = await fetch(url, { 
+            headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } 
+          });
+          if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+        } catch(e) { /* Ignore if file doesn't exist yet */ }
+    
+        const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+        
+        const body = { 
+          message: `🔄 Auto-sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, 
+          branch: ghConfig.branch || 'main' 
+        };
+        if(sha) body.sha = sha;
+    
+        const res = await fetch(url, { 
+          method: 'PUT', 
+          headers: { 
+            'Authorization': `token ${ghConfig.token}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify(body) 
+        });
+        
+        if(!res.ok) { 
+          const e = await res.json().catch(()=>({})); 
+          throw new Error(e.message || `HTTP ${res.status}`); 
+        }
+        console.log('💾 GitHub sync OK');
+      } catch(err) {
+        console.warn('⚠️ GitHub push failed:', err.message);
+      }
     }
 
     function startSchedulerEngine() {
