@@ -33,5 +33,15 @@
       "enabled": true
     }
   ],
-  "updatedAt": "2026-04-02T16:44:39.860Z"
+  "notifConfig": {
+    "tg": {
+      "token": "8773823890:AAE8t6TD6-UmuJtIAielTas2l6GvttAUcR8",
+      "chatId": "6783331825",
+      "enabled": false
+    },
+    "wa": {
+      "enabled": false
+    }
+  },
+  "updatedAt": "2026-04-02T17:58:01.557Z"
 }
