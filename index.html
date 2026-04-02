@@ -13,57 +13,94 @@
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; }
-    h1, h2, h3 { margin: 0 0 15px; }
+    h1 { text-align: center; margin: 0 0 5px; font-size: 1.8rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin: 0 0 20px; font-size: 0.9rem; }
+    
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat { text-align: center; }
-    .stat-value { font-size: 1.4rem; font-weight: bold; color: var(--accent); }
-    .stat-label { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
-    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin: 8px 0 12px; font-size: 14px; }
-    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 5px; transition: 0.2s; font-size: 14px; }
-    button:hover { opacity: 0.9; }
+    .card h3 { margin: 0 0 15px; color: var(--accent); font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input:read-only { background: #162032; color: #64748b; cursor: default; }
+    
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
     .btn-primary { background: var(--accent); color: #000; }
     .btn-success { background: var(--success); color: #fff; }
     .btn-danger { background: var(--danger); color: #fff; }
     .btn-secondary { background: var(--border); color: var(--text); }
-    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
-    .status-on { background: var(--success); }
-    .status-off { background: var(--danger); }
-    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; margin-top: 10px; white-space: pre-wrap; }
-    .hidden { display: none; }
+    
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+    
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    
+    /* Utility */
+    .hidden { display: none !important; }
+    #disconnectBtn { margin-bottom: 15px; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔌 dMarch Relay Pro</h1>
-    <p style="margin:-10px 0 20px; color:#94a3b8;">Web Control Panel - HiveMQ Cloud</p>
+    <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
-    <!-- MQTT Connection -->
-    <div class="card">
+    <!-- 1. CARD KONEKSI MQTT (Muncul saat Disconnect) -->
+    <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
-        <input type="text" id="broker" placeholder="Broker (wss://...)" value="wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt">
-        <input type="text" id="clientId" placeholder="Client ID" value="">
-        <input type="text" id="username" placeholder="Username" value="dmarchFF">
-        <input type="password" id="password" placeholder="Password" value="dmarchFF2205">
+        <div class="form-group">
+          <label>Device ID</label>
+          <input type="text" id="deviceId" value="dmarch_relay_001" readonly>
+        </div>
+        <div class="form-group">
+          <label>Broker</label>
+          <input type="text" id="broker" value="ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud">
+        </div>
+        <div class="form-group">
+          <label>Port (WSS)</label>
+          <input type="number" id="port" value="8884">
+        </div>
+        <div class="form-group">
+          <label>Client ID</label>
+          <input type="text" id="clientId" placeholder="Auto-generated" readonly>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="username" value="dmarchFF">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" value="dmarchFF2205">
+        </div>
       </div>
       <button class="btn-primary" id="btnConnect" onclick="toggleConnect()">🔗 Connect</button>
-      <p id="connStatus" style="text-align:center; margin-top:12px;"><span class="status-dot status-off"></span>Disconnected</p>
+      <p id="connStatus">Status: Disconnected</p>
     </div>
 
-    <!-- System Health -->
-    <div class="card">
+    <!-- TOMBOL DISCONNECT (Muncul saat Connected) -->
+    <button id="disconnectBtn" class="btn-danger hidden" onclick="toggleConnect()">🔌 Disconnect MQTT</button>
+
+    <!-- 2. SYSTEM HEALTH -->
+    <div class="card app-card hidden">
       <h3>📊 System Health</h3>
-      <div class="grid-2">
-        <div class="stat"><div class="stat-value" id="sigVal">--</div><div class="stat-label">Signal</div></div>
-        <div class="stat"><div class="stat-value" id="upVal">--</div><div class="stat-label">Uptime</div></div>
-        <div class="stat"><div class="stat-value" id="tempVal">--°C</div><div class="stat-label">Temp</div></div>
-        <div class="stat"><div class="stat-value" id="fwVal">--</div><div class="stat-label">FW Version</div></div>
+      <div class="stat-grid">
+        <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div>
+        <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div>
+        <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div>
+        <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div>
       </div>
     </div>
 
-    <!-- Relay Control -->
-    <div class="card">
+    <!-- 3. RELAY CONTROL -->
+    <div class="card app-card hidden">
       <h3>⚡ Relay Control</h3>
       <div class="grid-2">
         <button class="btn-success" onclick="pub('dmarch_relay_001/all/on', '1')">▶️ ALL ON</button>
@@ -72,46 +109,58 @@
       <div class="grid-2" style="margin-top:12px;" id="relayBtns"></div>
     </div>
 
-    <!-- Settings -->
-    <div class="card">
+    <!-- 4. SETTINGS -->
+    <div class="card app-card hidden">
       <h3>⚙️ Settings</h3>
-      <label>🕐 NTP Server</label>
-      <select id="ntpSelect">
-        <option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option>
-        <option value="pool.ntp.org">pool.ntp.org (Global)</option>
-        <option value="time.google.com">time.google.com (Google)</option>
-        <option value="time.cloudflare.com">time.cloudflare.com (Cloudflare)</option>
-        <option value="time.windows.com">time.windows.com (Windows)</option>
-      </select>
-      <input type="number" id="tzInput" placeholder="Timezone (Jam)" value="7">
+      <div class="form-group">
+        <label>🕐 NTP Server</label>
+        <select id="ntpSelect">
+          <option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option>
+          <option value="pool.ntp.org">pool.ntp.org (Global)</option>
+          <option value="time.google.com">time.google.com</option>
+          <option value="time.cloudflare.com">time.cloudflare.com</option>
+          <option value="time.windows.com">time.windows.com</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Timezone (Jam)</label>
+        <input type="number" id="tzInput" value="7">
+      </div>
       <button class="btn-primary" onclick="saveNTP()">💾 Save NTP & Timezone</button>
-      <label style="margin-top:12px;">🔌 GPIO Pin Mapping</label>
-      <input type="text" id="gpioInput" placeholder="Pin (comma separated, e.g., 12,14,27,26,25)">
+      
+      <div class="form-group" style="margin-top:15px;">
+        <label>🔌 GPIO Pin Mapping</label>
+        <input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25">
+      </div>
       <button class="btn-primary" onclick="updateGPIO()">💾 Update GPIO</button>
     </div>
 
-    <!-- 🌐 NETWORK SETTINGS CARD (Hidden until Connected) -->
-    <div class="card hidden" id="networkCard">
+    <!-- 5. NETWORK SETTINGS -->
+    <div class="card app-card hidden" id="networkCard">
       <h3>🌐 Network Settings</h3>
-      <label>SSID WiFi Baru</label>
-      <input type="text" id="netSsid" placeholder="Masukkan SSID WiFi">
-      <label>Password WiFi Baru</label>
-      <input type="password" id="netPass" placeholder="Masukkan Password WiFi">
+      <div class="form-group">
+        <label>SSID WiFi Baru</label>
+        <input type="text" id="netSsid" placeholder="Masukkan SSID WiFi">
+      </div>
+      <div class="form-group">
+        <label>Password WiFi Baru</label>
+        <input type="password" id="netPass" placeholder="Masukkan Password WiFi">
+      </div>
       <button class="btn-success" onclick="updateNetwork()">💾 Update Network</button>
       <button class="btn-danger" style="margin-top:10px;" onclick="resetWifi()">🔄 Reset WiFi (AP Mode)</button>
     </div>
 
-    <!-- System Controls -->
-    <div class="card">
+    <!-- 6. SYSTEM CONTROLS -->
+    <div class="card app-card hidden">
       <h3>🔄 System</h3>
       <div class="grid-2">
         <button class="btn-primary" onclick="pub('dmarch_relay_001/system/ota', '1')">⬇️ Check OTA</button>
-        <button class="btn-danger" onclick="pub('dmarch_relay_001/system/restart', '1')">🔄 Restart</button>
+        <button class="btn-danger" onclick="pub('dmarch_relay_001/system/restart', '1')">🔄 Restart Device</button>
       </div>
     </div>
 
-    <!-- Terminal -->
-    <div class="card">
+    <!-- 7. TERMINAL LOG -->
+    <div class="card app-card hidden">
       <h3>📝 Terminal Log</h3>
       <div class="terminal" id="terminal"></div>
       <button class="btn-secondary" style="margin-top:10px;" onclick="document.getElementById('terminal').innerHTML=''">🗑️ Clear Log</button>
@@ -122,8 +171,9 @@
     let mqtt = null;
     const DEVICE_ID = "dmarch_relay_001";
     document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
-    
-    // Generate Relay Buttons
+    document.getElementById('deviceId').value = DEVICE_ID;
+
+    // Generate Tombol Relay
     const relayContainer = document.getElementById('relayBtns');
     for(let i=1; i<=5; i++) {
       const btn = document.createElement('button');
@@ -138,61 +188,98 @@
       term.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + term.innerHTML;
     }
 
-    function updateConnectionStatus(connected) {
-      const statusEl = document.getElementById('connStatus');
-      const netCard = document.getElementById('networkCard');
+    // ✅ Kontrol Tampilan Card berdasarkan Status
+    function setConnectionState(connected) {
+      const connCard = document.getElementById('connCard');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      const appCards = document.querySelectorAll('.app-card');
+
       if (connected) {
-        statusEl.innerHTML = '<span class="status-dot status-on"></span>Connected';
-        netCard.classList.remove('hidden'); // Unhide saat online
+        connCard.classList.add('hidden');
+        disconnectBtn.classList.remove('hidden');
+        appCards.forEach(c => c.classList.remove('hidden'));
       } else {
-        statusEl.innerHTML = '<span class="status-dot status-off"></span>Disconnected';
-        netCard.classList.add('hidden');    // Hide saat disconnect
+        connCard.classList.remove('hidden');
+        disconnectBtn.classList.add('hidden');
+        appCards.forEach(c => c.classList.add('hidden'));
       }
     }
 
     function toggleConnect() {
       const btn = document.getElementById('btnConnect');
+      const statusEl = document.getElementById('connStatus');
+
+      // Jika sudah connect → Disconnect
       if (mqtt && mqtt.connected) {
         mqtt.end();
-        btn.textContent = '🔗 Connect';
-        updateConnectionStatus(false);
+        statusEl.textContent = "Status: Disconnecting...";
         return;
       }
-      const broker = document.getElementById('broker').value;
+
+      // Jika disconnect → Connect
+      const brokerHost = document.getElementById('broker').value.trim();
+      const port = document.getElementById('port').value.trim();
+      const brokerUrl = `wss://${brokerHost}:${port}/mqtt`;
       const opts = {
         clientId: document.getElementById('clientId').value,
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value,
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value.trim(),
         clean: true, reconnectPeriod: 0
       };
-      log(`Connecting to ${broker}...`);
-      mqtt = mqtt.connect(broker, opts);
-      btn.textContent = '❌ Disconnect';
 
-      mqtt.on('connect', () => { log('✅ MQTT Connected'); updateConnectionStatus(true); mqtt.subscribe(DEVICE_ID + '/#'); });
+      log(`Connecting to ${brokerUrl}...`);
+      statusEl.textContent = "Status: Connecting...";
+      btn.textContent = '⏳ Connecting...';
+      
+      mqtt = mqtt.connect(brokerUrl, opts);
+
+      mqtt.on('connect', () => {
+        log('✅ MQTT Connected');
+        setConnectionState(true);
+        mqtt.subscribe(DEVICE_ID + '/#');
+      });
+
       mqtt.on('message', (topic, message) => {
         const msg = message.toString();
         if (topic.includes('/terminal')) log(msg);
         if (topic.includes('/status')) {
           try {
             const d = JSON.parse(msg);
-            document.getElementById('sigVal').textContent = d.rssi + '%';
-            document.getElementById('upVal').textContent = d.uptime;
-            document.getElementById('tempVal').textContent = d.temp + '°C';
-            document.getElementById('fwVal').textContent = d.fw_version;
+            document.getElementById('sigVal').textContent = (d.rssi || '--') + '%';
+            document.getElementById('upVal').textContent = d.uptime || '--';
+            document.getElementById('tempVal').textContent = (d.temp || '--') + '°C';
+            document.getElementById('fwVal').textContent = d.fw_version || '--';
           } catch(e) {}
         }
       });
-      mqtt.on('error', err => log('❌ ' + err.message));
-      mqtt.on('close', () => { updateConnectionStatus(false); });
+
+      mqtt.on('error', err => {
+        log('❌ Error: ' + err.message);
+        setConnectionState(false);
+        statusEl.textContent = "Status: Error / Disconnected";
+      });
+
+      mqtt.on('close', () => {
+        log('🔌 MQTT Disconnected');
+        setConnectionState(false);
+        statusEl.textContent = "Status: Disconnected";
+        btn.textContent = '🔗 Connect';
+      });
     }
 
     function pub(topic, payload) {
-      if (mqtt && mqtt.connected) { mqtt.publish(topic, payload); log(`📤 ${topic} -> ${payload}`); }
-      else log('⚠️ MQTT Disconnected');
+      if (mqtt && mqtt.connected) {
+        mqtt.publish(topic, payload);
+        log(`📤 ${topic} -> ${payload}`);
+      } else {
+        log('⚠️ MQTT Disconnected');
+      }
     }
 
-    function saveNTP() { pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value); pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value); }
+    function saveNTP() {
+      pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value);
+      pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value);
+    }
     function updateGPIO() { pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value); }
 
     function updateNetwork() {
