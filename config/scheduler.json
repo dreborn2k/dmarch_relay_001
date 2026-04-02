@@ -11,7 +11,7 @@
     "gotify": {
       "url": "http://192.168.18.190:8080",
       "token": "AlMcTcdIOV-zRrc",
-      "enabled": true,
+      "enabled": false,
       "connected": false
     },
     "wa": {
@@ -19,5 +19,5 @@
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:59:39.425Z"
+  "updatedAt": "2026-04-02T19:05:07.646Z"
 }
