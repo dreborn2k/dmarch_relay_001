@@ -290,13 +290,20 @@
       t.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + t.innerHTML; 
     }
 
+    // 📷 QR LOGIC - VERSI DIPERBAIKI
+    let qrImagePreview = null; // Untuk preview gambar upload
     // 📷 QR LOGIC (Diperbaiki)
     function openQR() { 
-      document.getElementById('qrModal').style.display='flex'; 
+      document.getElementById('qrModal').style.display = 'flex'; 
       document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
       document.getElementById('qrMsg').style.color = '#94a3b8';
+      document.getElementById('reader').innerHTML = ''; // Reset reader
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
     }
-    document.getElementById('qrModal').onclick = function(e){ if(e.target===this) closeQR(); };
+
+    document.getElementById('qrModal').onclick = function(e){ 
+      if(e.target === this) closeQR(); 
+    };
     
     async function closeQR() {
       document.getElementById('qrModal').style.display = 'none';
@@ -305,45 +312,111 @@
         qrScanner.clear();
         qrScanner = null;
       }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
       document.getElementById('qrFileInput').value = '';
+      document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
     }
-
+    
+    // ✅ Kamera
     document.getElementById('startCameraBtn').onclick = function() {
       if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+      
+      document.getElementById('reader').innerHTML = '';
       qrScanner = new Html5Qrcode("reader");
       qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, ()=>{})
-        .catch(err=>{ alert('❌ Gagal akses kamera: ' + err); });
+        .catch(err => { 
+          alert('❌ Gagal akses kamera: ' + err); 
+          document.getElementById('qrMsg').textContent = '⚠️ Izinkan akses kamera atau gunakan upload gambar.';
+          document.getElementById('qrMsg').style.color = '#ef4444';
+        });
     };
 
+    // ✅ UPLOAD GAMBAR + PREVIEW + SCAN
     document.getElementById('qrFileInput').onchange = async function(e) {
-      var file = e.target.files[0]; if(!file) return;
-      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
-      qrScanner = new Html5Qrcode("reader");
+      const file = e.target.files[0]; 
+      if(!file) return;
+      
+      // Reset sebelumnya
+      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner = null; }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+      document.getElementById('reader').innerHTML = '';
+      
+      // 🖼️ Tampilkan preview gambar (feedback visual)
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = document.createElement('img');
+        img.src = evt.target.result;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '300px';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        document.getElementById('reader').appendChild(img);
+        qrImagePreview = img;
+      };
+      reader.readAsDataURL(file);
+      
       document.getElementById('qrMsg').textContent = '⏳ Memproses gambar...';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
+    
       try {
-        var decodedText = await qrScanner.scanFile(file, true);
+        // ✅ Scan file QR
+        qrScanner = new Html5Qrcode("reader");
+        const decodedText = await qrScanner.scanFile(file, true);
+        console.log('✅ QR Decoded:', decodedText);
         onQRSuccess(decodedText);
       } catch (err) {
-        document.getElementById('qrMsg').innerHTML = err.toString().includes("No MultiFormat Readers") 
-          ? '⚠️ QR tidak terdeteksi.<br>Pastikan gambar jelas & tidak blur.' 
-          : '❌ Gagal: ' + (err.message || 'Format tidak didukung');
+        console.error('❌ QR Scan Error:', err);
+        if (err.toString().includes("No MultiFormat Readers") || err.toString().includes("QR code parse error")) {
+          document.getElementById('qrMsg').innerHTML = '⚠️ QR tidak terdeteksi.<br>• Pastikan gambar jelas, tidak blur<br>• QR berisi JSON valid<br>• Coba upload ulang';
+        } else {
+          document.getElementById('qrMsg').textContent = '❌ Gagal: ' + (err.message || 'Format tidak didukung');
+        }
         document.getElementById('qrMsg').style.color = '#ef4444';
+        // Jangan close modal agar user bisa coba lagi
       }
     };
-
+    
+    // ✅ PROSES DATA QR YANG BERHASIL DIBACA
     function onQRSuccess(decodedText) {
       try {
-        var data = JSON.parse(decodedText);
-        if(data.broker && data.port && data.user && data.pass) {
-          document.getElementById('broker').value = data.broker;
-          document.getElementById('port').value = data.port;
-          document.getElementById('username').value = data.user;
-          document.getElementById('password').value = data.pass;
-          saveToStorage();
-          log('✅ QR berhasil discan. Credential terisi.');
-        } else throw new Error('Format JSON tidak lengkap');
-      } catch(err) { alert('❌ QR tidak valid.'); return; }
-      closeQR();
+        console.log('🔍 Parsing QR JSON:', decodedText);
+        const data = JSON.parse(decodedText);
+        
+        // Validasi field wajib
+        if(!data.broker || !data.port || !data.user || !data.pass) {
+          throw new Error('Field wajib tidak lengkap: broker, port, user, pass');
+        }
+        
+        // ✅ Isi form dengan data QR
+        document.getElementById('broker').value = data.broker;
+        document.getElementById('port').value = data.port;
+        document.getElementById('username').value = data.user;
+        document.getElementById('password').value = data.pass;
+        
+        // Simpan ke localStorage
+        saveToStorage();
+        
+        // Feedback sukses
+        document.getElementById('qrMsg').textContent = '✅ QR berhasil! Form terisi otomatis.';
+        document.getElementById('qrMsg').style.color = '#10b981';
+        log('✅ QR Config loaded: ' + data.broker);
+        
+        // ✅ Tutup modal setelah 1 detik (beri waktu user lihat feedback)
+        setTimeout(() => {
+          closeQR();
+          // Opsional: auto-connect jika user mau
+          // toggleConnect(); 
+        }, 1000);
+        
+      } catch(err) {
+        console.error('❌ Parse Error:', err);
+        document.getElementById('qrMsg').innerHTML = `❌ Format QR tidak valid:<br><code>${err.message}</code><br><br>Gunakan format:<br>{"broker":"...","port":8884,"user":"...","pass":"..."}`;
+        document.getElementById('qrMsg').style.color = '#ef4444';
+        // Jangan close modal agar user bisa lihat error
+      }
     }
   </script>
 </body>
