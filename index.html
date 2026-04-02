@@ -139,7 +139,23 @@
         <button id="allOffBtn" class="btn-secondary" style="background:var(--danger); color:#fff;">ALL OFF</button>
       </div>
       
-      <div class="relay-grid" id="relayBtns"></div>
+      <div class="relay-grid" id="relayBtns">
+        <button id="btn-relay-1" class="btn-secondary" data-state="off" onclick="sendRelayCommand(1)">
+          <span>Relay 1</span> <span class="status-dot off"></span>
+        </button>
+        <button id="btn-relay-2" class="btn-secondary" data-state="off" onclick="sendRelayCommand(2)">
+          <span>Relay 2</span> <span class="status-dot off"></span>
+        </button>
+        <button id="btn-relay-3" class="btn-secondary" data-state="off" onclick="sendRelayCommand(3)">
+          <span>Relay 3</span> <span class="status-dot off"></span>
+        </button>
+        <button id="btn-relay-4" class="btn-secondary" data-state="off" onclick="sendRelayCommand(4)">
+          <span>Relay 4</span> <span class="status-dot off"></span>
+        </button>
+        <button id="btn-relay-5" class="btn-secondary" data-state="off" onclick="sendRelayCommand(5)">
+          <span>Relay 5</span> <span class="status-dot off"></span>
+        </button>
+      </div>
     </div>
 
     <div class="card">
@@ -150,53 +166,20 @@
   </div>
 
   <script>
-    var client = null;
-    var DEVICE_ID = "dmarch_relay_001";
+    var mqttClient = null;
+    var DEVICE = "dmarch_relay_001";
     var qrScanner = null;
-    
-    // Array untuk menjaga state tombol di web secara lokal
-    var relayStates = [false, false, false, false, false]; 
 
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
-      document.getElementById('deviceId').value = DEVICE_ID;
+      document.getElementById('deviceId').value = DEVICE;
       loadFromStorage();
-
-      var rBox = document.getElementById('relayBtns');
-      
-      // ✅ GENERATE TOMBOL SESUAI LOGIKA ASLI ANDA, TAPI STATE-NYA PASIF
-      for(var i=1; i<=5; i++) {
-        var btn = document.createElement('button');
-        btn.className = 'btn-secondary';
-        btn.innerHTML = '<span>Relay ' + i + '</span> <span class="status-dot off"></span>';
-        btn.dataset.num = i;
-        btn.dataset.state = "off"; // State kontrol
-        
-        btn.onclick = function() {
-          var num = parseInt(this.dataset.num);
-          var idx = num - 1;
-          
-          // Membaca state saat ini untuk membalikkan perintah (Toggle)
-          var currentState = this.dataset.state === "on";
-          var nextCmd = currentState ? '0' : '1'; 
-          
-          // HANYA Publish ke Broker, JANGAN ubah UI/Warna di sini!
-          pub(DEVICE_ID + '/relay/' + num + '/cmd', nextCmd);
-          
-          // Efek visual klik cepat agar responsif
-          this.style.opacity = '0.7';
-          setTimeout(() => this.style.opacity = '1', 100);
-        };
-        rBox.appendChild(btn);
-      }
 
       // Tombol Event Listener
       document.getElementById('btnConnect').onclick = toggleConnect;
       document.getElementById('disconnectBtn').onclick = toggleConnect;
-      document.getElementById('allOnBtn').onclick = function(){ pub(DEVICE_ID + '/all/on', '1'); };
-      document.getElementById('allOffBtn').onclick = function(){ pub(DEVICE_ID + '/all/off', '1'); };
-      
-      // Tombol QR Scanner (Elemen yang sempat hilang di file sebelumnya)
+      document.getElementById('allOnBtn').onclick = function(){ pub(DEVICE + '/all/on', '1'); };
+      document.getElementById('allOffBtn').onclick = function(){ pub(DEVICE + '/all/off', '1'); };
       document.getElementById('btnScan').onclick = toggleQRScanner;
     });
 
@@ -231,19 +214,19 @@
     }
 
     function toggleConnect() {
-      if(client && client.connected) {
-        client.end();
+      if(mqttClient && mqttClient.connected) {
+        mqttClient.end();
         return;
       }
       saveToStorage();
       var url = document.getElementById('brokerUrl').value;
       var u = document.getElementById('username').value;
       var pw = document.getElementById('password').value;
-      DEVICE_ID = document.getElementById('deviceId').value;
+      DEVICE = document.getElementById('deviceId').value;
 
       log('Menghubungkan ke Broker...');
       
-      client = mqtt.connect(url, { 
+      mqttClient = mqtt.connect(url, { 
         clientId: document.getElementById('clientId').value, 
         username: u, 
         password: pw, 
@@ -251,29 +234,25 @@
         reconnectPeriod: 5000 
       });
       
-      client.on('connect', function(){ 
+      mqttClient.on('connect', function(){ 
         log('✅ MQTT Connected'); 
         setConnectionState(true); 
-        client.subscribe(DEVICE_ID + '/#'); 
+        mqttClient.subscribe(DEVICE + '/#'); 
       });
 
-      client.on('error', function(err){ 
+      mqttClient.on('error', function(err){ 
         log('❌ Error: ' + (err.message || 'Unknown')); 
         setConnectionState(false); 
       });
       
-      client.on('close', function(){ 
+      mqttClient.on('close', function(){ 
         log('🔌 Disconnected'); 
         setConnectionState(false); 
       });
       
-      // =======================================================
-      // 🔄 LOGIKA UTAMA: UPDATE UI HANYA SAAT TERIMA DATA STATE
-      // =======================================================
-      client.on('message', function(topic, msg) {
+      mqttClient.on('message', function(topic, msg) {
         var m = msg.toString();
         
-        // Logika log terminal & status sistem bawaan Anda
         if(topic.indexOf('/terminal') !== -1) log('ESP: ' + m);
         if(topic.indexOf('/status') !== -1) {
           try { 
@@ -285,36 +264,58 @@
           } catch(e){}
         }
 
-        // 🔔 Menangkap state relay 1 sampai 5 dari broker
-        if (topic.startsWith(DEVICE_ID + '/relay/') && topic.endsWith('/state')) {
+        // 🔔 TANGKAP STATE RELAY DAN UPDATE UI
+        if (topic.startsWith(DEVICE + '/relay/') && topic.endsWith('/state')) {
           var parts = topic.split('/');
           var num = parseInt(parts[2]);
           var state = parseInt(m);
           
-          // Cari tombol fisik di HTML dan ubah tampilannya
-          var btn = document.querySelector(`button[data-num="${num}"]`);
+          var btn = document.getElementById('btn-relay-' + num);
           if (btn) {
             var isOn = (state === 1);
             btn.dataset.state = isOn ? "on" : "off";
+            
+            // Mengubah style tombol langsung agar transisi warna berjalan
             btn.style.background = isOn ? 'var(--success)' : 'var(--border)';
             btn.style.color = isOn ? '#fff' : 'var(--text)';
+            
+            // Format teks persis seperti file index(1).html Anda
             btn.innerHTML = isOn ? 
-              `<span>Relay ${num} (ON)</span> <span class="status-dot on"></span>` : 
-              `<span>Relay ${num} (OFF)</span> <span class="status-dot off"></span>`;
+              `Relay ${num} <span class="status-dot on"></span> ON` : 
+              `Relay ${num} <span class="status-dot off"></span> OFF`;
           }
         }
       });
     }
 
-    function pub(topic, payload) {
-      if(!client || !client.connected) {
+    // HANDLER KLIK TOMBOL (Hanya publish, UI menunggu ESP membalas ke topik /state)
+    function sendRelayCommand(num) {
+      if (!mqttClient || !mqttClient.connected) {
         alert('⚠️ MQTT belum terhubung!');
         return;
       }
-      client.publish(topic, payload);
+      var btn = document.getElementById('btn-relay-' + num);
+      var currentState = btn ? btn.dataset.state : 'off';
+      var cmd = currentState === 'on' ? '0' : '1';
+      
+      mqttClient.publish(DEVICE + '/relay/' + num + '/cmd', cmd);
+      
+      // Feedback efek sentuhan cepat
+      if(btn) {
+        btn.style.opacity = '0.7';
+        setTimeout(() => btn.style.opacity = '1', 100);
+      }
     }
 
-    // FUNGSI QR SCANNER BAWAAN FILE ASLI ANDA
+    function pub(topic, payload) {
+      if(!mqttClient || !mqttClient.connected) {
+        alert('⚠️ MQTT belum terhubung!');
+        return;
+      }
+      mqttClient.publish(topic, payload);
+    }
+
+    // KODE QR SCANNER (Elemen yang sempat hilang sebelumnya)
     function toggleQRScanner() {
       var readerElem = document.getElementById('reader');
       var btnScan = document.getElementById('btnScan');
@@ -335,12 +336,12 @@
               if (data.pass) document.getElementById('password').value = data.pass;
               if (data.device) document.getElementById('deviceId').value = data.device;
               log('📸 QR Berhasil Discan!');
-              toggleQRScanner(); // Matikan scanner
+              toggleQRScanner(); 
             } catch(e) {
               log('❌ Format QR tidak valid!');
             }
           },
-          function(err) { /* Abaikan error pencarian frame */ }
+          function(err) { }
         ).catch(err => log('❌ Gagal akses kamera: ' + err));
       } else {
         readerElem.classList.add('hidden');
