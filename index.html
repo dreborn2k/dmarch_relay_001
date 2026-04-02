@@ -6,44 +6,31 @@
   <title>dMarch Relay Pro - Web Control</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    :root { 
-      --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; 
-      --accent: #38bdf8; --success: #10b981; --danger: #ef4444; --border: #334155; 
-    }
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; }
-    h1 { text-align: center; margin: 0 0 5px; font-size: 1.8rem; }
-    .subtitle { text-align: center; color: #94a3b8; margin: 0 0 20px; font-size: 0.9rem; }
-    
+    h1 { text-align: center; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
-    .card h3 { margin: 0 0 15px; color: var(--accent); font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
-    
+    .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
-    
     input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
     input:focus, select:focus { outline: none; border-color: var(--accent); }
     input:read-only { background: #162032; color: #64748b; cursor: default; }
-    
     button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
-    button:hover { opacity: 0.9; transform: translateY(-1px); }
-    button:active { transform: translateY(0); }
+    button:hover { opacity: 0.9; }
     .btn-primary { background: var(--accent); color: #000; }
     .btn-success { background: var(--success); color: #fff; }
     .btn-danger { background: var(--danger); color: #fff; }
     .btn-secondary { background: var(--border); color: var(--text); }
-    
     .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
     .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
-    .stat-lbl { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
-    
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
     .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
-    
-    /* Utility */
     .hidden { display: none !important; }
-    #disconnectBtn { margin-bottom: 15px; }
     #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
   </style>
 </head>
@@ -52,191 +39,147 @@
     <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
-    <!-- 1. CARD KONEKSI MQTT (Muncul saat Disconnect) -->
+    <!-- 1. CARD KONEKSI MQTT -->
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
-        <div class="form-group">
-          <label>Device ID</label>
-          <input type="text" id="deviceId" value="dmarch_relay_001" readonly>
-        </div>
-        <div class="form-group">
-          <label>Broker</label>
-          <input type="text" id="broker" value="ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud">
-        </div>
-        <div class="form-group">
-          <label>Port (WSS)</label>
-          <input type="number" id="port" value="8884">
-        </div>
-        <div class="form-group">
-          <label>Client ID</label>
-          <input type="text" id="clientId" placeholder="Auto-generated" readonly>
-        </div>
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" id="username" value="dmarchFF">
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="password" value="dmarchFF2205">
-        </div>
+        <div class="form-group"><label>Device ID</label><input type="text" id="deviceId" value="dmarch_relay_001" readonly></div>
+        <div class="form-group"><label>Broker</label><input type="text" id="broker" value="ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud"></div>
+        <div class="form-group"><label>Port (WSS)</label><input type="number" id="port" value="8884"></div>
+        <div class="form-group"><label>Client ID</label><input type="text" id="clientId" placeholder="Auto-generated" readonly></div>
+        <div class="form-group"><label>Username</label><input type="text" id="username" value="dmarchFF"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="password" value="dmarchFF2205"></div>
       </div>
-      <button class="btn-primary" id="btnConnect" onclick="toggleConnect()">🔗 Connect</button>
+      <button class="btn-primary" id="btnConnect">🔗 Connect</button>
       <p id="connStatus">Status: Disconnected</p>
     </div>
 
-    <!-- TOMBOL DISCONNECT (Muncul saat Connected) -->
-    <button id="disconnectBtn" class="btn-danger hidden" onclick="toggleConnect()">🔌 Disconnect MQTT</button>
+    <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
 
-    <!-- 2. SYSTEM HEALTH -->
-    <div class="card app-card hidden">
-      <h3>📊 System Health</h3>
-      <div class="stat-grid">
-        <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div>
-        <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div>
-        <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div>
-        <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div>
-      </div>
-    </div>
-
-    <!-- 3. RELAY CONTROL -->
-    <div class="card app-card hidden">
-      <h3>⚡ Relay Control</h3>
-      <div class="grid-2">
-        <button class="btn-success" onclick="pub('dmarch_relay_001/all/on', '1')">▶️ ALL ON</button>
-        <button class="btn-danger" onclick="pub('dmarch_relay_001/all/off', '1')">⏹️ ALL OFF</button>
-      </div>
-      <div class="grid-2" style="margin-top:12px;" id="relayBtns"></div>
-    </div>
-
-    <!-- 4. SETTINGS -->
-    <div class="card app-card hidden">
-      <h3>⚙️ Settings</h3>
-      <div class="form-group">
-        <label>🕐 NTP Server</label>
-        <select id="ntpSelect">
-          <option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option>
-          <option value="pool.ntp.org">pool.ntp.org (Global)</option>
-          <option value="time.google.com">time.google.com</option>
-          <option value="time.cloudflare.com">time.cloudflare.com</option>
-          <option value="time.windows.com">time.windows.com</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Timezone (Jam)</label>
-        <input type="number" id="tzInput" value="7">
-      </div>
-      <button class="btn-primary" onclick="saveNTP()">💾 Save NTP & Timezone</button>
-      
-      <div class="form-group" style="margin-top:15px;">
-        <label>🔌 GPIO Pin Mapping</label>
-        <input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25">
-      </div>
-      <button class="btn-primary" onclick="updateGPIO()">💾 Update GPIO</button>
-    </div>
-
-    <!-- 5. NETWORK SETTINGS -->
-    <div class="card app-card hidden" id="networkCard">
-      <h3>🌐 Network Settings</h3>
-      <div class="form-group">
-        <label>SSID WiFi Baru</label>
-        <input type="text" id="netSsid" placeholder="Masukkan SSID WiFi">
-      </div>
-      <div class="form-group">
-        <label>Password WiFi Baru</label>
-        <input type="password" id="netPass" placeholder="Masukkan Password WiFi">
-      </div>
-      <button class="btn-success" onclick="updateNetwork()">💾 Update Network</button>
-      <button class="btn-danger" style="margin-top:10px;" onclick="resetWifi()">🔄 Reset WiFi (AP Mode)</button>
-    </div>
-
-    <!-- 6. SYSTEM CONTROLS -->
-    <div class="card app-card hidden">
-      <h3>🔄 System</h3>
-      <div class="grid-2">
-        <button class="btn-primary" onclick="pub('dmarch_relay_001/system/ota', '1')">⬇️ Check OTA</button>
-        <button class="btn-danger" onclick="pub('dmarch_relay_001/system/restart', '1')">🔄 Restart Device</button>
-      </div>
-    </div>
-
-    <!-- 7. TERMINAL LOG -->
-    <div class="card app-card hidden">
-      <h3>📝 Terminal Log</h3>
-      <div class="terminal" id="terminal"></div>
-      <button class="btn-secondary" style="margin-top:10px;" onclick="document.getElementById('terminal').innerHTML=''">🗑️ Clear Log</button>
-    </div>
+    <!-- 2. APP CARDS -->
+    <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
+    
+    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option><option value="pool.ntp.org">pool.ntp.org (Global)</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID WiFi"></div><div class="form-group"><label>Password WiFi Baru</label><input type="password" id="netPass" placeholder="Masukkan Password WiFi"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP Mode)</button></div>
+    
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div></div>
+    
+    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
   </div>
 
   <script>
+    // Pastikan semua fungsi global agar bisa dipanggil via onclick/event
     let mqtt = null;
     const DEVICE_ID = "dmarch_relay_001";
-    document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
-    document.getElementById('deviceId').value = DEVICE_ID;
 
-    // Generate Tombol Relay
-    const relayContainer = document.getElementById('relayBtns');
-    for(let i=1; i<=5; i++) {
-      const btn = document.createElement('button');
-      btn.className = 'btn-secondary';
-      btn.textContent = `Relay ${i}`;
-      btn.onclick = () => pub(`${DEVICE_ID}/relay/${i}/cmd`, '1');
-      relayContainer.appendChild(btn);
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      // Inisialisasi default values
+      document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
+      document.getElementById('deviceId').value = DEVICE_ID;
+
+      // Generate tombol relay
+      const relayContainer = document.getElementById('relayBtns');
+      for(let i=1; i<=5; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-secondary';
+        btn.textContent = `Relay ${i}`;
+        btn.dataset.num = i;
+        btn.onclick = () => pub(`${DEVICE_ID}/relay/${i}/cmd`, '1');
+        relayContainer.appendChild(btn);
+      }
+
+      // Attach events to buttons
+      document.getElementById('btnConnect').addEventListener('click', toggleConnect);
+      document.getElementById('disconnectBtn').addEventListener('click', toggleConnect);
+      document.getElementById('allOnBtn').addEventListener('click', () => pub(`${DEVICE_ID}/all/on`, '1'));
+      document.getElementById('allOffBtn').addEventListener('click', () => pub(`${DEVICE_ID}/all/off`, '1'));
+      document.getElementById('saveNTPBtn').addEventListener('click', () => {
+        pub(`${DEVICE_ID}/ntp/set`, document.getElementById('ntpSelect').value);
+        pub(`${DEVICE_ID}/timezone/set`, document.getElementById('tzInput').value);
+      });
+      document.getElementById('updateGPIOBtn').addEventListener('click', () => pub(`${DEVICE_ID}/gpio/update`, document.getElementById('gpioInput').value));
+      document.getElementById('updateNetBtn').addEventListener('click', updateNetwork);
+      document.getElementById('resetNetBtn').addEventListener('click', resetWifi);
+      document.getElementById('otaBtn').addEventListener('click', () => pub(`${DEVICE_ID}/system/ota`, '1'));
+      document.getElementById('restartBtn').addEventListener('click', () => pub(`${DEVICE_ID}/system/restart`, '1'));
+      document.getElementById('clearLogBtn').addEventListener('click', () => document.getElementById('terminal').innerHTML = '');
+    });
 
     function log(msg) {
       const term = document.getElementById('terminal');
       term.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + term.innerHTML;
     }
 
-    // ✅ Kontrol Tampilan Card berdasarkan Status
     function setConnectionState(connected) {
       const connCard = document.getElementById('connCard');
       const disconnectBtn = document.getElementById('disconnectBtn');
       const appCards = document.querySelectorAll('.app-card');
+      const statusEl = document.getElementById('connStatus');
 
       if (connected) {
         connCard.classList.add('hidden');
         disconnectBtn.classList.remove('hidden');
         appCards.forEach(c => c.classList.remove('hidden'));
+        statusEl.textContent = "Status: Connected";
       } else {
         connCard.classList.remove('hidden');
         disconnectBtn.classList.add('hidden');
         appCards.forEach(c => c.classList.add('hidden'));
+        statusEl.textContent = "Status: Disconnected";
       }
     }
 
     function toggleConnect() {
-      const btn = document.getElementById('btnConnect');
+      const btnConnect = document.getElementById('btnConnect');
+      const btnDisconnect = document.getElementById('disconnectBtn');
       const statusEl = document.getElementById('connStatus');
 
-      // Jika sudah connect → Disconnect
+      // Jika sedang connect → Disconnect
       if (mqtt && mqtt.connected) {
         mqtt.end();
         statusEl.textContent = "Status: Disconnecting...";
         return;
       }
 
-      // Jika disconnect → Connect
-      const brokerHost = document.getElementById('broker').value.trim();
+      const host = document.getElementById('broker').value.trim();
       const port = document.getElementById('port').value.trim();
-      const brokerUrl = `wss://${brokerHost}:${port}/mqtt`;
-      const opts = {
-        clientId: document.getElementById('clientId').value,
-        username: document.getElementById('username').value.trim(),
-        password: document.getElementById('password').value.trim(),
-        clean: true, reconnectPeriod: 0
-      };
+      const user = document.getElementById('username').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const cid = document.getElementById('clientId').value.trim();
 
-      log(`Connecting to ${brokerUrl}...`);
+      if (!host || !port) return alert('⚠️ Host dan Port wajib diisi!');
+      if (port !== '8884') return alert('⚠️ HiveMQ Cloud WebSocket wajib pakai port 8884!');
+
+      const url = `wss://${host}:${port}/mqtt`;
+      log(`🔄 Connecting to ${url}...`);
       statusEl.textContent = "Status: Connecting...";
-      btn.textContent = '⏳ Connecting...';
-      
-      mqtt = mqtt.connect(brokerUrl, opts);
+      btnConnect.textContent = '⏳ Connecting...';
+
+      mqtt = mqtt.connect(url, {
+        clientId: cid, username: user, password: pass,
+        clean: true, reconnectPeriod: 0, connectTimeout: 10000
+      });
 
       mqtt.on('connect', () => {
         log('✅ MQTT Connected');
         setConnectionState(true);
         mqtt.subscribe(DEVICE_ID + '/#');
+      });
+
+      mqtt.on('error', (err) => {
+        console.error('❌ MQTT Error:', err);
+        log('❌ Error: ' + (err.message || 'Unknown'));
+        setConnectionState(false);
+        btnConnect.textContent = '🔗 Connect';
+      });
+
+      mqtt.on('close', () => {
+        log('🔌 MQTT Disconnected');
+        setConnectionState(false);
+        btnConnect.textContent = '🔗 Connect';
       });
 
       mqtt.on('message', (topic, message) => {
@@ -252,41 +195,18 @@
           } catch(e) {}
         }
       });
-
-      mqtt.on('error', err => {
-        log('❌ Error: ' + err.message);
-        setConnectionState(false);
-        statusEl.textContent = "Status: Error / Disconnected";
-      });
-
-      mqtt.on('close', () => {
-        log('🔌 MQTT Disconnected');
-        setConnectionState(false);
-        statusEl.textContent = "Status: Disconnected";
-        btn.textContent = '🔗 Connect';
-      });
     }
 
     function pub(topic, payload) {
       if (mqtt && mqtt.connected) {
-        mqtt.publish(topic, payload);
-        log(`📤 ${topic} -> ${payload}`);
-      } else {
-        log('⚠️ MQTT Disconnected');
-      }
+        mqtt.publish(topic, payload, { qos: 0 }, (err) => err ? log('❌ Publish Error') : log(`📤 ${topic} -> ${payload}`));
+      } else log('⚠️ MQTT Disconnected');
     }
-
-    function saveNTP() {
-      pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value);
-      pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value);
-    }
-    function updateGPIO() { pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value); }
 
     function updateNetwork() {
       const s = document.getElementById('netSsid').value.trim();
-      const p = document.getElementById('netPass').value.trim();
       if (!s) return alert('⚠️ SSID wajib diisi!');
-      pub(DEVICE_ID + '/network/update', JSON.stringify({ ssid: s, pass: p }));
+      pub(DEVICE_ID + '/network/update', JSON.stringify({ ssid: s, pass: document.getElementById('netPass').value.trim() }));
       alert('✅ Perintah Update Network terkirim. Device akan restart otomatis.');
     }
 
