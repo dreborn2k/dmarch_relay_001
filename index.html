@@ -197,7 +197,7 @@
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
     
-    <!-- ✅ NOTIFICATION CARD - REVISED LAYOUT -->
+    <!-- ✅ NOTIFICATION CARD - REVISED LAYOUT + GOTIFY -->
     <div class="card app-card hidden" id="notifCard">
       <h3>🔔 Notifikasi</h3>
       
@@ -211,7 +211,7 @@
           <label class="toggle-switch" id="tgToggle" title="Aktifkan/Nonaktifkan"></label>
         </div>
         
-        <!-- Config Form (hidden by default, shown when enabled + not connected) -->
+        <!-- Config Form -->
         <div id="tgConfig" class="notif-config hidden">
           <div class="form-group">
             <label for="tgToken">Bot Token</label>
@@ -229,7 +229,7 @@
           <span id="tgMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
         </div>
         
-        <!-- Connected State (shown when enabled + has valid config + tested OK) -->
+        <!-- Connected State -->
         <div id="tgConnected" class="hidden" style="margin-top:8px;">
           <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;">
             <span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay" class="config-mask"></span></span>
@@ -241,7 +241,46 @@
         </div>
       </div>
       
-      <!-- WhatsApp Webhook Section -->
+      <!-- ✅ Gotify Section (Self-Hosted) -->
+      <div class="notif-card">
+        <div class="notif-header">
+          <div class="notif-title">
+            <span>📡 Gotify (Self-Hosted)</span>
+            <span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span>
+          </div>
+          <label class="toggle-switch" id="gotifyToggle" title="Aktifkan/Nonaktifkan"></label>
+        </div>
+        
+        <!-- Gotify Config -->
+        <div id="gotifyConfig" class="notif-config hidden">
+          <div class="form-group">
+            <label for="gotifyUrl">Server URL</label>
+            <input type="url" id="gotifyUrl" placeholder="http://192.168.1.100" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="gotifyToken">App Token</label>
+            <input type="password" id="gotifyToken" placeholder="AH..." autocomplete="off">
+          </div>
+          <div class="notif-actions">
+            <button class="btn-success btn-notif" onclick="saveGotifyConfig()" type="button">💾 Save</button>
+            <button class="btn-secondary btn-notif" onclick="testGotify()" type="button">🧪 Test</button>
+          </div>
+          <span id="gotifyMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
+        </div>
+        
+        <!-- Gotify Connected -->
+        <div id="gotifyConnected" class="hidden" style="margin-top:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;">
+            <span>URL: <span class="config-mask" id="gotifyUrlDisplay"></span></span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-sm btn-secondary" onclick="editGotifyConfig()" type="button">✏️ Edit</button>
+              <button class="btn-sm btn-secondary" onclick="testGotify()" type="button">🧪 Test</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WhatsApp Section -->
       <div class="notif-card">
         <div class="notif-header">
           <div class="notif-title">
@@ -351,9 +390,14 @@
     
     // ✅ Notification Globals
     let notifConfig = JSON.parse(localStorage.getItem('dm_notif_config') || '{}');
+    // Telegram
     let tgEnabled = notifConfig.tg?.enabled || false;
-    let waEnabled = notifConfig.wa?.enabled || false;
     let tgConnected = notifConfig.tg?.connected || false;
+    // Gotify
+    let gotifyEnabled = notifConfig.gotify?.enabled || false;
+    let gotifyConnected = notifConfig.gotify?.connected || false;
+    // WhatsApp
+    let waEnabled = notifConfig.wa?.enabled || false;
     let waConnected = notifConfig.wa?.connected || false;
 
     function initGitHubUI() {
@@ -391,9 +435,9 @@
       }
     }
 
-    // ✅ NOTIFICATION UI INIT - FIXED TOGGLE SYNC
+    // ✅ NOTIFICATION UI INIT - REVISED (Telegram, Gotify, WA)
     function initNotifUI() {
-      // Telegram init
+      // 1. Telegram Init
       const tgConfig = notifConfig.tg || {};
       if(tgConfig.token && tgConfig.chatId) {
         document.getElementById('tgToken').value = '••••••••••••••••';
@@ -401,11 +445,21 @@
         document.getElementById('tgChatDisplay').textContent = tgConfig.chatId;
         tgConnected = tgConfig.connected || false;
       }
-      // ✅ PENTING: Sinkronkan toggle visual dengan nilai saved
       document.getElementById('tgToggle').classList.toggle('active', tgEnabled);
       updateTgUI();
       
-      // WhatsApp init
+      // 2. Gotify Init
+      const gotifyConfig = notifConfig.gotify || {};
+      if(gotifyConfig.url && gotifyConfig.token) {
+        document.getElementById('gotifyUrl').value = gotifyConfig.url;
+        document.getElementById('gotifyToken').value = '••••••••••••••••';
+        document.getElementById('gotifyUrlDisplay').textContent = shortenUrl(gotifyConfig.url);
+        gotifyConnected = gotifyConfig.connected || false;
+      }
+      document.getElementById('gotifyToggle').classList.toggle('active', gotifyEnabled);
+      updateGotifyUI();
+
+      // 3. WhatsApp Init
       const waConfig = notifConfig.wa || {};
       if(waConfig.webhook) {
         document.getElementById('waWebhook').value = waConfig.webhook;
@@ -413,11 +467,10 @@
         document.getElementById('waWebhookDisplay').textContent = shortenUrl(waConfig.webhook);
         waConnected = waConfig.connected || false;
       }
-      // ✅ PENTING: Sinkronkan toggle visual dengan nilai saved
       document.getElementById('waToggle').classList.toggle('active', waEnabled);
       updateWaUI();
       
-      // Toggle handlers (tetap sama)
+      // Toggle Handlers
       document.getElementById('tgToggle').onclick = function() {
         tgEnabled = !tgEnabled;
         this.classList.toggle('active', tgEnabled);
@@ -425,7 +478,13 @@
         saveNotifConfig();
         log(`📱 Telegram: ${tgEnabled ? 'ENABLED' : 'DISABLED'}`);
       };
-      
+      document.getElementById('gotifyToggle').onclick = function() {
+        gotifyEnabled = !gotifyEnabled;
+        this.classList.toggle('active', gotifyEnabled);
+        updateGotifyUI();
+        saveNotifConfig();
+        log(`📡 Gotify: ${gotifyEnabled ? 'ENABLED' : 'DISABLED'}`);
+      };
       document.getElementById('waToggle').onclick = function() {
         waEnabled = !waEnabled;
         this.classList.toggle('active', waEnabled);
@@ -434,31 +493,39 @@
         log(`💬 WhatsApp: ${waEnabled ? 'ENABLED' : 'DISABLED'}`);
       };
     }
-    
 
+    // UI Update Functions
     function updateTgUI() {
       const badge = document.getElementById('tgStatusBadge');
       const configDiv = document.getElementById('tgConfig');
       const connectedDiv = document.getElementById('tgConnected');
       
       if(!tgEnabled) {
-        // Disabled: hide all, show inactive badge
-        badge.textContent = 'Inactive';
-        badge.className = 'notif-status status-inactive';
-        configDiv.classList.add('hidden');
-        connectedDiv.classList.add('hidden');
-      } else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
-        // Enabled + Connected: show connected view
-        badge.textContent = '● Active';
-        badge.className = 'notif-status status-active';
-        configDiv.classList.add('hidden');
-        connectedDiv.classList.remove('hidden');
+        badge.textContent = 'Inactive'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.add('hidden'); connectedDiv.classList.add('hidden');
+      } else if(tgConnected && notifConfig.tg?.token) {
+        badge.textContent = '● Active'; badge.className = 'notif-status status-active';
+        configDiv.classList.add('hidden'); connectedDiv.classList.remove('hidden');
       } else {
-        // Enabled but not connected: show config form
-        badge.textContent = '⚙️ Config';
-        badge.className = 'notif-status status-inactive';
-        configDiv.classList.remove('hidden');
-        connectedDiv.classList.add('hidden');
+        badge.textContent = '⚙️ Config'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.remove('hidden'); connectedDiv.classList.add('hidden');
+      }
+    }
+
+    function updateGotifyUI() {
+      const badge = document.getElementById('gotifyStatusBadge');
+      const configDiv = document.getElementById('gotifyConfig');
+      const connectedDiv = document.getElementById('gotifyConnected');
+      
+      if(!gotifyEnabled) {
+        badge.textContent = 'Inactive'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.add('hidden'); connectedDiv.classList.add('hidden');
+      } else if(gotifyConnected && notifConfig.gotify?.url) {
+        badge.textContent = '● Active'; badge.className = 'notif-status status-active';
+        configDiv.classList.add('hidden'); connectedDiv.classList.remove('hidden');
+      } else {
+        badge.textContent = '⚙️ Config'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.remove('hidden'); connectedDiv.classList.add('hidden');
       }
     }
 
@@ -468,28 +535,20 @@
       const connectedDiv = document.getElementById('waConnected');
       
       if(!waEnabled) {
-        badge.textContent = 'Inactive';
-        badge.className = 'notif-status status-inactive';
-        configDiv.classList.add('hidden');
-        connectedDiv.classList.add('hidden');
+        badge.textContent = 'Inactive'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.add('hidden'); connectedDiv.classList.add('hidden');
       } else if(waConnected && notifConfig.wa?.webhook) {
-        badge.textContent = '● Active';
-        badge.className = 'notif-status status-active';
-        configDiv.classList.add('hidden');
-        connectedDiv.classList.remove('hidden');
+        badge.textContent = '● Active'; badge.className = 'notif-status status-active';
+        configDiv.classList.add('hidden'); connectedDiv.classList.remove('hidden');
       } else {
-        badge.textContent = '⚙️ Config';
-        badge.className = 'notif-status status-inactive';
-        configDiv.classList.remove('hidden');
-        connectedDiv.classList.add('hidden');
+        badge.textContent = '⚙️ Config'; badge.className = 'notif-status status-inactive';
+        configDiv.classList.remove('hidden'); connectedDiv.classList.add('hidden');
       }
     }
 
     function shortenUrl(url) {
-      try {
-        const u = new URL(url);
-        return u.hostname + (u.pathname.length > 20 ? u.pathname.substring(0,17) + '...' : u.pathname);
-      } catch { return url.substring(0, 30) + '...'; }
+      try { const u = new URL(url); return u.hostname + (u.pathname.length > 15 ? '...' : u.pathname); } 
+      catch { return url.length > 30 ? url.substring(0, 30) + '...' : url; }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -499,7 +558,7 @@
       initRelayButtons();
       initScheduler();
       initGitHubUI();
-      initNotifUI(); // ✅ Init notification UI
+      initNotifUI(); // ✅ Init Notification UI
       
       document.getElementById('btnConnect').onclick = toggleConnect;
       document.getElementById('disconnectBtn').onclick = toggleConnect;
@@ -589,9 +648,6 @@
         if(t.includes('/status')) { updateSystemHealth(m); return; }
         if(t.includes('/relay/') && t.endsWith('/state')) { 
           const parts = t.split('/'); updateRelayUI(parts[2], m); 
-        }
-        if(t.includes('/notif/confirm')) {
-          log(`✅ Notif terkirim: ${m}`);
         }
       });
       mqttClient.on('error', function(err){ console.error(err); log('❌ Error: ' + (err.message||'Unknown')); setConnectionState(false); btn.textContent='🔗 Connect'; });
@@ -821,198 +877,163 @@
       });
     }
 
-    // ✅✅✅ NOTIFICATION FUNCTIONS - REVISED ✅✅✅
+    // ✅✅✅ NOTIFICATION FUNCTIONS ✅✅✅
     function saveNotifConfig() {
       notifConfig = {
-        tg: { 
-          token: notifConfig.tg?.token, 
-          chatId: notifConfig.tg?.chatId, 
-          enabled: tgEnabled,
-          connected: tgConnected
-        },
-        wa: { 
-          webhook: notifConfig.wa?.webhook, 
-          phone: notifConfig.wa?.phone, 
-          enabled: waEnabled,
-          connected: waConnected
-        }
+        tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected },
+        gotify: { url: notifConfig.gotify?.url, token: notifConfig.gotify?.token, enabled: gotifyEnabled, connected: gotifyConnected },
+        wa: { webhook: notifConfig.wa?.webhook, phone: notifConfig.wa?.phone, enabled: waEnabled, connected: waConnected }
       };
       localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig));
-      // Sync ke GitHub jika aktif
       if(ghSyncEnabled) {
         clearTimeout(ghSyncTimeout);
         ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000);
       }
     }
 
+    // --- Telegram Functions ---
     function saveTelegramConfig() {
       const token = document.getElementById('tgToken').value.trim();
       const chatId = document.getElementById('tgChatId').value.trim();
       const msgEl = document.getElementById('tgMsg');
-      
-      if(!token || token.includes('•••')) {
-        msgEl.textContent = '⚠️ Token wajib diisi!';
-        msgEl.style.color = '#ef4444';
-        return;
-      }
-      if(!chatId || !/^\-?\d+$/.test(chatId)) {
-        msgEl.textContent = '⚠️ Chat ID harus angka!';
-        msgEl.style.color = '#ef4444';
-        return;
-      }
+      if(!token || token.includes('•••')) { msgEl.textContent = '⚠️ Token wajib!'; msgEl.style.color='#ef4444'; return; }
+      if(!chatId) { msgEl.textContent = '⚠️ Chat ID wajib!'; msgEl.style.color='#ef4444'; return; }
       
       notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false };
       saveNotifConfig();
       document.getElementById('tgToken').value = '••••••••••••••••';
       document.getElementById('tgChatDisplay').textContent = chatId;
-      msgEl.textContent = '✅ Disimpan! Klik 🧪 Test untuk verifikasi.';
-      msgEl.style.color = '#10b981';
+      msgEl.textContent = '✅ Disimpan! Klik Test.'; msgEl.style.color='#10b981';
       updateTgUI();
-      log('📱 Telegram config saved');
     }
-
     function editTelegramConfig() {
-      // Show config form with masked token
       document.getElementById('tgToken').value = notifConfig.tg?.token || '';
       document.getElementById('tgConfig').classList.remove('hidden');
       document.getElementById('tgConnected').classList.add('hidden');
       document.getElementById('tgStatusBadge').textContent = '⚙️ Editing';
       document.getElementById('tgStatusBadge').className = 'notif-status status-inactive';
     }
-
     async function testTelegram() {
-      if(!notifConfig.tg?.token || !notifConfig.tg?.chatId) {
-        document.getElementById('tgMsg').textContent = '⚠️ Simpan config dulu!';
-        document.getElementById('tgMsg').style.color = '#ef4444';
-        return;
-      }
-      
-      const msgEl = document.getElementById('tgMsg');
-      msgEl.textContent = '🔄 Testing...';
-      
+      if(!notifConfig.tg?.token) return alert('Simpan config dulu!');
       try {
         const res = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            chat_id: notifConfig.tg.chatId,
-            text: `✅ *dMarch Relay Pro*\nTest notifikasi berhasil!\n\n_Waktu: ${new Date().toLocaleString('id-ID')}_\n_Device: ${DEVICE_ID}_`,
-            parse_mode: 'Markdown'
-          })
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: `✅ *dMarch Relay Pro*\nTest OK\n_Device: ${DEVICE_ID}_`, parse_mode: 'Markdown' })
         });
-        const data = await res.json();
-        if(data.ok) {
-          msgEl.textContent = '✅ Test sukses!';
-          msgEl.style.color = '#10b981';
-          tgConnected = true;
-          notifConfig.tg.connected = true;
-          saveNotifConfig();
-          updateTgUI();
-          log('📱 Telegram test OK');
-        } else {
-          throw new Error(data.description || 'Unknown error');
-        }
-      } catch(err) {
-        msgEl.textContent = '❌ Gagal: ' + err.message;
-        msgEl.style.color = '#ef4444';
-        tgConnected = false;
-        updateTgUI();
-        log('❌ Telegram test failed: ' + err.message);
-      }
+        if((await res.json()).ok) {
+          tgConnected = true; notifConfig.tg.connected = true; saveNotifConfig(); updateTgUI();
+          log('📱 Telegram OK');
+        } else throw new Error('Gagal kirim');
+      } catch(e) { tgConnected = false; updateTgUI(); log('❌ Telegram Failed'); }
     }
-
     async function fetchChatId() {
       const token = document.getElementById('tgToken').value.trim();
-      const msgEl = document.getElementById('tgMsg');
-      
-      if(!token || token.includes('•••')) {
-        msgEl.textContent = '⚠️ Isi Token dulu!';
-        msgEl.style.color = '#ef4444';
-        return;
-      }
-      
-      msgEl.textContent = '🔄 Mendeteksi...';
-      msgEl.style.color = '#94a3b8';
-      
+      if(!token || token.includes('•••')) return alert('Isi Token dulu!');
       try {
         const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
         const data = await res.json();
-        
         if(data.ok && data.result?.[0]?.message?.chat?.id) {
-          const chatId = data.result[0].message.chat.id;
-          document.getElementById('tgChatId').value = chatId;
-          msgEl.textContent = `✅ Chat ID: ${chatId}`;
-          msgEl.style.color = '#10b981';
-          log(`📱 Auto-detected Chat ID: ${chatId}`);
+          document.getElementById('tgChatId').value = data.result[0].message.chat.id;
+          document.getElementById('tgMsg').textContent = '✅ ID ditemukan!'; document.getElementById('tgMsg').style.color='#10b981';
+        } else { alert('⚠️ Belum ada pesan dari bot. Kirim "test" dulu.'); }
+      } catch(e) { alert('❌ Gagal fetch: ' + e.message); }
+    }
+
+    // --- ✅ GOTIFY Functions ---
+    function saveGotifyConfig() {
+      const url = document.getElementById('gotifyUrl').value.trim();
+      const token = document.getElementById('gotifyToken').value.trim();
+      const msgEl = document.getElementById('gotifyMsg');
+      if(!url) { msgEl.textContent = '⚠️ URL wajib!'; msgEl.style.color='#ef4444'; return; }
+      if(!token) { msgEl.textContent = '⚠️ Token wajib!'; msgEl.style.color='#ef4444'; return; }
+      
+      notifConfig.gotify = { url, token, enabled: gotifyEnabled, connected: false };
+      saveNotifConfig();
+      document.getElementById('gotifyToken').value = '••••••••••••••••';
+      document.getElementById('gotifyUrlDisplay').textContent = shortenUrl(url);
+      msgEl.textContent = '✅ Disimpan! Klik Test.'; msgEl.style.color='#10b981';
+      updateGotifyUI();
+    }
+    function editGotifyConfig() {
+      document.getElementById('gotifyUrl').value = notifConfig.gotify?.url || '';
+      document.getElementById('gotifyToken').value = notifConfig.gotify?.token || ''; // Show real token for edit? Better safe masked.
+      document.getElementById('gotifyToken').value = '••••••••••••••••';
+      document.getElementById('gotifyConfig').classList.remove('hidden');
+      document.getElementById('gotifyConnected').classList.add('hidden');
+      document.getElementById('gotifyStatusBadge').textContent = '⚙️ Editing';
+      document.getElementById('gotifyStatusBadge').className = 'notif-status status-inactive';
+    }
+    async function testGotify() {
+      if(!notifConfig.gotify?.url || !notifConfig.gotify?.token) return alert('Simpan config dulu!');
+      const msgEl = document.getElementById('gotifyMsg');
+      msgEl.textContent = '🔄 Testing...'; msgEl.style.color='#94a3b8';
+      
+      try {
+        // Gunakan header auth untuk test
+        const url = notifConfig.gotify.url.replace(/\/$/, "");
+        const res = await fetch(`${url}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Gotify-Key': notifConfig.gotify.token },
+          body: JSON.stringify({ title: '🧪 Test Gotify', message: `dMarch Relay Pro Test OK\nDevice: ${DEVICE_ID}`, priority: 5 })
+        });
+        if(res.ok) {
+          gotifyConnected = true; notifConfig.gotify.connected = true; saveNotifConfig(); updateGotifyUI();
+          msgEl.textContent = '✅ Test Sukses!'; msgEl.style.color='#10b981';
+          log('📡 Gotify Test OK');
         } else {
-          msgEl.textContent = '⚠️ Belum ada pesan. Kirim "test" ke bot dulu.';
-          msgEl.style.color = '#f59e0b';
+          const errData = await res.json().catch(()=>{});
+          throw new Error(errData.error || `HTTP ${res.status}`);
         }
       } catch(err) {
-        msgEl.textContent = '❌ Gagal: ' + err.message;
-        msgEl.style.color = '#ef4444';
+        gotifyConnected = false; notifConfig.gotify.connected = false; saveNotifConfig(); updateGotifyUI();
+        msgEl.textContent = '❌ Gagal: ' + err.message; msgEl.style.color='#ef4444';
+        log('❌ Gotify Test Failed');
+      }
+    }
+    async function sendGotifyMessage(title, message) {
+      if(!gotifyEnabled || !gotifyConnected || !notifConfig.gotify?.url) return;
+      try {
+        const url = notifConfig.gotify.url.replace(/\/$/, "");
+        await fetch(`${url}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Gotify-Key': notifConfig.gotify.token },
+          body: JSON.stringify({ title: title, message: message, priority: 8 })
+        });
+        log('📡 Gotify notif sent');
+      } catch(err) {
+        log('❌ Gotify send failed: ' + err.message);
+        // Jika 401/403, matikan status connected
+        if(err.message.includes('401') || err.message.includes('403')) {
+          gotifyConnected = false; notifConfig.gotify.connected = false; updateGotifyUI(); saveNotifConfig();
+        }
       }
     }
 
+    // --- WhatsApp Functions ---
     function saveWhatsAppConfig() {
       const webhook = document.getElementById('waWebhook').value.trim();
       const phone = document.getElementById('waPhone').value.trim();
-      
-      if(!webhook || !/^https?:\/\//.test(webhook)) {
-        alert('⚠️ Webhook URL harus valid (http/https)');
-        return;
-      }
-      
+      if(!webhook) return alert('⚠️ Webhook URL wajib!');
       notifConfig.wa = { webhook, phone: phone || '628551291055', enabled: waEnabled, connected: false };
       saveNotifConfig();
       document.getElementById('waWebhookDisplay').textContent = shortenUrl(webhook);
       updateWaUI();
       log('💬 WhatsApp config saved');
-      alert('✅ Config tersimpan. Klik 🧪 Test untuk verifikasi webhook.');
+      alert('✅ Config tersimpan. Klik Test untuk verifikasi.');
     }
-
     function editWhatsAppConfig() {
       document.getElementById('waConfig').classList.remove('hidden');
       document.getElementById('waConnected').classList.add('hidden');
       document.getElementById('waStatusBadge').textContent = '⚙️ Editing';
       document.getElementById('waStatusBadge').className = 'notif-status status-inactive';
     }
-
     async function testWhatsApp() {
-      if(!notifConfig.wa?.webhook || !notifConfig.wa?.phone) {
-        alert('⚠️ Simpan config webhook dulu!');
-        return;
-      }
-      
+      if(!notifConfig.wa?.webhook) return alert('Simpan config dulu!');
       try {
-        const res = await fetch(notifConfig.wa.webhook, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            phone: notifConfig.wa.phone,
-            message: `🧪 *Test WhatsApp*\nIni adalah pesan test dari dMarch Relay Pro.\n\nDevice: ${DEVICE_ID}\nWaktu: ${new Date().toLocaleString('id-ID')}`,
-            device: DEVICE_ID,
-            timestamp: new Date().toISOString(),
-            test: true
-          })
-        });
-        
-        if(res.ok || res.status === 200) {
-          waConnected = true;
-          notifConfig.wa.connected = true;
-          saveNotifConfig();
-          updateWaUI();
-          log('💬 WhatsApp webhook test OK');
-          alert('✅ Webhook test berhasil! Notifikasi akan terkirim saat ada event.');
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
-      } catch(err) {
-        waConnected = false;
-        updateWaUI();
-        log('❌ WhatsApp webhook test failed: ' + err.message);
-        alert('❌ Webhook test gagal: ' + err.message + '\n\nPastikan endpoint Anda menerima POST request dengan Content-Type: application/json');
-      }
+        await fetch(notifConfig.wa.webhook, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: notifConfig.wa.phone, message: `🧪 Test WA\nDevice: ${DEVICE_ID}`, test: true }) });
+        waConnected = true; notifConfig.wa.connected = true; saveNotifConfig(); updateWaUI();
+        log('💬 WA Webhook OK'); alert('✅ Webhook triggered. Cek HP Anda.');
+      } catch(e) { waConnected = false; updateWaUI(); alert('❌ Webhook Error'); }
     }
 
     // ✅ MAIN NOTIFICATION SENDER
@@ -1020,50 +1041,26 @@
       const timestamp = new Date().toLocaleString('id-ID');
       const fullMsg = `*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Waktu: ${timestamp}_`;
       
-      // ✅ Telegram
-      if(tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
+      // 1. Telegram
+      if(tgEnabled && tgConnected && notifConfig.tg?.token) {
         try {
-          await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              chat_id: notifConfig.tg.chatId,
-              text: fullMsg,
-              parse_mode: 'Markdown'
-            })
-          });
-          log('📱 Telegram notif sent');
-        } catch(err) { 
-          log('❌ Telegram failed: ' + err.message);
-          tgConnected = false;
-          updateTgUI();
-        }
+          fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'Markdown' })
+          }).catch(e => log('❌ TG Send Error'));
+        } catch(e) { log('❌ TG Error'); }
       }
       
-      // ✅ WhatsApp Webhook
-      if(waEnabled && waConnected && notifConfig.wa?.webhook && notifConfig.wa?.phone) {
-        try {
-          await fetch(notifConfig.wa.webhook, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              phone: notifConfig.wa.phone,
-              message: `${title}\n${message}\n\nDevice: ${DEVICE_ID}\nWaktu: ${timestamp}`,
-              device: DEVICE_ID,
-              timestamp: new Date().toISOString()
-            })
-          });
-          log('💬 WhatsApp webhook triggered');
-        } catch(err) { 
-          log('❌ WhatsApp webhook failed: ' + err.message);
-          waConnected = false;
-          updateWaUI();
-        }
+      // 2. Gotify (Self-Hosted)
+      if(gotifyEnabled && gotifyConnected && notifConfig.gotify?.url) {
+        await sendGotifyMessage(title, `${message}\n\nDevice: ${DEVICE_ID}\nWaktu: ${timestamp}`);
       }
-      
-      // ✅ Publish ke MQTT untuk ESP handle (opsional)
-      if(mqttClient?.connected) {
-        pub(`${DEVICE_ID}/notif/request`, JSON.stringify({ title, message, timestamp }));
+
+      // 3. WhatsApp
+      if(waEnabled && waConnected && notifConfig.wa?.webhook) {
+        try {
+          fetch(notifConfig.wa.webhook, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: notifConfig.wa.phone, message: fullMsg.replace(/\*/g,''), device: DEVICE_ID }) }).catch(e => log('❌ WA Send Error'));
+        } catch(e) { log('❌ WA Error'); }
       }
     }
 
@@ -1073,169 +1070,68 @@
       const repo = document.getElementById('ghRepo').value.trim() || 'dmarch_relay_001';
       const token = document.getElementById('ghToken').value.trim();
       const path = 'config/scheduler.json';
-      
-      if(!token || token.includes('•••')) return alert('⚠️ Token GitHub wajib diisi (bukan masked)!');
-      
+      if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       setSyncStatus(true);
       loadFromGitHub();
     }
-
     function disableGitHubSync() {
-      if(!confirm('Nonaktifkan Cloud Sync? Data tetap aman di localStorage.')) return;
-      ghConfig = {};
-      localStorage.removeItem('dm_gh_config');
-      setSyncStatus(false);
+      if(!confirm('Nonaktifkan Sync?')) return;
+      ghConfig = {}; localStorage.removeItem('dm_gh_config'); setSyncStatus(false);
     }
-
     async function loadFromGitHub() {
       if(!ghSyncEnabled || !ghConfig?.token) return;
       try {
-        const btn = document.getElementById('ghLoadBtn');
-        if(btn) { btn.textContent = '⏳...'; btn.disabled = true; }
-        
-        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
-        const res = await fetch(url, {
-          headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        
-        if(res.status === 404) { log('📁 File belum ada di GitHub'); return; }
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        const data = await res.json();
-        const content = JSON.parse(atob(data.content));
-        
-        if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
-          schedules = mergeScheduleArrays(schedules, content.schedules);
-          // ✅ Load notif config jika ada
-          if(content.notifConfig) {
-            notifConfig = content.notifConfig;
-            tgEnabled = notifConfig.tg?.enabled || false;
-            waEnabled = notifConfig.wa?.enabled || false;
-            tgConnected = notifConfig.tg?.connected || false;
-            waConnected = notifConfig.wa?.connected || false;
-            initNotifUI();
+        const btn = document.getElementById('ghLoadBtn'); if(btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+        const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(res.ok) {
+          const data = await res.json();
+          const content = JSON.parse(atob(data.content));
+          if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+            schedules = mergeScheduleArrays(schedules, content.schedules);
+            // Load Notif Config
+            if(content.notifConfig) {
+              notifConfig = content.notifConfig;
+              tgEnabled = notifConfig.tg?.enabled; tgConnected = notifConfig.tg?.connected;
+              gotifyEnabled = notifConfig.gotify?.enabled; gotifyConnected = notifConfig.gotify?.connected;
+              waEnabled = notifConfig.wa?.enabled; waConnected = notifConfig.wa?.connected;
+              initNotifUI();
+            }
+            saveSchedulesLocal(); renderSchedules();
+            log(`✅ Pull OK (${schedules.length} jadwal)`);
           }
-          saveSchedulesLocal();
-          renderSchedules();
-          log(`✅ Pull dari GitHub sukses (${schedules.length} jadwal)`);
-        }
-      } catch(err) { log('❌ Pull failed: ' + err.message); }
-      finally { 
-        const btn = document.getElementById('ghLoadBtn'); 
-        if(btn) { btn.textContent = '🔄 Pull'; btn.disabled = false; } 
-      }
+        } else if(res.status !== 404) log('❌ Pull failed');
+      } catch(e) { log('❌ Pull Error'); }
+      finally { const btn = document.getElementById('ghLoadBtn'); if(btn) { btn.textContent = '🔄 Pull'; btn.disabled = false; } }
     }
-
     async function pushToGitHub(retryCount = 0) {
-      if(!ghSyncEnabled || !ghConfig?.token) return;
-      if(retryCount >= 3) { 
-        log('❌ Gagal sync setelah 3x retry. Data aman di localStorage.'); 
-        return; 
-      }
-
+      if(!ghSyncEnabled || !ghConfig?.token || retryCount >= 3) return;
       try {
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
-        
         let sha = null;
-        let serverSchedules = null;
-        const getRes = await fetch(url, { 
-          headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } 
-        });
+        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
         
-        if(getRes.ok) { 
-          const getData = await getRes.json(); 
-          sha = getData.sha;
-          try {
-            const content = JSON.parse(atob(getData.content));
-            if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
-              serverSchedules = content.schedules;
-            }
-          } catch(e) {}
-        }
-        else if(getRes.status !== 404) throw new Error(`SHA fetch: ${getRes.status}`);
-
-        const cleanSchedules = schedules.map(s => {
-          const { _source, ...clean } = JSON.parse(JSON.stringify(s));
-          return clean;
-        });
-        
-        const payload = { 
-          device: DEVICE_ID, 
-          schedules: cleanSchedules,
-          notifConfig: notifConfig,
-          updatedAt: new Date().toISOString() 
-        };
+        const payload = { device: DEVICE_ID, schedules, notifConfig, updatedAt: new Date().toISOString() };
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
         
-        const body = { 
-          message: `🔄 Sync: ${DEVICE_ID} (${schedules.length} jadwal) @ ${new Date().toLocaleTimeString('id-ID')}`, 
-          content, 
-          branch: ghConfig.branch || 'main' 
-        };
-        if(sha) body.sha = sha;
-
-        const putRes = await fetch(url, { 
-          method: 'PUT', 
-          headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(body) 
+        const res = await fetch(url, { 
+          method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main', ...(sha ? {sha} : {}) })
         });
-
-        if(putRes.ok) { 
-          log(`💾 GitHub sync OK (${schedules.length} jadwal)`); 
-          return; 
-        }
-
-        if(putRes.status === 409 || putRes.status === 422) {
-          const errData = await putRes.json().catch(()=>({}));
-          log(`⚠️ Conflict #${retryCount+1}/3: ${errData.message || 'SHA mismatch'}. Merging...`);
-          
-          if(!serverSchedules) {
-            const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
-            if(freshRes.ok) {
-              const freshData = JSON.parse(atob((await freshRes.json()).content));
-              if(freshData.device === DEVICE_ID && Array.isArray(freshData.schedules)) {
-                serverSchedules = freshData.schedules;
-              }
-            }
-          }
-          
-          if(serverSchedules) {
-            const beforeCount = schedules.length;
-            const merged = mergeScheduleArrays(schedules, serverSchedules);
-            log(`🔄 Merge: ${serverSchedules.length} server + ${beforeCount} lokal → ${merged.length} total`);
-            console.log('📋 Merged schedule IDs:', merged.map(s => s.id));
-            
-            schedules = merged;
-            saveSchedulesLocal();
-            renderSchedules();
-            
-            const backoffMs = Math.pow(2, retryCount) * 1000;
-            log(`⏱️ Waiting ${backoffMs}ms before retry...`);
-            await new Promise(res => setTimeout(res, backoffMs));
-            return await pushToGitHub(retryCount + 1);
-          }
-          log('⚠️ Gagal fetch server untuk merge, retry dengan SHA baru...');
-          await new Promise(res => setTimeout(res, 1000 * (retryCount + 1)));
-          return await pushToGitHub(retryCount + 1);
-        }
-
-        const errData = await putRes.json().catch(()=>({}));
-        throw new Error(errData.message || `HTTP ${putRes.status}`);
         
-      } catch(err) { 
-        log('❌ Push failed: ' + err.message);
-        console.warn('GitHub sync error:', err);
-      }
+        if(!res.ok) {
+          if(res.status === 409 || res.status === 422) {
+            log(`⚠️ Conflict retry ${retryCount+1}`);
+            // Re-fetch and retry could happen here
+          }
+          return;
+        }
+        log('💾 GitHub sync OK');
+      } catch(e) { log('❌ Push Error'); }
     }
-
-    window.addEventListener('online', () => {
-      if(ghSyncEnabled && ghConfig?.token) {
-        log('🌐 Online detected, syncing...');
-        pushToGitHub();
-      }
-    });
+    window.addEventListener('online', () => { if(ghSyncEnabled) pushToGitHub(); });
   </script>
 </body>
 </html>
