@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dMarch Relay Pro - Web Control</title>
+  
+  <!-- ✅ CDN Stabil -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <link rel="icon" href="image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+    .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input:read-only { background: #162032; color: #64748b; cursor: default; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-qr { background: #6366f1; color: #fff; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
+
+    /* QR Modal */
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; }
+    .qr-actions { display:flex; gap:10px; margin-top:15px; }
+    #qrFileInput { display:none; }
+    .qr-msg { margin-top:10px; font-size:0.9rem; color:#94a3b8; text-align:center; transition: color 0.3s; }
+
+    /* ✅ SCHEDULER STYLES */
+    .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .day-btn { padding:6px 0; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); cursor:pointer; font-size:0.75rem; transition:0.2s; }
+    .day-btn.active { background:var(--accent); color:#000; border-color:var(--accent); font-weight:bold; }
+    
+    .schedule-item { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; font-size:0.85rem; }
+    .sch-info { flex:1; }
+    .sch-time { font-weight:bold; color:var(--accent); margin-right:8px; }
+    .sch-days { color:#94a3b8; font-size:0.8rem; }
+    .sch-actions { display:flex; gap:8px; align-items:center; }
+    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; transition:0.3s; }
+    .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:0.3s; }
+    .toggle-switch.active { background:var(--success); }
+    .toggle-switch.active::after { left:18px; }
+    .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
+    .btn-del { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+    .btn-del:hover { background:var(--danger); color:#fff; }
+
+    .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; }
+    .sync-on { background:#064e3b; color:#10b981; }
+    .sync-off { background:#334155; color:#94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔌 dMarch Relay Pro</h1>
+    <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
+
+    <div class="card" id="connCard">
+      <h3>🔗 Koneksi MQTT</h3>
+      <div class="grid-2">
+        <div class="form-group"><label>Device ID</label><input type="text" id="deviceId" value="dmarch_relay_001" readonly></div>
+        <div class="form-group"><label>Broker</label><input type="text" id="broker" placeholder="broker.hivemq.cloud"></div>
+        <div class="form-group"><label>Port (WSS)</label><input type="number" id="port" placeholder="8884"></div>
+        <div class="form-group"><label>Client ID</label><input type="text" id="clientId" placeholder="Auto-generated" readonly></div>
+        <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="mqtt_user"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="mqtt_pass"></div>
+      </div>
+      <button class="btn-qr" onclick="openQR()">📷 Scan QR / 📁 Upload Gambar</button>
+      <button class="btn-primary" id="btnConnect" style="margin-top:10px;">🔗 Connect</button>
+      <p id="connStatus">Status: Disconnected</p>
+    </div>
+
+    <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
+
+    <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
+    
+    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    
+    <!-- ✅ SCHEDULER CARD -->
+    <div class="card app-card hidden" id="schedulerCard">
+      <h3>⏰ Relay Scheduler</h3>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>🔌 Relay Target</label>
+          <select id="schRelay">
+            <option value="1">Relay 1</option><option value="2">Relay 2</option>
+            <option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>⚡ Aksi</label>
+          <select id="schAction">
+            <option value="1">ON</option><option value="0">OFF</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>🕐 Waktu</label>
+          <input type="time" id="schTime" value="12:00">
+        </div>
+        <div class="form-group">
+          <label>📅 Hari Aktif</label>
+          <div class="day-grid" id="daySelector">
+            <button class="day-btn" data-day="1">Sen</button>
+            <button class="day-btn" data-day="2">Sel</button>
+            <button class="day-btn" data-day="3">Rab</button>
+            <button class="day-btn" data-day="4">Kam</button>
+            <button class="day-btn" data-day="5">Jum</button>
+            <button class="day-btn" data-day="6">Sab</button>
+            <button class="day-btn" data-day="0">Min</button>
+          </div>
+        </div>
+      </div>
+      <!-- ☁️ GitHub Sync Config -->
+      <div style="margin-top:15px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span>
+          <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+        </div>
+        <div class="grid-2" style="font-size:0.85rem;">
+          <input type="text" id="ghOwner" placeholder="Username" value="dreborn2k" readonly style="opacity:0.7;">
+          <input type="text" id="ghRepo" placeholder="Repo" value="dmarch_relay_001" readonly style="opacity:0.7;">
+          <input type="password" id="ghToken" placeholder="GitHub Token (wajib)" style="grid-column:1/-1;">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-primary" onclick="enableGitHubSync()" id="ghEnableBtn" style="padding:8px 12px; font-size:0.85rem;">🔗 Aktifkan</button>
+          <button class="btn-secondary" onclick="loadFromGitHub()" id="ghLoadBtn" style="padding:8px 12px; font-size:0.85rem;">🔄 Pull</button>
+        </div>
+      </div>
+      
+      <button class="btn-primary" onclick="addSchedule()">➕ Tambah Jadwal</button>
+      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+    
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID"></div><div class="form-group"><label>Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP)</button></div>
+    
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
+    
+    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div id="qrModal">
+    <div class="modal-box">
+      <h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3>
+      <div id="reader"></div>
+      <div class="qr-actions">
+        <button class="btn-primary" id="startCameraBtn">📷 Buka Kamera</button>
+        <label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Pilih Gambar</label>
+        <input type="file" id="qrFileInput" accept="image/*">
+      </div>
+      <p class="qr-msg" id="qrMsg">Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}</p>
+    </div>
+  </div>
+
+  <script>
+    let mqttClient = null;
+    const DEVICE_ID = "dmarch_relay_001";
+    let qrScanner = null;
+
+    // ✅ SCHEDULER VARIABLES
+    let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
+    let schedulerInterval = null;
+    let lastTriggered = {};
+
+    let ghSyncEnabled = false;
+    let ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
+    let currentFileSha = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
+      document.getElementById('deviceId').value = DEVICE_ID;
+      loadFromStorage();
+      initRelayButtons();
+      initScheduler(); // ✅ Init Scheduler
+      
+      document.getElementById('btnConnect').onclick = toggleConnect;
+      document.getElementById('disconnectBtn').onclick = toggleConnect;
+      document.getElementById('allOnBtn').onclick = () => pub(DEVICE_ID + '/all/on', '1');
+      document.getElementById('allOffBtn').onclick = () => pub(DEVICE_ID + '/all/off', '1');
+      document.getElementById('saveNTPBtn').onclick = () => { 
+        pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value); 
+        pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value); 
+      };
+      document.getElementById('updateGPIOBtn').onclick = () => pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value);
+      document.getElementById('updateNetBtn').onclick = updateNetwork;
+      document.getElementById('resetNetBtn').onclick = resetWifi;
+      document.getElementById('otaBtn').onclick = () => pub(DEVICE_ID + '/system/ota', '1');
+      document.getElementById('restartBtn').onclick = () => pub(DEVICE_ID + '/system/restart', '1');
+      document.getElementById('clearLogBtn').onclick = () => { document.getElementById('terminal').innerHTML = ''; };
+    });
+
+    // ✅ 1. GENERATE TOMBOL RELAY
+    function initRelayButtons() {
+      const rBox = document.getElementById('relayBtns');
+      rBox.innerHTML = '';
+      for(let i=1; i<=5; i++) {
+        const btn = document.createElement('button');
+        btn.id = `btn-relay-${i}`;
+        btn.className = 'btn-secondary';
+        btn.dataset.state = 'off';
+        btn.textContent = `Relay ${i} (OFF)`;
+        btn.onclick = () => sendRelayCommand(i);
+        rBox.appendChild(btn);
+      }
+    }
+
+    // ✅ 2. LOGIC UPDATE UI (HANYA DIPANGGIL SAAT TERIMA PESAN /state)
+    function updateRelayUI(num, state) {
+      const btn = document.getElementById(`btn-relay-${num}`);
+      if (!btn) return;
+      
+      const isOn = (state === '1' || state === 1 || state === true || state === 'true');
+      btn.dataset.state = isOn ? 'on' : 'off';
+      btn.textContent = `Relay ${num} (${isOn ? 'ON' : 'OFF'})`;
+      btn.className = isOn ? 'btn-success' : 'btn-secondary';
+      log(`🔄 State Relay ${num} diperbarui ke: ${isOn ? 'ON' : 'OFF'}`);
+    }
+
+    // ✅ 3. HANDLER KLIK TOMBOL (HANYA PUBLISH, JANGAN UBAH UI!)
+    function sendRelayCommand(num) {
+      if (!mqttClient || !mqttClient.connected) return alert('⚠️ MQTT belum terhubung!');
+      const currentState = document.getElementById(`btn-relay-${num}`).dataset.state;
+      const cmd = currentState === 'on' ? 0 : 1;
+      
+      mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
+      log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd} (Menunggu respon ESP...)`);
+    }
+
+    // ✅ 4. KONEKSI & SUBSCRIBE (SELF-HEALING)
+    function toggleConnect() {
+      const btn = document.getElementById('btnConnect');
+      const statusEl = document.getElementById('connStatus');
+      
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.end(true);
+        statusEl.textContent = 'Status: Disconnecting...';
+        return;
+      }
+
+      const h = document.getElementById('broker').value.trim();
+      const pt = document.getElementById('port').value.trim();
+      const u = document.getElementById('username').value.trim();
+      const pw = document.getElementById('password').value.trim();
+      
+      if (!h || !pt) return alert('⚠️ Broker & Port wajib diisi!');
+      if (pt !== '8884') return alert('⚠️ HiveMQ WebSocket wajib port 8884!');
+
+      saveToStorage();
+      const url = `wss://${h}:${pt}/mqtt`;
+      log(`🔄 Connecting to ${url}...`);
+      statusEl.textContent = 'Status: Connecting...'; 
+      btn.textContent = '⏳ Connecting...';
+
+      mqttClient = mqtt.connect(url, { 
+        clientId: document.getElementById('clientId').value, 
+        username: u, password: pw, 
+        clean: true, reconnectPeriod: 0 
+      });
+
+      mqttClient.on('connect', function(){ 
+        log('✅ MQTT Connected'); 
+        setConnectionState(true); 
+        
+        mqttClient.subscribe([
+          `${DEVICE_ID}/relay/+/state`,
+          `${DEVICE_ID}/status`,
+          `${DEVICE_ID}/terminal`
+        ]);
+
+        mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
+      });
+
+      mqttClient.on('message', function(topic, msg) {
+        const t = topic.toString();
+        const m = msg.toString().trim();
+
+        if(t.includes('/terminal')) { log(m); return; }
+        if(t.includes('/status')) { updateSystemHealth(m); return; }
+
+        if(t.includes('/relay/') && t.endsWith('/state')) {
+          const parts = t.split('/');
+          const relayNum = parts[2];
+          updateRelayUI(relayNum, m);
+        }
+      });
+
+      mqttClient.on('error', function(err){ 
+        console.error(err); log('❌ Error: ' + (err.message||'Unknown')); 
+        setConnectionState(false); btn.textContent='🔗 Connect'; 
+      });
+      mqttClient.on('close', function(){ 
+        log('🔌 Disconnected'); setConnectionState(false); btn.textContent='🔗 Connect'; 
+      });
+    }
+
+    function updateSystemHealth(msg) {
+      try { 
+        const d = JSON.parse(msg); 
+        document.getElementById('sigVal').textContent = (d.rssi || '--') + '%'; 
+        document.getElementById('upVal').textContent = d.uptime || '--'; 
+        document.getElementById('tempVal').textContent = (d.temp || '--') + '°C'; 
+        document.getElementById('fwVal').textContent = d.fw_version || '--'; 
+      } catch(e){}
+    }
+
+    function pub(topic, payload) { 
+      if(mqttClient && mqttClient.connected) {
+        mqttClient.publish(topic, payload, {qos:0}, e => e ? log('❌ Pub Error') : log(`📤 ${topic} -> ${payload}`));
+      } else log('⚠️ Disconnected'); 
+    }
+
+    function setConnectionState(connected) {
+      document.getElementById('connCard').classList.toggle('hidden', connected);
+      document.getElementById('disconnectBtn').classList.toggle('hidden', !connected);
+      document.querySelectorAll('.app-card').forEach(c => c.classList.toggle('hidden', !connected));
+      document.getElementById('connStatus').textContent = connected ? 'Status: Connected' : 'Status: Disconnected';
+    }
+
+    function saveToStorage() {
+      localStorage.setItem('dm_mqtt', JSON.stringify({
+        b: document.getElementById('broker').value,
+        p: document.getElementById('port').value,
+        u: document.getElementById('username').value,
+        pw: document.getElementById('password').value
+      }));
+    }
+    function loadFromStorage() {
+      try {
+        var d = JSON.parse(localStorage.getItem('dm_mqtt'));
+        if(d) {
+          document.getElementById('broker').value = d.b || '';
+          document.getElementById('port').value = d.p || '';
+          document.getElementById('username').value = d.u || '';
+          document.getElementById('password').value = d.pw || '';
+        }
+      } catch(e) {}
+    }
+
+    function updateNetwork() { 
+      var s=document.getElementById('netSsid').value.trim(); 
+      if(!s) return alert('SSID wajib!'); 
+      pub(DEVICE_ID+'/network/update', JSON.stringify({ssid:s, pass:document.getElementById('netPass').value.trim()})); 
+      alert('✅ Perintah terkirim.'); 
+    }
+    function resetWifi() { 
+      if(!confirm('Reset WiFi ke AP?')) return; 
+      pub(DEVICE_ID+'/network/reset','1'); 
+      alert('🔄 Reset terkirim.'); 
+    }
+    function log(msg) { 
+      var t=document.getElementById('terminal'); 
+      t.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + t.innerHTML; 
+    }
+
+    // 📷 QR LOGIC
+    let qrImagePreview = null;
+    function openQR() { 
+      document.getElementById('qrModal').style.display = 'flex'; 
+      document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
+      document.getElementById('reader').innerHTML = '';
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+    }
+
+    document.getElementById('qrModal').onclick = function(e){ 
+      if(e.target === this) closeQR(); 
+    };
+    
+    async function closeQR() {
+      document.getElementById('qrModal').style.display = 'none';
+      if (qrScanner) {
+        try { await qrScanner.stop(); } catch(e) {}
+        qrScanner.clear();
+        qrScanner = null;
+      }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+      document.getElementById('qrFileInput').value = '';
+      document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
+    }
+    
+    document.getElementById('startCameraBtn').onclick = function() {
+      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+      document.getElementById('reader').innerHTML = '';
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, ()=>{})
+        .catch(err => { 
+          alert('❌ Gagal akses kamera: ' + err); 
+          document.getElementById('qrMsg').textContent = '⚠️ Izinkan akses kamera atau gunakan upload gambar.';
+          document.getElementById('qrMsg').style.color = '#ef4444';
+        });
+    };
+
+    document.getElementById('qrFileInput').onchange = async function(e) {
+      const file = e.target.files[0]; 
+      if(!file) return;
+      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner = null; }
+      if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
+      document.getElementById('reader').innerHTML = '';
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = document.createElement('img');
+        img.src = evt.target.result;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '300px';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        document.getElementById('reader').appendChild(img);
+        qrImagePreview = img;
+      };
+      reader.readAsDataURL(file);
+      
+      document.getElementById('qrMsg').textContent = '⏳ Memproses gambar...';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
+    
+      try {
+        qrScanner = new Html5Qrcode("reader");
+        const decodedText = await qrScanner.scanFile(file, true);
+        console.log('✅ QR Decoded:', decodedText);
+        onQRSuccess(decodedText);
+      } catch (err) {
+        console.error('❌ QR Scan Error:', err);
+        if (err.toString().includes("No MultiFormat Readers") || err.toString().includes("QR code parse error")) {
+          document.getElementById('qrMsg').innerHTML = '⚠️ QR tidak terdeteksi.<br>• Pastikan gambar jelas, tidak blur<br>• QR berisi JSON valid<br>• Coba upload ulang';
+        } else {
+          document.getElementById('qrMsg').textContent = '❌ Gagal: ' + (err.message || 'Format tidak didukung');
+        }
+        document.getElementById('qrMsg').style.color = '#ef4444';
+      }
+    };
+    
+    function onQRSuccess(decodedText) {
+      try {
+        console.log('🔍 Parsing QR JSON:', decodedText);
+        const data = JSON.parse(decodedText);
+        if(!data.broker || !data.port || !data.user || !data.pass) {
+          throw new Error('Field wajib tidak lengkap: broker, port, user, pass');
+        }
+        document.getElementById('broker').value = data.broker;
+        document.getElementById('port').value = data.port;
+        document.getElementById('username').value = data.user;
+        document.getElementById('password').value = data.pass;
+        saveToStorage();
+        document.getElementById('qrMsg').textContent = '✅ QR berhasil! Form terisi otomatis.';
+        document.getElementById('qrMsg').style.color = '#10b981';
+        log('✅ QR Config loaded: ' + data.broker);
+        setTimeout(() => { closeQR(); }, 1000);
+      } catch(err) {
+        console.error('❌ Parse Error:', err);
+        document.getElementById('qrMsg').innerHTML = `❌ Format QR tidak valid:<br><code>${err.message}</code><br><br>Gunakan format:<br>{"broker":"...","port":8884,"user":"...","pass":"..."}`;
+        document.getElementById('qrMsg').style.color = '#ef4444';
+      }
+    }
+
+    // ✅✅✅ SCHEDULER ENGINE ✅✅✅
+    function initScheduler() {
+      document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.onclick = function() { this.classList.toggle('active'); };
+      });
+      renderSchedules();
+      startSchedulerEngine();
+    }
+
+    function addSchedule() {
+      const time = document.getElementById('schTime').value;
+      const relay = document.getElementById('schRelay').value;
+      const action = document.getElementById('schAction').value;
+      const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b => parseInt(b.dataset.day));
+      
+      if (!time || activeDays.length === 0) return alert('⚠️ Waktu & minimal 1 hari wajib dipilih!');
+      
+      const newSch = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+        time, relay, action, days: activeDays, enabled: true
+      };
+      
+      schedules.push(newSch);
+      saveSchedules();
+      renderSchedules();
+      log(`⏰ Jadwal ditambahkan: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);
+    }
+
+    function toggleSchedule(id) {
+      const sch = schedules.find(s => s.id === id);
+      if(sch) { sch.enabled = !sch.enabled; saveSchedules(); renderSchedules(); }
+    }
+
+    function deleteSchedule(id) {
+      if(!confirm('Hapus jadwal ini?')) return;
+      schedules = schedules.filter(s => s.id !== id);
+      saveSchedules(); renderSchedules(); log('🗑️ Jadwal dihapus');
+    }
+
+    function saveSchedules() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
+
+    // ☁️ GITHUB SYNC FUNCTIONS - TAMBAHKAN DI SINI
+    function enableGitHubSync() {
+      const owner = document.getElementById('ghOwner')?.value.trim() || 'dreborn2k';
+      const repo = document.getElementById('ghRepo')?.value.trim() || 'dmarch_relay_001';
+      const token = document.getElementById('ghToken')?.value.trim();
+      const path = 'config/scheduler.json'; // ✅ Sesuaikan path file di repo Anda
+      
+      if(!token) return alert('⚠️ Token GitHub wajib diisi!');
+      
+      ghConfig = { owner, repo, token, path, branch: 'main' };
+      localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      ghSyncEnabled = true;
+      
+      const statusEl = document.getElementById('ghSyncStatus');
+      if(statusEl) {
+        statusEl.textContent = '● Online';
+        statusEl.className = 'sync-status sync-on';
+      }
+      log('☁️ GitHub Sync: ' + owner + '/' + repo + '/' + path);
+      loadFromGitHub();
+    }
+    
+    async function loadFromGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      try {
+        const btn = document.getElementById('ghLoadBtn');
+        if(btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+        
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        if(res.status === 404) { 
+          console.log('📁 File belum ada di GitHub'); 
+          return; 
+        }
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const data = await res.json();
+        const content = JSON.parse(atob(data.content));
+        
+        if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+          schedules = content.schedules;
+          // ✅ Gunakan localStorage.setItem langsung, JANGAN panggil saveSchedules()
+          localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+          renderSchedules();
+          console.log('✅ Pull dari GitHub sukses');
+        }
+      } catch(err) { 
+        console.warn('❌ Pull failed:', err.message); 
+      }
+      finally { 
+        const btn = document.getElementById('ghLoadBtn'); 
+        if(btn) { btn.textContent = '🔄 Pull'; btn.disabled = false; } 
+      }
+    }
+    
+    async function pushToGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        
+        // Get SHA dulu untuk update file
+        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
+        let sha = null;
+        if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+        else if(getRes.status !== 404) throw new Error(`SHA fetch error: ${getRes.status}`);
+    
+        const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+        
+        const body = { 
+          message: `🔄 Auto-sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, branch: ghConfig.branch || 'main' 
+        };
+        if(sha) body.sha = sha;
+    
+        const res = await fetch(url, { 
+          method: 'PUT', 
+          headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body) 
+        });
+        
+        if(!res.ok) { const e = await res.json(); throw new Error(e.message || `HTTP ${res.status}`); }
+        log('💾 Push ke GitHub sukses');
+      } catch(err) { log('❌ Push failed: ' + err.message); }
+    }
+    
+    // Helper: simpan ke localStorage saja (tanpa sync online)
+    function saveSchedulesLocal() {
+      localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+    }
+
+    function renderSchedules() {
+      const list = document.getElementById('scheduleList');
+      list.innerHTML = '';
+      if(schedules.length === 0) {
+        list.innerHTML = '<p style="color:#64748b; text-align:center; font-size:0.85rem;">Belum ada jadwal. Tambahkan di atas.</p>';
+        return;
+      }
+      
+      const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+      schedules.forEach(sch => {
+        const daysStr = sch.days.map(d => dayNames[d]).join(', ');
+        const item = document.createElement('div');
+        item.className = 'schedule-item';
+        item.innerHTML = `
+          <div class="sch-info">
+            <span class="sch-time">🕐 ${sch.time}</span>
+            <span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br>
+            <span class="sch-days">📅 ${daysStr}</span>
+          </div>
+          <div class="sch-actions">
+            <div class="toggle-switch ${sch.enabled ? 'active' : ''}" onclick="toggleSchedule('${sch.id}')"></div>
+            <button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // ✅ SAVE SCHEDULES - VERSI AMAN (NO RECURSION)
+    function saveSchedules() {
+      // 1. Simpan ke localStorage (langsung, tanpa trigger sync)
+      try {
+        localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+      } catch(e) {
+        console.warn('⚠️ Gagal simpan ke localStorage:', e);
+      }
+      
+      // 2. Jika GitHub sync aktif & online, jadwalkan push (debounced)
+      if(ghSyncEnabled && navigator.onLine && ghConfig?.token) {
+        clearTimeout(window._ghDebounce);
+        window._ghDebounce = setTimeout(() => {
+          _pushToGitHubSafe(); // Pakai fungsi internal, bukan yang bisa trigger recursion
+        }, 800);
+      }
+    }
+    
+    // ✅ Helper: Push ke GitHub tanpa memicu saveSchedules lagi
+    async function _pushToGitHubSafe() {
+      if(!ghConfig?.token) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        
+        // Get SHA dulu
+        let sha = null;
+        try {
+          const getRes = await fetch(url, { 
+            headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } 
+          });
+          if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+        } catch(e) { /* Ignore if file doesn't exist yet */ }
+    
+        const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+        
+        const body = { 
+          message: `🔄 Auto-sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, 
+          branch: ghConfig.branch || 'main' 
+        };
+        if(sha) body.sha = sha;
+    
+        const res = await fetch(url, { 
+          method: 'PUT', 
+          headers: { 
+            'Authorization': `token ${ghConfig.token}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify(body) 
+        });
+        
+        if(!res.ok) { 
+          const e = await res.json().catch(()=>({})); 
+          throw new Error(e.message || `HTTP ${res.status}`); 
+        }
+        console.log('💾 GitHub sync OK');
+      } catch(err) {
+        console.warn('⚠️ GitHub push failed:', err.message);
+      }
+    }
+
+    function startSchedulerEngine() {
+      if(schedulerInterval) clearInterval(schedulerInterval);
+      schedulerInterval = setInterval(checkSchedules, 30000);
+      log('✅ Scheduler engine berjalan');
+    }
+
+    function checkSchedules() {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const currentDay = now.getDay();
+      const dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+      schedules.forEach(sch => {
+        if(!sch.enabled || sch.time !== currentTime || !sch.days.includes(currentDay)) return;
+        
+        const triggerKey = `${sch.id}_${dateKey}`;
+        if(lastTriggered[sch.id] === triggerKey) return;
+        
+        lastTriggered[sch.id] = triggerKey;
+        
+        if(mqttClient && mqttClient.connected) {
+          pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action);
+          log(`⏰ [AUTO] Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'} @ ${currentTime}`);
+        } else {
+          log(`⚠️ [SCHEDULER] Gagal trigger: MQTT disconnected`);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
