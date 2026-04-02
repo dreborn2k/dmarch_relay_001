@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dMarch Relay Pro - Web Control</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+    .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input:read-only { background: #162032; color: #64748b; cursor: default; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-qr { background: #6366f1; color: #fff; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
+
+    /* QR Modal */
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; }
+    .qr-actions { display:flex; gap:10px; margin-top:15px; }
+    .qr-close { position:absolute; top:20px; right:20px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; }
+    #qrFileInput { display:none; }
+    .qr-msg { margin-top:10px; font-size:0.9rem; color:#94a3b8; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔌 dMarch Relay Pro</h1>
+    <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
+
+    <!-- 1. CARD KONEKSI MQTT -->
+    <div class="card" id="connCard">
+      <h3>🔗 Koneksi MQTT</h3>
+      <div class="grid-2">
+        <div class="form-group"><label>Device ID</label><input type="text" id="deviceId" value="dmarch_relay_001" readonly></div>
+        <div class="form-group"><label>Broker</label><input type="text" id="broker" placeholder="broker.hivemq.cloud"></div>
+        <div class="form-group"><label>Port (WSS)</label><input type="number" id="port" placeholder="8884"></div>
+        <div class="form-group"><label>Client ID</label><input type="text" id="clientId" placeholder="Auto-generated" readonly></div>
+        <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="mqtt_user"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="mqtt_pass"></div>
+      </div>
+      <button class="btn-qr" onclick="openQR()">📷 Scan QR / 📁 Upload Gambar</button>
+      <button class="btn-primary" id="btnConnect" style="margin-top:10px;">🔗 Connect</button>
+      <p id="connStatus">Status: Disconnected</p>
+    </div>
+
+    <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
+
+    <!-- APP CARDS -->
+    <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
+    
+    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID"></div><div class="form-group"><label>Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP)</button></div>
+    
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
+    
+    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div id="qrModal">
+    <div class="modal-box">
+      <h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3>
+      <div id="reader"></div>
+      <div class="qr-actions">
+        <button class="btn-primary" id="startCameraBtn">📷 Buka Kamera</button>
+        <label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1;">📁 Pilih Gambar</label>
+        <input type="file" id="qrFileInput" accept="image/*">
+      </div>
+      <p class="qr-msg" id="qrMsg">Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}</p>
+    </div>
+  </div>
+
+  <script>
+    var client = null;
+    var DEVICE_ID = "dmarch_relay_001";
+    var qrScanner = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
+      document.getElementById('deviceId').value = DEVICE_ID;
+      loadFromStorage();
+
+      var rBox = document.getElementById('relayBtns');
+      for(var i=1; i<=5; i++) {
+        var btn = document.createElement('button');
+        btn.className = 'btn-secondary';
+        btn.textContent = 'Relay ' + i;
+        (function(num){ btn.onclick = function(){ pub(DEVICE_ID + '/relay/' + num + '/cmd', '1'); }; })(i);
+        rBox.appendChild(btn);
+      }
+
+      document.getElementById('btnConnect').onclick = toggleConnect;
+      document.getElementById('disconnectBtn').onclick = toggleConnect;
+      document.getElementById('allOnBtn').onclick = function(){ pub(DEVICE_ID + '/all/on', '1'); };
+      document.getElementById('allOffBtn').onclick = function(){ pub(DEVICE_ID + '/all/off', '1'); };
+      document.getElementById('saveNTPBtn').onclick = function(){ pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value); pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value); };
+      document.getElementById('updateGPIOBtn').onclick = function(){ pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value); };
+      document.getElementById('updateNetBtn').onclick = updateNetwork;
+      document.getElementById('resetNetBtn').onclick = resetWifi;
+      document.getElementById('otaBtn').onclick = function(){ pub(DEVICE_ID + '/system/ota', '1'); };
+      document.getElementById('restartBtn').onclick = function(){ pub(DEVICE_ID + '/system/restart', '1'); };
+      document.getElementById('clearLogBtn').onclick = function(){ document.getElementById('terminal').innerHTML = ''; };
+    });
+
+    function log(msg) { var t=document.getElementById('terminal'); t.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + t.innerHTML; }
+    function setConnectionState(connected) {
+      document.getElementById('connCard').classList.toggle('hidden', connected);
+      document.getElementById('disconnectBtn').classList.toggle('hidden', !connected);
+      document.querySelectorAll('.app-card').forEach(c => c.classList.toggle('hidden', !connected));
+      document.getElementById('connStatus').textContent = connected ? 'Status: Connected' : 'Status: Disconnected';
+    }
+    function saveToStorage() {
+      localStorage.setItem('dm_mqtt', JSON.stringify({
+        b: document.getElementById('broker').value,
+        p: document.getElementById('port').value,
+        u: document.getElementById('username').value,
+        pw: document.getElementById('password').value
+      }));
+    }
+    function loadFromStorage() {
+      try {
+        var d = JSON.parse(localStorage.getItem('dm_mqtt'));
+        if(d) {
+          document.getElementById('broker').value = d.b || '';
+          document.getElementById('port').value = d.p || '';
+          document.getElementById('username').value = d.u || '';
+          document.getElementById('password').value = d.pw || '';
+        }
+      } catch(e) {}
+    }
+
+    function toggleConnect() {
+      var btn = document.getElementById('btnConnect'), statusEl = document.getElementById('connStatus');
+      if (client && client.connected) { client.end(); statusEl.textContent = 'Status: Disconnecting...'; return; }
+
+      var h = document.getElementById('broker').value.trim(), pt = document.getElementById('port').value.trim();
+      var u = document.getElementById('username').value.trim(), pw = document.getElementById('password').value.trim();
+      if (!h || !pt) return alert('⚠️ Broker & Port wajib diisi!');
+      if (pt !== '8884') return alert('⚠️ HiveMQ WebSocket wajib port 8884!');
+
+      saveToStorage();
+      var url = 'wss://' + h + ':' + pt + '/mqtt';
+      log('🔄 Connecting to ' + url + '...');
+      statusEl.textContent = 'Status: Connecting...'; btn.textContent = '⏳ Connecting...';
+
+      client = mqtt.connect(url, { clientId: document.getElementById('clientId').value, username:u, password:pw, clean:true, reconnectPeriod:0, connectTimeout:10000 });
+      client.on('connect', function(){ log('✅ MQTT Connected'); setConnectionState(true); client.subscribe(DEVICE_ID + '/#'); });
+      client.on('error', function(err){ console.error(err); log('❌ Error: ' + (err.message||'Unknown')); setConnectionState(false); btn.textContent='🔗 Connect'; });
+      client.on('close', function(){ log('🔌 Disconnected'); setConnectionState(false); btn.textContent='🔗 Connect'; });
+      client.on('message', function(topic, msg) {
+        var m = msg.toString();
+        if(topic.indexOf('/terminal')!==-1) log(m);
+        if(topic.indexOf('/status')!==-1) {
+          try { var d=JSON.parse(m); document.getElementById('sigVal').textContent=(d.rssi||'--')+'%'; document.getElementById('upVal').textContent=d.uptime||'--'; document.getElementById('tempVal').textContent=(d.temp||'--')+'°C'; document.getElementById('fwVal').textContent=d.fw_version||'--'; } catch(e){}
+        }
+      });
+    }
+
+    function pub(topic, payload) { if(client&&client.connected) client.publish(topic,payload,{qos:0},e=>e?log('❌ Pub Error'):log('📤 '+topic+' -> '+payload)); else log('⚠️ Disconnected'); }
+    function updateNetwork() { var s=document.getElementById('netSsid').value.trim(); if(!s) return alert('SSID wajib!'); pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:document.getElementById('netPass').value.trim()})); alert('✅ Perintah terkirim.'); }
+    function resetWifi() { if(!confirm('Reset WiFi ke AP?')) return; pub(DEVICE_ID+'/network/reset','1'); alert('🔄 Reset terkirim.'); }
+
+    // 📷 QR / FILE HANDLING
+    function openQR() { document.getElementById('qrModal').style.display='flex'; }
+    document.getElementById('qrModal').onclick = function(e){ if(e.target===this) closeQR(); };
+    function closeQR() { document.getElementById('qrModal').style.display='none'; if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } }
+
+    document.getElementById('startCameraBtn').onclick = function() {
+      if(qrScanner) { qrScanner.stop(); qrScanner.clear(); }
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, onQRFail).catch(err=>{ alert('❌ Gagal akses kamera: ' + err); });
+    };
+
+    document.getElementById('qrFileInput').onchange = function(e) {
+      var file = e.target.files[0]; if(!file) return;
+      if(qrScanner) { qrScanner.stop(); qrScanner.clear(); }
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.scanFile(file, true).then(onQRSuccess).catch(err=>{ alert('❌ Gagal baca gambar: ' + err); });
+    };
+
+    function onQRSuccess(decodedText) {
+      try {
+        var data = JSON.parse(decodedText);
+        if(data.broker && data.port && data.user && data.pass) {
+          document.getElementById('broker').value = data.broker;
+          document.getElementById('port').value = data.port;
+          document.getElementById('username').value = data.user;
+          document.getElementById('password').value = data.pass;
+          saveToStorage();
+          log('✅ QR berhasil discan. Credential terisi.');
+          closeQR();
+        } else throw new Error('Format JSON tidak lengkap');
+      } catch(err) { alert('❌ QR tidak valid. Gunakan format:\n{"broker":"...","port":8884,"user":"...","pass":"..."}'); }
+    }
+    function onQRFail(err) { /* Ignore scan failures during live camera */ }
+  </script>
+</body>
+</html>
