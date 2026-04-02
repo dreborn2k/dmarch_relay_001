@@ -21,7 +21,17 @@
         2
       ],
       "enabled": true
+    },
+    {
+      "id": "mnhpga2x1ee4",
+      "time": "12:00",
+      "relay": "5",
+      "action": "1",
+      "days": [
+        0
+      ],
+      "enabled": true
     }
   ],
-  "updatedAt": "2026-04-02T15:16:04.722Z"
+  "updatedAt": "2026-04-02T16:44:39.860Z"
 }
