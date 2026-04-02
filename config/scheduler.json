@@ -1,27 +1,6 @@
 {
   "device": "dmarch_relay_001",
-  "schedules": [
-    {
-      "id": "mnhmabjmfpjb",
-      "time": "12:00",
-      "relay": "1",
-      "action": "1",
-      "days": [
-        2
-      ],
-      "enabled": true
-    },
-    {
-      "id": "mnhpga2x1ee4",
-      "time": "12:00",
-      "relay": "5",
-      "action": "1",
-      "days": [
-        0
-      ],
-      "enabled": true
-    }
-  ],
+  "schedules": [],
   "notifConfig": {
     "tg": {
       "token": "8773823890:AAE8t6TD6-UmuJtIAielTas2l6GvttAUcR8",
@@ -34,5 +13,5 @@
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:23:57.952Z"
+  "updatedAt": "2026-04-02T18:24:03.836Z"
 }
