@@ -1,29 +1,5 @@
 {
   "device": "dmarch_relay_001",
-  "schedules": [
-    {
-      "id": "mnhlwxzlwpmn",
-      "time": "12:00",
-      "relay": "1",
-      "action": "1",
-      "days": [
-        2
-      ],
-      "enabled": true,
-      "_modified": "2026-04-02T15:05:37.809Z"
-    },
-    {
-      "id": "mnhm19p5c6b7",
-      "time": "12:00",
-      "relay": "1",
-      "action": "1",
-      "days": [
-        2,
-        3
-      ],
-      "enabled": true,
-      "_modified": "2026-04-02T15:08:59.609Z"
-    }
-  ],
-  "updatedAt": "2026-04-02T15:09:01.273Z"
+  "schedules": [],
+  "updatedAt": "2026-04-02T15:14:28.119Z"
 }
