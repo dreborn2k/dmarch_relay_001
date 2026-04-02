@@ -1,683 +1,350 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch Relay Pro - Web Control</title>
-    <!-- Library MQTT.js -->
-    <script src="https://unpkg.com/mqtt@5.6.2/dist/mqtt.min.js"></script>
-    <!-- Library QR Code Reader (Opsional, untuk fitur scan) -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dMarch Relay Pro - Web Control</title>
+  
+  <!-- ✅ CDN Stabil -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <link rel="icon" href="image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 
-    <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --primary: #00bcd4;
-            --success: #4caf50;
-            --danger: #f44336;
-            --warning: #ff9800;
-            --border: #333;
-        }
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+    .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input:read-only { background: #162032; color: #64748b; cursor: default; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-qr { background: #6366f1; color: #fff; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
 
-        body {
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        h1, h2, h3 { margin-top: 0; }
-        
-        /* Layout */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            display: grid;
-            gap: 15px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid var(--border);
-        }
-
-        /* Header & Status */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            background: #333;
-            color: #777;
-        }
-        .status-badge.connected { background: var(--success); color: white; }
-        .status-badge.error { background: var(--danger); color: white; }
-
-        /* Inputs */
-        input, select {
-            background: #2c2c2c;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            border-radius: 6px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-        .row { display: flex; gap: 10px; }
-        .col { flex: 1; }
-
-        /* Buttons */
-        button {
-            cursor: pointer;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            transition: all 0.2s;
-            color: white;
-            background: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        button.primary { background: var(--primary); }
-        button.success { background: var(--success); }
-        button.danger { background: var(--danger); }
-        
-        /* Relay Control Grid */
-        .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-        }
-        .relay-btn {
-            height: 60px;
-            font-size: 1.1rem;
-            position: relative;
-            background: #333; /* Default OFF */
-            border: 2px solid transparent;
-        }
-        /* State ON via Class */
-        .relay-btn.active {
-            background: var(--success);
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
-        }
-        .relay-btn.loading::after {
-            content: "";
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Terminal */
-        #terminal {
-            background: #000;
-            font-family: monospace;
-            height: 150px;
-            overflow-y: auto;
-            padding: 10px;
-            border-radius: 6px;
-            color: #0f0;
-            font-size: 0.85rem;
-            white-space: pre-wrap;
-        }
-
-        /* Accordion / Collapsible */
-        details {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            padding: 10px;
-        }
-        summary { cursor: pointer; font-weight: bold; outline: none; }
-        
-        /* QR Scan Area */
-        #qr-reader { width: 100%; margin-bottom: 10px; }
-    </style>
+    /* QR Modal */
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; }
+    .qr-actions { display:flex; gap:10px; margin-top:15px; }
+    #qrFileInput { display:none; }
+    .qr-msg { margin-top:10px; font-size:0.9rem; color:#94a3b8; text-align:center; transition: color 0.3s; }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>🔌 dMarch Relay Pro</h1>
+    <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
-<div class="container">
-    <!-- Header -->
-    <div class="card header">
-        <div>
-            <h2 style="margin:0">🔌 dMarch Relay Pro</h2>
-            <small style="color:var(--text-muted)">Web Control Panel - HiveMQ Cloud</small>
-        </div>
-        <span id="connStatus" class="status-badge">Disconnected</span>
+    <div class="card" id="connCard">
+      <h3>🔗 Koneksi MQTT</h3>
+      <div class="grid-2">
+        <div class="form-group"><label>Device ID</label><input type="text" id="deviceId" value="dmarch_relay_001" readonly></div>
+        <div class="form-group"><label>Broker</label><input type="text" id="broker" placeholder="broker.hivemq.cloud"></div>
+        <div class="form-group"><label>Port (WSS)</label><input type="number" id="port" placeholder="8884"></div>
+        <div class="form-group"><label>Client ID</label><input type="text" id="clientId" placeholder="Auto-generated" readonly></div>
+        <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="mqtt_user"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="mqtt_pass"></div>
+      </div>
+      <button class="btn-qr" onclick="openQR()">📷 Scan QR / 📁 Upload Gambar</button>
+      <button class="btn-primary" id="btnConnect" style="margin-top:10px;">🔗 Connect</button>
+      <p id="connStatus">Status: Disconnected</p>
     </div>
 
-    <!-- 1. Koneksi MQTT -->
-    <div class="card">
-        <h3>🔗 Koneksi MQTT</h3>
-        <div class="row">
-            <div class="col"><input type="text" id="broker" placeholder="Broker URL (wss://...)" value="wss://broker.hivemq.com:8884/mqtt"></div>
-            <div class="col"><input type="number" id="port" placeholder="Port" value="8884"></div>
-        </div>
-        <div class="row">
-            <div class="col"><input type="text" id="clientid" placeholder="Client ID"></div>
-        </div>
-        <div class="row">
-            <div class="col"><input type="text" id="username" placeholder="Username"></div>
-            <div class="col"><input type="password" id="password" placeholder="Password"></div>
-        </div>
-        <div class="row">
-            <div class="col"><input type="text" id="deviceID" placeholder="Topic Base (e.g. dMarch)" value="dMarch"></div>
-        </div>
-        <button id="btnConnect" class="primary" onclick="toggleConnection()">🚀 Connect</button>
-        <div style="margin-top:10px; text-align:center;">
-            <button onclick="openQRScanner()" style="width:auto; display:inline-flex; font-size:0.8rem">📷 Scan QR Config</button>
-            <input type="file" id="qrFile" style="display:none" onchange="handleQRFile(this)">
-            <button onclick="document.getElementById('qrFile').click()" style="width:auto; display:inline-flex; font-size:0.8rem">📁 Upload Gambar</button>
-        </div>
+    <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
+
+    <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
+    
+    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID"></div><div class="form-group"><label>Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP)</button></div>
+    
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
+    
+    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div id="qrModal">
+    <div class="modal-box">
+      <h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3>
+      <div id="reader"></div>
+      <div class="qr-actions">
+        <button class="btn-primary" id="startCameraBtn">📷 Buka Kamera</button>
+        <label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Pilih Gambar</label>
+        <input type="file" id="qrFileInput" accept="image/*">
+      </div>
+      <p class="qr-msg" id="qrMsg">Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}</p>
     </div>
+  </div>
 
-    <!-- 2. System Health -->
-    <div class="card">
-        <h3>📊 System Health</h3>
-        <div class="row">
-            <div class="col card" style="text-align:center; background:#111; padding:10px">
-                <small>RSSI</small><div id="health-rssi" style="font-size:1.2rem; font-weight:bold">--</div>
-            </div>
-            <div class="col card" style="text-align:center; background:#111; padding:10px">
-                <small>Uptime</small><div id="health-uptime" style="font-size:1.2rem; font-weight:bold">--</div>
-            </div>
-            <div class="col card" style="text-align:center; background:#111; padding:10px">
-                <small>Temp</small><div id="health-temp" style="font-size:1.2rem; font-weight:bold">--</div>
-            </div>
-            <div class="col card" style="text-align:center; background:#111; padding:10px">
-                <small>FW</small><div id="health-fw" style="font-size:1.2rem; font-weight:bold">--</div>
-            </div>
-        </div>
-    </div>
+  <script>
+    let mqttClient = null;
+    const DEVICE_ID = "dmarch_relay_001";
+    let qrScanner = null;
 
-    <!-- 3. Relay Control (PENTING: Logic State Disini) -->
-    <div class="card">
-        <h3>⚡ Relay Control</h3>
-        <div class="row" style="margin-bottom:15px">
-            <button class="primary col" onclick="cmdAll(true)" id="btn-all-on">▶️ ALL ON</button>
-            <button class="danger col" onclick="cmdAll(false)" id="btn-all-off">⏹️ ALL OFF</button>
-        </div>
-        <div class="relay-grid">
-            <!-- Tombol Relay Individu -->
-            <button id="btn-r1" class="relay-btn" onclick="toggleRelay(1)">
-                <span>Relay 1</span>
-            </button>
-            <button id="btn-r2" class="relay-btn" onclick="toggleRelay(2)">
-                <span>Relay 2</span>
-            </button>
-            <!-- Tambahkan relay lain jika perlu -->
-            <button id="btn-r3" class="relay-btn" onclick="toggleRelay(3)" style="display:none">
-                <span>Relay 3</span>
-            </button>
-        </div>
-    </div>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
+      document.getElementById('deviceId').value = DEVICE_ID;
+      loadFromStorage();
+      initRelayButtons();
+      
+      document.getElementById('btnConnect').onclick = toggleConnect;
+      document.getElementById('disconnectBtn').onclick = toggleConnect;
+      document.getElementById('allOnBtn').onclick = () => pub(DEVICE_ID + '/all/on', '1');
+      document.getElementById('allOffBtn').onclick = () => pub(DEVICE_ID + '/all/off', '1');
+      document.getElementById('saveNTPBtn').onclick = () => { 
+        pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value); 
+        pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value); 
+      };
+      document.getElementById('updateGPIOBtn').onclick = () => pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value);
+      document.getElementById('updateNetBtn').onclick = updateNetwork;
+      document.getElementById('resetNetBtn').onclick = resetWifi;
+      document.getElementById('otaBtn').onclick = () => pub(DEVICE_ID + '/system/ota', '1');
+      document.getElementById('restartBtn').onclick = () => pub(DEVICE_ID + '/system/restart', '1');
+      document.getElementById('clearLogBtn').onclick = () => { document.getElementById('terminal').innerHTML = ''; };
+    });
 
-    <!-- 4. Settings -->
-    <details>
-        <summary>⚙️ Settings (NTP, GPIO, Network)</summary>
-        <div style="margin-top:10px">
-            <h3>🕐 NTP & Timezone</h3>
-            <div class="row">
-                <div class="col"><input type="text" id="ntp-server" placeholder="NTP Server" value="id.pool.ntp.org"></div>
-                <div class="col"><input type="number" id="ntp-tz" placeholder="Timezone (Jam)" value="7"></div>
-            </div>
-            <button class="primary" onclick="saveSettings('ntp')">💾 Save NTP</button>
+    // ✅ 1. GENERATE TOMBOL RELAY (Hanya inisialisasi DOM)
+    function initRelayButtons() {
+      const rBox = document.getElementById('relayBtns');
+      rBox.innerHTML = '';
+      for(let i=1; i<=5; i++) {
+        const btn = document.createElement('button');
+        btn.id = `btn-relay-${i}`;
+        btn.className = 'btn-secondary';
+        btn.dataset.state = 'off'; // State default UI
+        btn.textContent = `Relay ${i} (OFF)`;
+        btn.onclick = () => sendRelayCommand(i);
+        rBox.appendChild(btn);
+      }
+    }
 
-            <h3 style="margin-top:15px">🔌 GPIO Mapping</h3>
-            <input type="text" id="gpio-map" placeholder="Contoh: 26,27,14,25">
-            <button class="primary" onclick="saveSettings('gpio')">💾 Update GPIO</button>
+    // ✅ 2. LOGIC UPDATE UI (HANYA DIPANGGIL SAAT TERIMA PESAN /state)
+    function updateRelayUI(num, state) {
+      const btn = document.getElementById(`btn-relay-${num}`);
+      if (!btn) return;
+      
+      const isOn = (state === '1' || state === 1 || state === true || state === 'true');
+      btn.dataset.state = isOn ? 'on' : 'off';
+      btn.textContent = `Relay ${num} (${isOn ? 'ON' : 'OFF'})`;
+      btn.className = isOn ? 'btn-success' : 'btn-secondary';
+      log(`🔄 State Relay ${num} diperbarui ke: ${isOn ? 'ON' : 'OFF'}`);
+    }
 
-            <h3 style="margin-top:15px">🌐 Network Settings</h3>
-            <div class="row">
-                <div class="col"><input type="text" id="new-ssid" placeholder="SSID Baru"></div>
-                <div class="col"><input type="password" id="new-pass" placeholder="Password WiFi"></div>
-            </div>
-            <button class="success" onclick="saveSettings('wifi')">💾 Update Network</button>
-            <button class="warning" onclick="saveSettings('reset_wifi')" style="margin-top:5px">🔄 Reset WiFi (AP)</button>
+    // ✅ 3. HANDLER KLIK TOMBOL (HANYA PUBLISH, JANGAN UBAH UI!)
+    function sendRelayCommand(num) {
+      if (!mqttClient || !mqttClient.connected) return alert('⚠️ MQTT belum terhubung!');
+      const currentState = document.getElementById(`btn-relay-${num}`).dataset.state;
+      const cmd = currentState === 'on' ? 0 : 1;
+      
+      mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
+      log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd} (Menunggu respon ESP...)`);
+    }
 
-            <h3 style="margin-top:15px">🔄 System</h3>
-            <button class="primary" onclick="sendCmd('ota')">⬇️ Check OTA</button>
-            <button class="danger" onclick="sendCmd('restart')" style="margin-top:5px">🔥 Restart</button>
-        </div>
-    </details>
+    // ✅ 4. KONEKSI & SUBSCRIBE (SELF-HEALING)
+    function toggleConnect() {
+      const btn = document.getElementById('btnConnect');
+      const statusEl = document.getElementById('connStatus');
+      
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.end(true);
+        statusEl.textContent = 'Status: Disconnecting...';
+        return;
+      }
 
-    <!-- 5. Terminal Log -->
-    <div class="card">
-        <div style="display:flex; justify-content:space-between">
-            <h3>📝 Terminal Log</h3>
-            <button onclick="document.getElementById('terminal').innerText=''" style="width:auto; padding:5px 10px; font-size:0.8rem">🗑️ Clear</button>
-        </div>
-        <div id="terminal">Menunggu koneksi...</div>
-    </div>
+      const h = document.getElementById('broker').value.trim();
+      const pt = document.getElementById('port').value.trim();
+      const u = document.getElementById('username').value.trim();
+      const pw = document.getElementById('password').value.trim();
+      
+      if (!h || !pt) return alert('⚠️ Broker & Port wajib diisi!');
+      if (pt !== '8884') return alert('⚠️ HiveMQ WebSocket wajib port 8884!');
 
-    <!-- Modal QR -->
-    <div id="qr-modal" class="card" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000; background:rgba(0,0,0,0.9)">
-        <div style="position:relative; max-width:500px; margin:50px auto; text-align:center">
-            <button onclick="closeQRScanner()" style="margin-bottom:10px">❌ Tutup</button>
-            <div id="qr-reader" style="background:#333; min-height:200px;"></div>
-            <p id="qr-result" style="color:white">Arahkan kamera ke QR Code...</p>
-        </div>
-    </div>
-</div>
+      saveToStorage();
+      const url = `wss://${h}:${pt}/mqtt`;
+      log(`🔄 Connecting to ${url}...`);
+      statusEl.textContent = 'Status: Connecting...'; 
+      btn.textContent = '⏳ Connecting...';
 
-<script>
-    /**
-     * STATE MANAGEMENT
-     * Ini adalah "Single Source of Truth".
-     * UI hanya membaca dari sini.
-     */
-    let appState = {
-        connected: false,
-        client: null,
-        relays: {
-            1: false, // Default unknown/off
-            2: false,
-            3: false
-        },
-        pending: {
-            1: false, // Jika true, berarti sedang menunggu respon dari ESP
-            2: false,
-            3: false
+      mqttClient = mqtt.connect(url, { 
+        clientId: document.getElementById('clientId').value, 
+        username: u, password: pw, 
+        clean: true, reconnectPeriod: 0 
+      });
+
+      mqttClient.on('connect', function(){ 
+        log('✅ MQTT Connected'); 
+        setConnectionState(true); 
+        
+        // ✅ Subscribe ke topik state. Retained message akan langsung turun & trigger update UI
+        mqttClient.subscribe([
+          `${DEVICE_ID}/relay/+/state`,
+          `${DEVICE_ID}/status`,
+          `${DEVICE_ID}/terminal`
+        ]);
+
+        // 🛡️ SELF-HEALING: Minta ESP broadcast state terkini jika tidak pakai retained message
+        mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
+      });
+
+      mqttClient.on('message', function(topic, msg) {
+        const t = topic.toString();
+        const m = msg.toString().trim();
+
+        if(t.includes('/terminal')) { log(m); return; }
+        if(t.includes('/status')) { updateSystemHealth(m); return; }
+
+        // ✅ INTI LOGIKA: UI hanya berubah saat menerima /state
+        if(t.includes('/relay/') && t.endsWith('/state')) {
+          const parts = t.split('/');
+          const relayNum = parts[2]; // Ambil angka relay
+          updateRelayUI(relayNum, m);
         }
+      });
+
+      mqttClient.on('error', function(err){ 
+        console.error(err); log('❌ Error: ' + (err.message||'Unknown')); 
+        setConnectionState(false); btn.textContent='🔗 Connect'; 
+      });
+      mqttClient.on('close', function(){ 
+        log('🔌 Disconnected'); setConnectionState(false); btn.textContent='🔗 Connect'; 
+      });
+    }
+
+    function updateSystemHealth(msg) {
+      try { 
+        const d = JSON.parse(msg); 
+        document.getElementById('sigVal').textContent = (d.rssi || '--') + '%'; 
+        document.getElementById('upVal').textContent = d.uptime || '--'; 
+        document.getElementById('tempVal').textContent = (d.temp || '--') + '°C'; 
+        document.getElementById('fwVal').textContent = d.fw_version || '--'; 
+      } catch(e){}
+    }
+
+    function pub(topic, payload) { 
+      if(mqttClient && mqttClient.connected) {
+        mqttClient.publish(topic, payload, {qos:0}, e => e ? log('❌ Pub Error') : log(`📤 ${topic} -> ${payload}`));
+      } else log('⚠️ Disconnected'); 
+    }
+
+    function setConnectionState(connected) {
+      document.getElementById('connCard').classList.toggle('hidden', connected);
+      document.getElementById('disconnectBtn').classList.toggle('hidden', !connected);
+      document.querySelectorAll('.app-card').forEach(c => c.classList.toggle('hidden', !connected));
+      document.getElementById('connStatus').textContent = connected ? 'Status: Connected' : 'Status: Disconnected';
+    }
+
+    function saveToStorage() {
+      localStorage.setItem('dm_mqtt', JSON.stringify({
+        b: document.getElementById('broker').value,
+        p: document.getElementById('port').value,
+        u: document.getElementById('username').value,
+        pw: document.getElementById('password').value
+      }));
+    }
+    function loadFromStorage() {
+      try {
+        var d = JSON.parse(localStorage.getItem('dm_mqtt'));
+        if(d) {
+          document.getElementById('broker').value = d.b || '';
+          document.getElementById('port').value = d.p || '';
+          document.getElementById('username').value = d.u || '';
+          document.getElementById('password').value = d.pw || '';
+        }
+      } catch(e) {}
+    }
+
+    function updateNetwork() { 
+      var s=document.getElementById('netSsid').value.trim(); 
+      if(!s) return alert('SSID wajib!'); 
+      pub(DEVICE_ID+'/network/update', JSON.stringify({ssid:s, pass:document.getElementById('netPass').value.trim()})); 
+      alert('✅ Perintah terkirim.'); 
+    }
+    function resetWifi() { 
+      if(!confirm('Reset WiFi ke AP?')) return; 
+      pub(DEVICE_ID+'/network/reset','1'); 
+      alert('🔄 Reset terkirim.'); 
+    }
+    function log(msg) { 
+      var t=document.getElementById('terminal'); 
+      t.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + t.innerHTML; 
+    }
+
+    // 📷 QR LOGIC (Diperbaiki)
+    function openQR() { 
+      document.getElementById('qrModal').style.display='flex'; 
+      document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
+    }
+    document.getElementById('qrModal').onclick = function(e){ if(e.target===this) closeQR(); };
+    
+    async function closeQR() {
+      document.getElementById('qrModal').style.display = 'none';
+      if (qrScanner) {
+        try { await qrScanner.stop(); } catch(e) {}
+        qrScanner.clear();
+        qrScanner = null;
+      }
+      document.getElementById('qrFileInput').value = '';
+    }
+
+    document.getElementById('startCameraBtn').onclick = function() {
+      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, ()=>{})
+        .catch(err=>{ alert('❌ Gagal akses kamera: ' + err); });
     };
 
-    let html5QrCode = null;
-    let terminal = document.getElementById('terminal');
+    document.getElementById('qrFileInput').onchange = async function(e) {
+      var file = e.target.files[0]; if(!file) return;
+      if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
+      qrScanner = new Html5Qrcode("reader");
+      document.getElementById('qrMsg').textContent = '⏳ Memproses gambar...';
+      try {
+        var decodedText = await qrScanner.scanFile(file, true);
+        onQRSuccess(decodedText);
+      } catch (err) {
+        document.getElementById('qrMsg').innerHTML = err.toString().includes("No MultiFormat Readers") 
+          ? '⚠️ QR tidak terdeteksi.<br>Pastikan gambar jelas & tidak blur.' 
+          : '❌ Gagal: ' + (err.message || 'Format tidak didukung');
+        document.getElementById('qrMsg').style.color = '#ef4444';
+      }
+    };
 
-    // ========================
-    // 1. MQTT CORE LOGIC
-    // ========================
-    
-    function toggleConnection() {
-        if (appState.connected) {
-            log("Disconnecting...");
-            if(appState.client) appState.client.end();
-        } else {
-            connectMQTT();
-        }
+    function onQRSuccess(decodedText) {
+      try {
+        var data = JSON.parse(decodedText);
+        if(data.broker && data.port && data.user && data.pass) {
+          document.getElementById('broker').value = data.broker;
+          document.getElementById('port').value = data.port;
+          document.getElementById('username').value = data.user;
+          document.getElementById('password').value = data.pass;
+          saveToStorage();
+          log('✅ QR berhasil discan. Credential terisi.');
+        } else throw new Error('Format JSON tidak lengkap');
+      } catch(err) { alert('❌ QR tidak valid.'); return; }
+      closeQR();
     }
-
-    function connectMQTT() {
-        const broker = document.getElementById('broker').value;
-        const clientId = document.getElementById('clientid').value || 'dMarch_' + Math.random().toString(16).substr(2, 8);
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        // Tentukan Topic Base (prefix)
-        const deviceID = document.getElementById('deviceID').value || 'dMarch';
-        // Contoh Topic: dMarch/relay1/state, dMarch/relay1/set
-
-        const options = {
-            clientId: clientId,
-            clean: true,
-            reconnectPeriod: 3000, // Self-healing: otomatis reconnect
-            connectTimeout: 5000
-        };
-
-        if (username) options.username = username;
-        if (password) options.password = password;
-
-        log(`🔄 Menghubungkan ke ${broker}...`);
-        
-        try {
-            appState.client = mqtt.connect(broker, options);
-
-            appState.client.on('connect', () => {
-                appState.connected = true;
-                updateStatusUI('connected', 'Connected');
-                log('✅ MQTT Connected!');
-                
-                // Subscribe ke topic state (Self-Healing)
-                // Format topic diasumsikan: dMarch/+/state atau dMarch/relay/+/state
-                // Saya menggunakan wildcard + untuk fleksibilitas
-                appState.client.subscribe(`${deviceID}/+/state`, { qos: 1 });
-                appState.client.subscribe(`${deviceID}/health`, { qos: 1 });
-                
-                // Self-Healing Step 2: Minta state terbaru saat reconnect
-                // ESP harus didesain merespon topic ini
-                log("🔄 Requesting state sync...");
-                appState.client.publish(`${deviceID}/cmd`, JSON.stringify({ cmd: "get_state" }), { qos: 1 });
-            });
-
-            appState.client.on('message', (topic, message) => {
-                handleMqttMessage(topic, message);
-            });
-
-            appState.client.on('error', (err) => {
-                log(`❌ Error: ${err.message}`);
-            });
-
-            appState.client.on('close', () => {
-                appState.connected = false;
-                updateStatusUI('error', 'Disconnected');
-                disableRelayUI(true); // Kunci tombol saat putus koneksi
-                log("⚠️ Connection closed.");
-            });
-            
-            // Reconnect event handled by 'connect' listener karena reconnectPeriod
-
-        } catch (e) {
-            log(`❌ Connection Error: ${e.message}`);
-        }
-    }
-
-    /**
-     * HANDLER PESAN MASUK (SATU-SATUNYA SUMBER PERUBAHAN UI RELAY)
-     */
-    function handleMqttMessage(topic, payload) {
-        const msg = payload.toString();
-        log(`📥 [${topic.split('/').pop()}]: ${msg}`);
-
-        try {
-            // Contoh Parsing JSON dari ESP
-            // Asumsi ESP mengirim: {"relay": 1, "state": true} 
-            // ATAU {"r1": true, "r2": false} (grosir)
-            const data = JSON.parse(msg);
-            
-            // --- SYNC RELAY STATE ---
-            // Cek apakah payload berisi state individual atau bulk
-            if (data.relay && data.state !== undefined) {
-                // Format: {"relay": 1, "state": true}
-                const rId = data.relay;
-                appState.relays[rId] = data.state;
-                appState.pending[rId] = false; // Buka kunci tombol
-            } 
-            
-            // Contoh parsing format lain jika ESP kirim semua sekaligus
-            if (data.r1 !== undefined) { appState.relays[1] = data.r1; appState.pending[1] = false; }
-            if (data.r2 !== undefined) { appState.relays[2] = data.r2; appState.pending[2] = false; }
-
-            // --- SYNC HEALTH ---
-            if (data.rssi) document.getElementById('health-rssi').innerText = data.rssi;
-            if (data.uptime) document.getElementById('health-uptime').innerText = formatUptime(data.uptime);
-            if (data.temp) document.getElementById('health-temp').innerText = data.temp + '°C';
-            if (data.fw_ver) document.getElementById('health-fw').innerText = data.fw_ver;
-
-            // Update UI setelah data diproses
-            updateRelayUI();
-
-        } catch (e) {
-            // Jika bukan JSON, mungkin teks biasa dari terminal
-            // log(`Text: ${msg}`);
-        }
-    }
-
-    // ========================
-    // 2. BUTTON LOGIC (COMMAND ONLY)
-    // ========================
-
-    // Toggle Individual Relay
-    function toggleRelay(id) {
-        if (appState.pending[id]) {
-            log(`⚠️ Tombol Relay ${id} sedang loading...`);
-            return;
-        }
-        if (!appState.connected) {
-            log("❌ Tidak terkoneksi ke MQTT.");
-            return;
-        }
-
-        // 1. Set Pending State (UI jadi loading)
-        appState.pending[id] = true;
-        updateRelayUI(); // Tampilkan spinner, jangan ubah warna active/on
-        log(`📤 Mengirim Toggle Relay ${id}...`);
-
-        // 2. Publish Command
-        // Sesuaikan format JSON dengan firmware ESP Anda
-        // Saya asumsikan ESP butuh format: {"relay": 1, "cmd": "toggle"}
-        const deviceID = document.getElementById('deviceID').value || 'dMarch';
-        
-        const payload = JSON.stringify({ 
-            relay: id, 
-            cmd: "toggle" 
-        });
-
-        appState.client.publish(`${deviceID}/cmd`, payload, { qos: 1 }, (err) => {
-            if (err) {
-                log("❌ Gagal publish command");
-                appState.pending[id] = false;
-                updateRelayUI();
-            }
-        });
-
-        // 3. Safety Timeout (jika ESP tidak membalas dalam 5 detik)
-        setTimeout(() => {
-            if (appState.pending[id]) {
-                appState.pending[id] = false;
-                updateRelayUI();
-                log(`⏰ Timeout: Relay ${id} tidak merespons.`);
-            }
-        }, 5000);
-    }
-
-    // All On / All Off
-    function cmdAll(status) {
-        if (!appState.connected) return;
-        
-        log(`📤 Sending ALL ${status ? 'ON' : 'OFF'}...`);
-        
-        // Set semua pending
-        [1,2,3].forEach(id => {
-            if(appState.relays[id]) appState.pending[id] = true; // Hanya pending relay yang ada
-        });
-        updateRelayUI();
-
-        const deviceID = document.getElementById('deviceID').value || 'dMarch';
-        const payload = JSON.stringify({ 
-            cmd: status ? "all_on" : "all_off" 
-        });
-
-        appState.client.publish(`${deviceID}/cmd`, payload, { qos: 1 });
-
-        // Timeout
-        setTimeout(() => {
-            [1,2,3].forEach(id => { appState.pending[id] = false; });
-            updateRelayUI();
-        }, 5000);
-    }
-
-    // Generic Settings Command
-    function saveSettings(type) {
-        if (!appState.connected) return alert("Tidak terkoneksi!");
-        
-        let payload = {};
-        if (type === 'ntp') {
-            payload = {
-                cmd: "set_ntp",
-                server: document.getElementById('ntp-server').value,
-                tz: document.getElementById('ntp-tz').value
-            };
-        } else if (type === 'gpio') {
-            payload = { cmd: "set_gpio", pins: document.getElementById('gpio-map').value };
-        } else if (type === 'wifi') {
-            payload = {
-                cmd: "set_wifi",
-                ssid: document.getElementById('new-ssid').value,
-                pass: document.getElementById('new-pass').value
-            };
-        } else if (type === 'reset_wifi') {
-            payload = { cmd: "reset_wifi" };
-        }
-
-        log(`⚙️ Update Settings: ${type}`);
-        appState.client.publish(`${document.getElementById('deviceID').value}/cmd`, JSON.stringify(payload), {qos:1});
-    }
-
-    function sendCmd(cmd) {
-        if (!appState.connected) return;
-        appState.client.publish(`${document.getElementById('deviceID').value}/cmd`, JSON.stringify({cmd: cmd}), {qos:1});
-        log(`📤 Sent CMD: ${cmd}`);
-    }
-
-    // ========================
-    // 3. UI UPDATE FUNCTIONS
-    // ========================
-
-    // Fungsi ini HANYA dipanggil oleh MQTT Handler
-    function updateRelayUI() {
-        // Update tombol 1, 2, 3
-        for (let i = 1; i <= 3; i++) {
-            const btn = document.getElementById(`btn-r${i}`);
-            if (!btn) continue;
-
-            const state = appState.relays[i];
-            const pending = appState.pending[i];
-
-            // 1. Tentukan Kelas (Active/Inactive)
-            if (state === true) {
-                btn.classList.add('active');
-                btn.innerHTML = `<span>Relay ${i} ON</span>`;
-            } else if (state === false) {
-                btn.classList.remove('active');
-                btn.innerHTML = `<span>Relay ${i} OFF</span>`;
-            }
-
-            // 2. Tentukan Status Loading/Disabled
-            if (pending) {
-                btn.classList.add('loading');
-                btn.disabled = true; // Disable klik ganda
-                btn.style.opacity = "0.7";
-            } else {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-                btn.style.opacity = "1";
-            }
-        }
-    }
-
-    function updateStatusUI(type, text) {
-        const el = document.getElementById('connStatus');
-        el.className = `status-badge ${type}`;
-        el.innerText = text;
-        
-        const btn = document.getElementById('btnConnect');
-        if (type === 'connected') {
-            btn.innerText = "🔌 Disconnect";
-            btn.classList.remove('primary');
-            btn.classList.add('danger');
-            disableRelayUI(false);
-        } else {
-            btn.innerText = "🚀 Connect";
-            btn.classList.remove('danger');
-            btn.classList.add('primary');
-            disableRelayUI(true);
-        }
-    }
-
-    function disableRelayUI(disabled) {
-        document.querySelectorAll('.relay-btn').forEach(btn => {
-            btn.disabled = disabled;
-            if (disabled) {
-                btn.classList.remove('active');
-                btn.classList.remove('loading');
-                btn.innerHTML = btn.innerHTML.replace(/ON|OFF/gi, '--');
-            }
-        });
-    }
-
-    // Helper Terminal
-    function log(msg) {
-        const time = new Date().toLocaleTimeString();
-        terminal.innerHTML += `[${time}] ${msg}\n`;
-        terminal.scrollTop = terminal.scrollHeight;
-    }
-
-    function formatUptime(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h}h ${m}m`;
-    }
-
-    // ========================
-    // 4. QR SCANNER & UTILS
-    // ========================
-
-    function openQRScanner() {
-        document.getElementById('qr-modal').style.display = 'block';
-        
-        // Inisialisasi Scanner hanya sekali
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("qr-reader");
-        }
-        
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText, decodedResult) => {
-                // Sukses Scan
-                document.getElementById('qr-result').innerText = "✅ Berhasil!";
-                document.getElementById('qr-result').style.color = "#4caf50";
-                processQRData(decodedText);
-                closeQRScanner();
-            },
-            (errorMessage) => {
-                // ignore error scan frame per frame
-            }
-        ).catch(err => {
-            document.getElementById('qr-result').innerText = "❌ Gagal akses kamera: " + err;
-            document.getElementById('qr-result').style.color = "red";
-        });
-    }
-
-    function closeQRScanner() {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop();
-        }
-        document.getElementById('qr-modal').style.display = 'none';
-    }
-
-    function handleQRFile(input) {
-        if (input.files.length === 0) return;
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            // Logic decode QR dari gambar statis (sederhana)
-            // Disini kita butuh library tambahan untuk decode dari image statis
-            // Untuk demo ini, kita asumsikan user scan via kamera
-            alert("Fitur upload gambar perlu library tambahan atau backend. Gunakan Kamera.");
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function processQRData(jsonStr) {
-        try {
-            const data = JSON.parse(jsonStr);
-            if(data.broker) document.getElementById('broker').value = data.broker;
-            if(data.port) document.getElementById('port').value = data.port;
-            if(data.user) document.getElementById('username').value = data.user;
-            if(data.pass) document.getElementById('password').value = data.pass;
-            log("✅ Konfigurasi MQTT terisi dari QR Code.");
-            // Auto connect?
-            // toggleConnection(); 
-        } catch(e) {
-            alert("Format QR tidak valid");
-        }
-    }
-
-</script>
-
+  </script>
 </body>
 </html>
