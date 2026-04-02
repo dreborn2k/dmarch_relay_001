@@ -210,11 +210,31 @@
       qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, onQRFail).catch(err=>{ alert('❌ Gagal akses kamera: ' + err); });
     };
 
-    document.getElementById('qrFileInput').onchange = function(e) {
-      var file = e.target.files[0]; if(!file) return;
-      if(qrScanner) { qrScanner.stop(); qrScanner.clear(); }
+    document.getElementById('qrFileInput').onchange = async function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+    
+      var msgEl = document.getElementById('qrMsg');
+      msgEl.innerHTML = '⏳ Memproses gambar...';
+      msgEl.style.color = '#94a3b8';
+    
+      // Bersihkan scanner lama jika ada
+      if (qrScanner) { qrScanner.stop().catch(() => {}); qrScanner.clear(); }
       qrScanner = new Html5Qrcode("reader");
-      qrScanner.scanFile(file, true).then(onQRSuccess).catch(err=>{ alert('❌ Gagal baca gambar: ' + err); });
+    
+      try {
+        // scanFile(file, showImagePreview)
+        var decodedText = await qrScanner.scanFile(file, true);
+        onQRSuccess(decodedText);
+      } catch (err) {
+        // Tangkap error spesifik dari engine ZXing
+        if (err.toString().includes("No MultiFormat Readers")) {
+          msgEl.innerHTML = '⚠️ QR tidak terdeteksi.<br>Pastikan gambar jelas, tidak blur, & berisi kode QR standar.';
+        } else {
+          msgEl.textContent = '❌ Gagal: ' + (err.message || 'Format tidak didukung');
+        }
+        msgEl.style.color = '#ef4444';
+      }
     };
 
     function onQRSuccess(decodedText) {
