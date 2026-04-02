@@ -11,7 +11,17 @@
       ],
       "enabled": true,
       "_modified": "2026-04-02T15:16:02.394Z"
+    },
+    {
+      "id": "mnhmabjmfpjb",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        2
+      ],
+      "enabled": true
     }
   ],
-  "updatedAt": "2026-04-02T15:16:04.415Z"
+  "updatedAt": "2026-04-02T15:16:04.722Z"
 }
