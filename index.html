@@ -190,18 +190,27 @@
     // 📷 QR / FILE HANDLING
     function openQR() { document.getElementById('qrModal').style.display='flex'; }
     document.getElementById('qrModal').onclick = function(e){ if(e.target===this) closeQR(); };
-    function closeQR() {
+    async function closeQR() {
       document.getElementById('qrModal').style.display = 'none';
+      
       if (qrScanner) {
-        // ✅ Hanya stop jika kamera benar-benar aktif (hindari error saat upload file)
-        if (qrScanner.isScanning) {
-          qrScanner.stop().catch(() => {});
+        try {
+          // ✅ Tunggu kamera benar-benar berhenti sebelum menghapus elemen
+          if (qrScanner.isScanning) {
+            await qrScanner.stop();
+          }
+          qrScanner.clear();
+        } catch (err) {
+          console.warn("QR Cleanup skipped:", err.message);
+        } finally {
+          qrScanner = null;
         }
-        qrScanner.clear();
-        qrScanner = null;
       }
-      // ✅ Reset input file agar bisa upload file yang sama berulang kali
+      
+      // ✅ Reset UI & input file
       document.getElementById('qrFileInput').value = '';
+      document.getElementById('qrMsg').innerHTML = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
+      document.getElementById('qrMsg').style.color = '#94a3b8';
     }
 
     document.getElementById('startCameraBtn').onclick = function() {
