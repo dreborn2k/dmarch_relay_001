@@ -35,7 +35,7 @@
   ],
   "notifConfig": {
     "tg": {
-      "token": "••••••••••••••••",
+      "token": "8773823890:AAE8t6TD6-UmuJtIAielTas2l6GvttAUcR8",
       "chatId": "6783331825",
       "enabled": true
     },
@@ -43,5 +43,5 @@
       "enabled": false
     }
   },
-  "updatedAt": "2026-04-02T18:00:51.441Z"
+  "updatedAt": "2026-04-02T18:01:07.976Z"
 }
