@@ -41,9 +41,9 @@
       "connected": true
     },
     "wa": {
-      "enabled": false,
+      "enabled": true,
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:16:07.311Z"
+  "updatedAt": "2026-04-02T18:23:25.132Z"
 }
