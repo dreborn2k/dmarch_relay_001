@@ -64,6 +64,10 @@
     .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
     .btn-del { background:transparent; color:var(--danger); border:1px solid var(--danger); }
     .btn-del:hover { background:var(--danger); color:#fff; }
+
+    .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; }
+    .sync-on { background:#064e3b; color:#10b981; }
+    .sync-off { background:#334155; color:#94a3b8; }
   </style>
 </head>
 <body>
@@ -128,6 +132,23 @@
           </div>
         </div>
       </div>
+      <!-- ☁️ GitHub Sync Config -->
+      <div style="margin-top:15px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span>
+          <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+        </div>
+        <div class="grid-2" style="font-size:0.85rem;">
+          <input type="text" id="ghOwner" placeholder="Username" value="dreborn2k" readonly style="opacity:0.7;">
+          <input type="text" id="ghRepo" placeholder="Repo" value="dmarch_relay_001" readonly style="opacity:0.7;">
+          <input type="password" id="ghToken" placeholder="GitHub Token (wajib)" style="grid-column:1/-1;">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-primary" onclick="enableGitHubSync()" id="ghEnableBtn" style="padding:8px 12px; font-size:0.85rem;">🔗 Aktifkan</button>
+          <button class="btn-secondary" onclick="loadFromGitHub()" id="ghLoadBtn" style="padding:8px 12px; font-size:0.85rem;">🔄 Pull</button>
+        </div>
+      </div>
+      
       <button class="btn-primary" onclick="addSchedule()">➕ Tambah Jadwal</button>
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
@@ -164,6 +185,10 @@
     let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
     let schedulerInterval = null;
     let lastTriggered = {};
+
+    let ghSyncEnabled = false;
+    let ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
+    let currentFileSha = null;
 
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
@@ -494,6 +519,101 @@
     }
 
     function saveSchedules() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
+
+    // ☁️ GITHUB SYNC FUNCTIONS - TAMBAHKAN DI SINI
+    function enableGitHubSync() {
+      const owner = document.getElementById('ghOwner')?.value.trim() || 'dreborn2k';
+      const repo = document.getElementById('ghRepo')?.value.trim() || 'dmarch_relay_001';
+      const token = document.getElementById('ghToken')?.value.trim();
+      const path = 'config/scheduler.json'; // ✅ Sesuaikan path file di repo Anda
+      
+      if(!token) return alert('⚠️ Token GitHub wajib diisi!');
+      
+      ghConfig = { owner, repo, token, path, branch: 'main' };
+      localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      ghSyncEnabled = true;
+      
+      const statusEl = document.getElementById('ghSyncStatus');
+      if(statusEl) {
+        statusEl.textContent = '● Online';
+        statusEl.className = 'sync-status sync-on';
+      }
+      log('☁️ GitHub Sync: ' + owner + '/' + repo + '/' + path);
+      loadFromGitHub();
+    }
+    
+    async function loadFromGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      try {
+        const btn = document.getElementById('ghLoadBtn');
+        if(btn) btn.textContent = '⏳...';
+        
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        if(res.status === 404) { log('📁 File belum ada, akan dibuat saat save pertama'); return; }
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const data = await res.json();
+        const content = JSON.parse(atob(data.content));
+        
+        if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+          schedules = content.schedules;
+          saveSchedulesLocal(); // Sync ke localStorage
+          renderSchedules();
+          log('✅ Pull dari GitHub sukses');
+        }
+      } catch(err) { log('❌ Pull failed: ' + err.message); }
+      finally { const btn = document.getElementById('ghLoadBtn'); if(btn) btn.textContent = '🔄 Pull'; }
+    }
+    
+    async function pushToGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        
+        // Get SHA dulu untuk update file
+        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
+        let sha = null;
+        if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+        else if(getRes.status !== 404) throw new Error(`SHA fetch error: ${getRes.status}`);
+    
+        const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+        
+        const body = { 
+          message: `🔄 Auto-sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, branch: ghConfig.branch || 'main' 
+        };
+        if(sha) body.sha = sha;
+    
+        const res = await fetch(url, { 
+          method: 'PUT', 
+          headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body) 
+        });
+        
+        if(!res.ok) { const e = await res.json(); throw new Error(e.message || `HTTP ${res.status}`); }
+        log('💾 Push ke GitHub sukses');
+      } catch(err) { log('❌ Push failed: ' + err.message); }
+    }
+    
+    // Helper: simpan ke localStorage saja (tanpa sync online)
+    function saveSchedulesLocal() {
+      localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+    }
+    
+    // Override saveSchedules() yang sudah ada agar auto-sync
+    const _originalSaveSchedules = saveSchedules;
+    function saveSchedules() {
+      _originalSaveSchedules(); // Jalankan fungsi lama (simpan localStorage)
+      if(ghSyncEnabled && navigator.onLine) {
+        clearTimeout(window._ghDebounce);
+        window._ghDebounce = setTimeout(() => pushToGitHub(), 800); // Debounce 800ms
+      }
+    }
 
     function renderSchedules() {
       const list = document.getElementById('scheduleList');
