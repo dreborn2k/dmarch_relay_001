@@ -37,11 +37,11 @@
     "tg": {
       "token": "••••••••••••••••",
       "chatId": "6783331825",
-      "enabled": true
+      "enabled": false
     },
     "wa": {
       "enabled": false
     }
   },
-  "updatedAt": "2026-04-02T18:13:58.668Z"
+  "updatedAt": "2026-04-02T18:14:14.427Z"
 }
