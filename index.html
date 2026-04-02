@@ -578,35 +578,81 @@
       }
     }
     
-    async function pushToGitHub() {
-      if(!ghSyncEnabled || !ghConfig?.token) return;
+    // ✅ 1. FUNGSI MERGE (ID-BASED)
+    function mergeScheduleArrays(localArr, serverArr) {
+      const map = new Map();
+      // 1. Masukkan semua jadwal dari server dulu
+      (serverArr || []).forEach(s => map.set(s.id, s));
+      // 2. Timpa dengan jadwal lokal (lokal dianggap paling baru/diedit user)
+      (localArr || []).forEach(s => map.set(s.id, s));
+      // 3. Sort berdasarkan waktu agar tampilan rapi
+      return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
+    }
+    
+    // ✅ 2. PUSH TO GITHUB DENGAN CONFLICT RESOLUTION & AUTO-RETRY
+    async function pushToGitHub(retryCount = 0) {
+      if (!ghSyncEnabled || !ghConfig?.token) return;
+      if (retryCount >= 2) {
+        log('❌ Gagal sync setelah 2x retry. Periksa koneksi atau token.');
+        return;
+      }
+    
       try {
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
         
-        // Get SHA dulu untuk update file
-        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
+        // Ambil SHA terbaru
         let sha = null;
-        if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
-        else if(getRes.status !== 404) throw new Error(`SHA fetch error: ${getRes.status}`);
+        try {
+          const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+          if (getRes.ok) sha = (await getRes.json()).sha;
+        } catch(e) {}
     
         const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
         
         const body = { 
-          message: `🔄 Auto-sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
-          content, branch: ghConfig.branch || 'main' 
+          message: `🔄 Sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, 
+          branch: 'main' 
         };
-        if(sha) body.sha = sha;
+        if (sha) body.sha = sha;
     
         const res = await fetch(url, { 
           method: 'PUT', 
           headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(body) 
         });
-        
-        if(!res.ok) { const e = await res.json(); throw new Error(e.message || `HTTP ${res.status}`); }
-        log('💾 Push ke GitHub sukses');
-      } catch(err) { log('❌ Push failed: ' + err.message); }
+    
+        if (res.ok) {
+          log('💾 GitHub sync OK');
+          return;
+        }
+    
+        // 🔴 DETEKSI KONFLIK (422 = SHA Mismatch / Conflict)
+        if (res.status === 422) {
+          log('⚠️ Conflict terdeteksi! Device lain mengubah data. Merging...');
+          
+          // Fetch data terbaru dari server
+          const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+          if (!freshRes.ok) throw new Error(`Gagal fetch fresh data: ${freshRes.status}`);
+          
+          const freshData = JSON.parse(atob((await freshRes.json()).content));
+          const serverSchedules = freshData.schedules || [];
+          
+          // 🔄 Merge: lokal menimpa server untuk ID sama, jadwal baru dari server tetap masuk
+          schedules = mergeScheduleArrays(schedules, serverSchedules);
+          saveSchedulesLocal(); // Update localStorage tanpa trigger recursion
+          renderSchedules();
+          log('🔄 Merge selesai. Retry push...');
+          
+          // Retry otomatis dengan SHA yang sudah baru
+          return pushToGitHub(retryCount + 1);
+        }
+    
+        throw new Error(`HTTP ${res.status}`);
+      } catch(err) { 
+        log('❌ Push failed: ' + err.message); 
+      }
     }
     
     // Helper: simpan ke localStorage saja (tanpa sync online)
