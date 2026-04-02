@@ -189,7 +189,19 @@
     // 📷 QR / FILE HANDLING
     function openQR() { document.getElementById('qrModal').style.display='flex'; }
     document.getElementById('qrModal').onclick = function(e){ if(e.target===this) closeQR(); };
-    function closeQR() { document.getElementById('qrModal').style.display='none'; if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } }
+    function closeQR() {
+      document.getElementById('qrModal').style.display = 'none';
+      if (qrScanner) {
+        // ✅ Hanya stop jika kamera benar-benar aktif (hindari error saat upload file)
+        if (qrScanner.isScanning) {
+          qrScanner.stop().catch(() => {});
+        }
+        qrScanner.clear();
+        qrScanner = null;
+      }
+      // ✅ Reset input file agar bisa upload file yang sama berulang kali
+      document.getElementById('qrFileInput').value = '';
+    }
 
     document.getElementById('startCameraBtn').onclick = function() {
       if(qrScanner) { qrScanner.stop(); qrScanner.clear(); }
@@ -207,16 +219,23 @@
     function onQRSuccess(decodedText) {
       try {
         var data = JSON.parse(decodedText);
-        if(data.broker && data.port && data.user && data.pass) {
+        if (data.broker && data.port && data.user && data.pass) {
           document.getElementById('broker').value = data.broker;
           document.getElementById('port').value = data.port;
           document.getElementById('username').value = data.user;
           document.getElementById('password').value = data.pass;
           saveToStorage();
           log('✅ QR berhasil discan. Credential terisi.');
-          closeQR();
-        } else throw new Error('Format JSON tidak lengkap');
-      } catch(err) { alert('❌ QR tidak valid. Gunakan format:\n{"broker":"...","port":8884,"user":"...","pass":"..."}'); }
+        } else {
+          throw new Error('Format JSON tidak lengkap');
+        }
+      } catch (err) {
+        alert('❌ QR tidak valid. Gunakan format:\n{"broker":"...","port":8884,"user":"...","pass":"..."}');
+        return; // Hentikan eksekusi jika validasi gagal
+      }
+      
+      // ✅ PINDAHKAN closeQR() ke luar try-catch agar error UI tidak memicu alert
+      closeQR();
     }
     function onQRFail(err) { /* Ignore scan failures during live camera */ }
   </script>
