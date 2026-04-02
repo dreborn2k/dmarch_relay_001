@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>dMarch Relay Pro - Web Control</title>
+  <!-- ✅ Library MQTT harus load duluan -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
@@ -69,12 +70,17 @@
   </div>
 
   <script>
-    // ✅ Gunakan var agar tidak error jika script termuat 2x
-    var mqtt = null;
+    // ✅ GUNAKAN 'client' AGAR TIDAK BENTROK DENGAN LIBRARY 'mqtt'
+    var client = null;
     var DEVICE_ID = "dmarch_relay_001";
 
     document.addEventListener('DOMContentLoaded', function() {
-      // Inisialisasi hanya sekali
+      // Cek library load
+      if (typeof mqtt === 'undefined') {
+        alert('❌ Library MQTT gagal dimuat. Periksa koneksi internet atau CDN.');
+        return;
+      }
+
       document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
       document.getElementById('deviceId').value = DEVICE_ID;
 
@@ -84,7 +90,9 @@
         var btn = document.createElement('button');
         btn.className = 'btn-secondary';
         btn.textContent = 'Relay ' + i;
-        btn.onclick = (function(num) { return function() { pub(DEVICE_ID + '/relay/' + num + '/cmd', '1'); }; })(i);
+        (function(num) {
+          btn.onclick = function() { pub(DEVICE_ID + '/relay/' + num + '/cmd', '1'); };
+        })(i);
         rBox.appendChild(btn);
       }
 
@@ -133,8 +141,9 @@
       var btn = document.getElementById('btnConnect');
       var statusEl = document.getElementById('connStatus');
 
-      if (mqtt && mqtt.connected) {
-        mqtt.end();
+      // Jika sedang connect → Disconnect
+      if (client && client.connected) {
+        client.end();
         statusEl.textContent = 'Status: Disconnecting...';
         return;
       }
@@ -153,31 +162,32 @@
       statusEl.textContent = 'Status: Connecting...';
       btn.textContent = '⏳ Connecting...';
 
-      mqtt = mqtt.connect(url, {
+      // ✅ PANGGIL 'mqtt.connect' DARI LIBRARY, SIMPAN KE 'client'
+      client = mqtt.connect(url, {
         clientId: cid, username: user, password: pass,
         clean: true, reconnectPeriod: 0, connectTimeout: 10000
       });
 
-      mqtt.on('connect', function() {
+      client.on('connect', function() {
         log('✅ MQTT Connected');
         setConnectionState(true);
-        mqtt.subscribe(DEVICE_ID + '/#');
+        client.subscribe(DEVICE_ID + '/#');
       });
 
-      mqtt.on('error', function(err) {
+      client.on('error', function(err) {
         console.error('❌ MQTT Error:', err);
         log('❌ Error: ' + (err.message || 'Unknown'));
         setConnectionState(false);
         btn.textContent = '🔗 Connect';
       });
 
-      mqtt.on('close', function() {
+      client.on('close', function() {
         log('🔌 MQTT Disconnected');
         setConnectionState(false);
         btn.textContent = '🔗 Connect';
       });
 
-      mqtt.on('message', function(topic, message) {
+      client.on('message', function(topic, message) {
         var msg = message.toString();
         if (topic.indexOf('/terminal') !== -1) log(msg);
         if (topic.indexOf('/status') !== -1) {
@@ -193,8 +203,8 @@
     }
 
     function pub(topic, payload) {
-      if (mqtt && mqtt.connected) {
-        mqtt.publish(topic, payload, { qos: 0 }, function(err) {
+      if (client && client.connected) {
+        client.publish(topic, payload, { qos: 0 }, function(err) {
           if (err) log('❌ Publish Error'); else log('📤 ' + topic + ' -> ' + payload);
         });
       } else log('⚠️ MQTT Disconnected');
