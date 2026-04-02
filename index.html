@@ -46,6 +46,24 @@
     .qr-actions { display:flex; gap:10px; margin-top:15px; }
     #qrFileInput { display:none; }
     .qr-msg { margin-top:10px; font-size:0.9rem; color:#94a3b8; text-align:center; transition: color 0.3s; }
+
+    /* ✅ SCHEDULER STYLES */
+    .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .day-btn { padding:6px 0; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); cursor:pointer; font-size:0.75rem; transition:0.2s; }
+    .day-btn.active { background:var(--accent); color:#000; border-color:var(--accent); font-weight:bold; }
+    
+    .schedule-item { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; font-size:0.85rem; }
+    .sch-info { flex:1; }
+    .sch-time { font-weight:bold; color:var(--accent); margin-right:8px; }
+    .sch-days { color:#94a3b8; font-size:0.8rem; }
+    .sch-actions { display:flex; gap:8px; align-items:center; }
+    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; transition:0.3s; }
+    .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:0.3s; }
+    .toggle-switch.active { background:var(--success); }
+    .toggle-switch.active::after { left:18px; }
+    .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
+    .btn-del { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+    .btn-del:hover { background:var(--danger); color:#fff; }
   </style>
 </head>
 <body>
@@ -73,6 +91,46 @@
     <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
     
     <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    
+    <!-- ✅ SCHEDULER CARD -->
+    <div class="card app-card hidden" id="schedulerCard">
+      <h3>⏰ Relay Scheduler</h3>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>🔌 Relay Target</label>
+          <select id="schRelay">
+            <option value="1">Relay 1</option><option value="2">Relay 2</option>
+            <option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>⚡ Aksi</label>
+          <select id="schAction">
+            <option value="1">ON</option><option value="0">OFF</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>🕐 Waktu</label>
+          <input type="time" id="schTime" value="12:00">
+        </div>
+        <div class="form-group">
+          <label>📅 Hari Aktif</label>
+          <div class="day-grid" id="daySelector">
+            <button class="day-btn" data-day="1">Sen</button>
+            <button class="day-btn" data-day="2">Sel</button>
+            <button class="day-btn" data-day="3">Rab</button>
+            <button class="day-btn" data-day="4">Kam</button>
+            <button class="day-btn" data-day="5">Jum</button>
+            <button class="day-btn" data-day="6">Sab</button>
+            <button class="day-btn" data-day="0">Min</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addSchedule()">➕ Tambah Jadwal</button>
+      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
     
     <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
     
@@ -102,11 +160,17 @@
     const DEVICE_ID = "dmarch_relay_001";
     let qrScanner = null;
 
+    // ✅ SCHEDULER VARIABLES
+    let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
+    let schedulerInterval = null;
+    let lastTriggered = {};
+
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
       document.getElementById('deviceId').value = DEVICE_ID;
       loadFromStorage();
       initRelayButtons();
+      initScheduler(); // ✅ Init Scheduler
       
       document.getElementById('btnConnect').onclick = toggleConnect;
       document.getElementById('disconnectBtn').onclick = toggleConnect;
@@ -124,7 +188,7 @@
       document.getElementById('clearLogBtn').onclick = () => { document.getElementById('terminal').innerHTML = ''; };
     });
 
-    // ✅ 1. GENERATE TOMBOL RELAY (Hanya inisialisasi DOM)
+    // ✅ 1. GENERATE TOMBOL RELAY
     function initRelayButtons() {
       const rBox = document.getElementById('relayBtns');
       rBox.innerHTML = '';
@@ -132,7 +196,7 @@
         const btn = document.createElement('button');
         btn.id = `btn-relay-${i}`;
         btn.className = 'btn-secondary';
-        btn.dataset.state = 'off'; // State default UI
+        btn.dataset.state = 'off';
         btn.textContent = `Relay ${i} (OFF)`;
         btn.onclick = () => sendRelayCommand(i);
         rBox.appendChild(btn);
@@ -196,14 +260,12 @@
         log('✅ MQTT Connected'); 
         setConnectionState(true); 
         
-        // ✅ Subscribe ke topik state. Retained message akan langsung turun & trigger update UI
         mqttClient.subscribe([
           `${DEVICE_ID}/relay/+/state`,
           `${DEVICE_ID}/status`,
           `${DEVICE_ID}/terminal`
         ]);
 
-        // 🛡️ SELF-HEALING: Minta ESP broadcast state terkini jika tidak pakai retained message
         mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
       });
 
@@ -214,10 +276,9 @@
         if(t.includes('/terminal')) { log(m); return; }
         if(t.includes('/status')) { updateSystemHealth(m); return; }
 
-        // ✅ INTI LOGIKA: UI hanya berubah saat menerima /state
         if(t.includes('/relay/') && t.endsWith('/state')) {
           const parts = t.split('/');
-          const relayNum = parts[2]; // Ambil angka relay
+          const relayNum = parts[2];
           updateRelayUI(relayNum, m);
         }
       });
@@ -290,14 +351,13 @@
       t.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + t.innerHTML; 
     }
 
-    // 📷 QR LOGIC - VERSI DIPERBAIKI
-    let qrImagePreview = null; // Untuk preview gambar upload
-    // 📷 QR LOGIC (Diperbaiki)
+    // 📷 QR LOGIC
+    let qrImagePreview = null;
     function openQR() { 
       document.getElementById('qrModal').style.display = 'flex'; 
       document.getElementById('qrMsg').textContent = 'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}';
       document.getElementById('qrMsg').style.color = '#94a3b8';
-      document.getElementById('reader').innerHTML = ''; // Reset reader
+      document.getElementById('reader').innerHTML = '';
       if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
     }
 
@@ -318,11 +378,9 @@
       document.getElementById('qrMsg').style.color = '#94a3b8';
     }
     
-    // ✅ Kamera
     document.getElementById('startCameraBtn').onclick = function() {
       if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); }
       if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
-      
       document.getElementById('reader').innerHTML = '';
       qrScanner = new Html5Qrcode("reader");
       qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRSuccess, ()=>{})
@@ -333,17 +391,13 @@
         });
     };
 
-    // ✅ UPLOAD GAMBAR + PREVIEW + SCAN
     document.getElementById('qrFileInput').onchange = async function(e) {
       const file = e.target.files[0]; 
       if(!file) return;
-      
-      // Reset sebelumnya
       if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner = null; }
       if (qrImagePreview) { qrImagePreview.remove(); qrImagePreview = null; }
       document.getElementById('reader').innerHTML = '';
       
-      // 🖼️ Tampilkan preview gambar (feedback visual)
       const reader = new FileReader();
       reader.onload = function(evt) {
         const img = document.createElement('img');
@@ -362,7 +416,6 @@
       document.getElementById('qrMsg').style.color = '#94a3b8';
     
       try {
-        // ✅ Scan file QR
         qrScanner = new Html5Qrcode("reader");
         const decodedText = await qrScanner.scanFile(file, true);
         console.log('✅ QR Decoded:', decodedText);
@@ -375,48 +428,128 @@
           document.getElementById('qrMsg').textContent = '❌ Gagal: ' + (err.message || 'Format tidak didukung');
         }
         document.getElementById('qrMsg').style.color = '#ef4444';
-        // Jangan close modal agar user bisa coba lagi
       }
     };
     
-    // ✅ PROSES DATA QR YANG BERHASIL DIBACA
     function onQRSuccess(decodedText) {
       try {
         console.log('🔍 Parsing QR JSON:', decodedText);
         const data = JSON.parse(decodedText);
-        
-        // Validasi field wajib
         if(!data.broker || !data.port || !data.user || !data.pass) {
           throw new Error('Field wajib tidak lengkap: broker, port, user, pass');
         }
-        
-        // ✅ Isi form dengan data QR
         document.getElementById('broker').value = data.broker;
         document.getElementById('port').value = data.port;
         document.getElementById('username').value = data.user;
         document.getElementById('password').value = data.pass;
-        
-        // Simpan ke localStorage
         saveToStorage();
-        
-        // Feedback sukses
         document.getElementById('qrMsg').textContent = '✅ QR berhasil! Form terisi otomatis.';
         document.getElementById('qrMsg').style.color = '#10b981';
         log('✅ QR Config loaded: ' + data.broker);
-        
-        // ✅ Tutup modal setelah 1 detik (beri waktu user lihat feedback)
-        setTimeout(() => {
-          closeQR();
-          // Opsional: auto-connect jika user mau
-          // toggleConnect(); 
-        }, 1000);
-        
+        setTimeout(() => { closeQR(); }, 1000);
       } catch(err) {
         console.error('❌ Parse Error:', err);
         document.getElementById('qrMsg').innerHTML = `❌ Format QR tidak valid:<br><code>${err.message}</code><br><br>Gunakan format:<br>{"broker":"...","port":8884,"user":"...","pass":"..."}`;
         document.getElementById('qrMsg').style.color = '#ef4444';
-        // Jangan close modal agar user bisa lihat error
       }
+    }
+
+    // ✅✅✅ SCHEDULER ENGINE ✅✅✅
+    function initScheduler() {
+      document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.onclick = function() { this.classList.toggle('active'); };
+      });
+      renderSchedules();
+      startSchedulerEngine();
+    }
+
+    function addSchedule() {
+      const time = document.getElementById('schTime').value;
+      const relay = document.getElementById('schRelay').value;
+      const action = document.getElementById('schAction').value;
+      const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b => parseInt(b.dataset.day));
+      
+      if (!time || activeDays.length === 0) return alert('⚠️ Waktu & minimal 1 hari wajib dipilih!');
+      
+      const newSch = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+        time, relay, action, days: activeDays, enabled: true
+      };
+      
+      schedules.push(newSch);
+      saveSchedules();
+      renderSchedules();
+      log(`⏰ Jadwal ditambahkan: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);
+    }
+
+    function toggleSchedule(id) {
+      const sch = schedules.find(s => s.id === id);
+      if(sch) { sch.enabled = !sch.enabled; saveSchedules(); renderSchedules(); }
+    }
+
+    function deleteSchedule(id) {
+      if(!confirm('Hapus jadwal ini?')) return;
+      schedules = schedules.filter(s => s.id !== id);
+      saveSchedules(); renderSchedules(); log('🗑️ Jadwal dihapus');
+    }
+
+    function saveSchedules() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
+
+    function renderSchedules() {
+      const list = document.getElementById('scheduleList');
+      list.innerHTML = '';
+      if(schedules.length === 0) {
+        list.innerHTML = '<p style="color:#64748b; text-align:center; font-size:0.85rem;">Belum ada jadwal. Tambahkan di atas.</p>';
+        return;
+      }
+      
+      const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+      schedules.forEach(sch => {
+        const daysStr = sch.days.map(d => dayNames[d]).join(', ');
+        const item = document.createElement('div');
+        item.className = 'schedule-item';
+        item.innerHTML = `
+          <div class="sch-info">
+            <span class="sch-time">🕐 ${sch.time}</span>
+            <span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br>
+            <span class="sch-days">📅 ${daysStr}</span>
+          </div>
+          <div class="sch-actions">
+            <div class="toggle-switch ${sch.enabled ? 'active' : ''}" onclick="toggleSchedule('${sch.id}')"></div>
+            <button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function startSchedulerEngine() {
+      if(schedulerInterval) clearInterval(schedulerInterval);
+      schedulerInterval = setInterval(checkSchedules, 30000);
+      log('✅ Scheduler engine berjalan');
+    }
+
+    function checkSchedules() {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const currentDay = now.getDay();
+      const dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+      schedules.forEach(sch => {
+        if(!sch.enabled || sch.time !== currentTime || !sch.days.includes(currentDay)) return;
+        
+        const triggerKey = `${sch.id}_${dateKey}`;
+        if(lastTriggered[sch.id] === triggerKey) return;
+        
+        lastTriggered[sch.id] = triggerKey;
+        
+        if(mqttClient && mqttClient.connected) {
+          pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action);
+          log(`⏰ [AUTO] Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'} @ ${currentTime}`);
+        } else {
+          log(`⚠️ [SCHEDULER] Gagal trigger: MQTT disconnected`);
+        }
+      });
     }
   </script>
 </body>
