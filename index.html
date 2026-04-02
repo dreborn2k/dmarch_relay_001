@@ -70,11 +70,12 @@
     .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; }
     .gh-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
     .btn-gh { padding:6px 12px; font-size:0.8rem; }
+    .form-label-text { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🔌 dMarchFF Relay Pro</h1>
+    <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
     <div class="card" id="connCard">
@@ -110,11 +111,11 @@
       <p id="connStatus">Status: Disconnected</p>
     </div>
 
-    <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
+    <button id="disconnectBtn" class="btn-danger hidden" type="button">🔌 Disconnect MQTT</button>
 
     <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
     
-    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
+    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn" type="button">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" type="button">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
     
     <!-- ✅ SCHEDULER CARD dengan Cloud Sync -->
     <div class="card app-card hidden" id="schedulerCard">
@@ -135,17 +136,17 @@
       <div class="grid-2">
         <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
         <div class="form-group">
-        <div class="form-label-text">📅 Hari Aktif</div>
-        <div class="day-grid" id="daySelector" role="group" aria-label="Pilih hari aktif">
-          <button class="day-btn" data-day="1" type="button">Sen</button>
-          <button class="day-btn" data-day="2" type="button">Sel</button>
-          <button class="day-btn" data-day="3" type="button">Rab</button>
-          <button class="day-btn" data-day="4" type="button">Kam</button>
-          <button class="day-btn" data-day="5" type="button">Jum</button>
-          <button class="day-btn" data-day="6" type="button">Sab</button>
-          <button class="day-btn" data-day="0" type="button">Min</button>
+          <div class="form-label-text">📅 Hari Aktif</div>
+          <div class="day-grid" id="daySelector" role="group" aria-label="Pilih hari aktif">
+            <button class="day-btn" data-day="1" type="button" aria-label="Senin">Sen</button>
+            <button class="day-btn" data-day="2" type="button" aria-label="Selasa">Sel</button>
+            <button class="day-btn" data-day="3" type="button" aria-label="Rabu">Rab</button>
+            <button class="day-btn" data-day="4" type="button" aria-label="Kamis">Kam</button>
+            <button class="day-btn" data-day="5" type="button" aria-label="Jumat">Jum</button>
+            <button class="day-btn" data-day="6" type="button" aria-label="Sabtu">Sab</button>
+            <button class="day-btn" data-day="0" type="button" aria-label="Minggu">Min</button>
+          </div>
         </div>
-      </div>
       </div>
       
       <!-- ☁️ GitHub Sync Section -->
@@ -257,7 +258,6 @@
     let ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
     let ghSyncTimeout = null;
 
-    // ✅ Load saved GitHub config & update UI
     function initGitHubUI() {
       if(ghConfig.owner && ghConfig.token) {
         document.getElementById('ghOwner').value = ghConfig.owner;
@@ -317,7 +317,6 @@
       document.getElementById('clearLogBtn').onclick = () => { document.getElementById('terminal').innerHTML = ''; };
     });
 
-    // ✅ Relay Button Init
     function initRelayButtons() {
       const rBox = document.getElementById('relayBtns');
       rBox.innerHTML = '';
@@ -351,7 +350,6 @@
       log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);
     }
 
-    // ✅ MQTT Connect/Disconnect
     function toggleConnect() {
       const btn = document.getElementById('btnConnect');
       const statusEl = document.getElementById('connStatus');
@@ -543,22 +541,29 @@
       saveSchedules(); renderSchedules(); log('🗑️ Jadwal dihapus'); 
     }
 
-    // ✅✅✅ MERGE HELPER: ROBUST ID-BASED MERGE ✅✅✅
+    // ✅✅✅ ROBUST MERGE HELPER ✅✅✅
     function mergeScheduleArrays(localArr, serverArr) {
       const result = new Map();
+      
+      // 1. Deep clone & masukkan server schedules
       (serverArr || []).forEach(s => {
-        const clean = { ...s };
+        const clean = JSON.parse(JSON.stringify(s));
         delete clean._source;
         result.set(clean.id, clean);
       });
+      
+      // 2. Timpa dengan lokal HANYA jika lebih baru atau belum ada
       (localArr || []).forEach(s => {
         const existing = result.get(s.id);
-        if(!existing || (s._modified && (!existing._modified || s._modified > existing._modified))) {
-          const clean = { ...s };
+        const isLocalNewer = s._modified && (!existing?._modified || s._modified > existing._modified);
+        if(!existing || isLocalNewer) {
+          const clean = JSON.parse(JSON.stringify(s));
           delete clean._source;
           result.set(s.id, clean);
         }
       });
+      
+      // 3. Return sorted array
       return Array.from(result.values()).sort((a, b) => {
         if(a.time === b.time) return (a.relay||'').localeCompare(b.relay||'');
         return a.time.localeCompare(b.time);
@@ -618,7 +623,7 @@
       });
     }
 
-    // ☁️ GITHUB SYNC FUNCTIONS
+    // ☁️ GITHUB SYNC FUNCTIONS - ROBUST CONFLICT RESOLUTION
     function enableGitHubSync() {
       const owner = document.getElementById('ghOwner').value.trim() || 'dreborn2k';
       const repo = document.getElementById('ghRepo').value.trim() || 'dmarch_relay_001';
@@ -670,6 +675,7 @@
       }
     }
 
+    // ✅✅✅ PUSH KE GITHUB DENGAN EXPONENTIAL BACKOFF + ROBUST MERGE ✅✅✅
     async function pushToGitHub(retryCount = 0) {
       if(!ghSyncEnabled || !ghConfig?.token) return;
       if(retryCount >= 3) { 
@@ -680,6 +686,7 @@
       try {
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
         
+        // 🔁 SELALU fetch SHA terbaru SEBELUM push (setiap retry)
         let sha = null;
         let serverSchedules = null;
         const getRes = await fetch(url, { 
@@ -694,12 +701,13 @@
             if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
               serverSchedules = content.schedules;
             }
-          } catch(e) {}
+          } catch(e) { console.warn('Parse server content failed:', e); }
         }
         else if(getRes.status !== 404) throw new Error(`SHA fetch: ${getRes.status}`);
 
+        // Prepare payload - deep clone & hapus metadata internal
         const cleanSchedules = schedules.map(s => {
-          const { _source, ...clean } = s;
+          const { _source, ...clean } = JSON.parse(JSON.stringify(s));
           return clean;
         });
         
@@ -728,9 +736,12 @@
           return; 
         }
 
+        // 🔴 Conflict (409/422) → Auto-merge & retry dengan exponential backoff
         if(putRes.status === 409 || putRes.status === 422) {
-          log(`⚠️ Conflict terdeteksi (retry ${retryCount+1}/3). Merging...`);
+          const errData = await putRes.json().catch(()=>({}));
+          log(`⚠️ Conflict #${retryCount+1}/3: ${errData.message || 'SHA mismatch'}. Merging...`);
           
+          // Jika belum punya serverSchedules, fetch ulang
           if(!serverSchedules) {
             const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
             if(freshRes.ok) {
@@ -742,15 +753,30 @@
           }
           
           if(serverSchedules) {
+            // ✅ Deep merge: gabungkan semua jadwal unik
+            const beforeCount = schedules.length;
             const merged = mergeScheduleArrays(schedules, serverSchedules);
-            log(`🔄 Merge: ${serverSchedules.length} server + ${schedules.length} lokal → ${merged.length} total`);
+            log(`🔄 Merge: ${serverSchedules.length} server + ${beforeCount} lokal → ${merged.length} total`);
+            
+            // Debug: tampilkan ID yang di-merge
+            console.log('📋 Merged schedule IDs:', merged.map(s => s.id));
             
             schedules = merged;
             saveSchedulesLocal();
             renderSchedules();
+            
+            // ✅ Exponential backoff: 1s → 2s → 4s
+            const backoffMs = Math.pow(2, retryCount) * 1000;
+            log(`⏱️ Waiting ${backoffMs}ms before retry...`);
+            await new Promise(res => setTimeout(res, backoffMs));
+            
+            // ✅ Recursive retry dengan AWAIT yang benar
             return await pushToGitHub(retryCount + 1);
           }
+          
+          // Jika gagal fetch server, tetap retry dengan SHA baru
           log('⚠️ Gagal fetch server untuk merge, retry dengan SHA baru...');
+          await new Promise(res => setTimeout(res, 1000 * (retryCount + 1)));
           return await pushToGitHub(retryCount + 1);
         }
 
