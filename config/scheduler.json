@@ -11,7 +11,18 @@
       ],
       "enabled": true,
       "_modified": "2026-04-02T19:13:22.282Z"
+    },
+    {
+      "id": "mnhurp0xx9i2",
+      "time": "14:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1
+      ],
+      "enabled": true,
+      "_modified": "2026-04-02T19:13:29.457Z"
     }
   ],
-  "updatedAt": "2026-04-02T19:13:23.862Z"
+  "updatedAt": "2026-04-02T19:13:31.020Z"
 }
