@@ -6,6 +6,7 @@
   <title>dMarch Relay Pro - Web Control</title>
   
   <!-- ✅ CDN Stabil & Terkunci Versi -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <link rel="icon" href="image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
@@ -268,6 +269,93 @@
       closeQR(); // ✅ Dipanggil di luar try-catch agar tidak memicu error palsu
     }
     function onQRFail(err) { /* Ignore scan failures during live camera */ }
+
+    let mqttClient = null;
+    let DEVICE = ''; // ✅ Diambil dinamis dari input user
+  
+    // ✅ 1. Fungsi Koneksi (Dipanggil saat tombol Hubungkan di card Koneksi MQTT diklik)
+    function handleConnect() {
+      // Sesuaikan ID input jika di file asli Anda berbeda
+      DEVICE = document.getElementById('inputDeviceId').value.trim() || 'dmarch_relay_001';
+      const broker = document.getElementById('inputBroker').value.trim();
+      const user = document.getElementById('inputUser').value.trim();
+      const pass = document.getElementById('inputPass').value.trim();
+      const statusEl = document.getElementById('connStatus');
+  
+      if (!broker) return alert('Broker URL wajib diisi!');
+      if (mqttClient) mqttClient.end(true);
+  
+      if (statusEl) { statusEl.textContent = '🔄 Menghubungkan...'; statusEl.className = 'connecting'; }
+  
+      mqttClient = mqtt.connect(broker, {
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+        username: user,
+        password: pass,
+        clean: true,
+        reconnectPeriod: 3000
+      });
+  
+      mqttClient.on('connect', () => {
+        console.log('✅ MQTT Connected');
+        if (statusEl) { statusEl.textContent = '🟢 Terhubung'; statusEl.className = 'connected'; }
+        // Subscribe ke state. Retained message akan langsung turun & trigger update UI
+        mqttClient.subscribe(`${DEVICE}/relay/+/state`);
+      });
+  
+      mqttClient.on('message', (topic, payload) => {
+        const msg = payload.toString().trim();
+        const topicStr = topic.toString();
+        
+        // ✅ 2. UPDATE UI HANYA SAAT TERIMA PESAN /state DARI ESP
+        if (topicStr.includes('/relay/') && topicStr.endsWith('/state')) {
+          const parts = topicStr.split('/');
+          const rNum = parts[2]; // Angka relay 1-5
+          updateButtonState(rNum, parseInt(msg));
+        }
+      });
+  
+      mqttClient.on('error', err => console.error('MQTT Error:', err));
+      mqttClient.on('close', () => {
+        if (statusEl) { statusEl.textContent = '⚪ Terputus'; statusEl.className = 'disconnected'; }
+      });
+    }
+  
+    // ✅ 3. Fungsi Update Visual Tombol (Dipanggil OTOMATIS oleh on('message'))
+    function updateButtonState(num, stateVal) {
+      // Sesuaikan ID tombol jika di file asli Anda berbeda (contoh: btn-relay-1, relay1, dll)
+      const btn = document.getElementById(`btn-relay-${num}`); 
+      if (!btn) return;
+      
+      const isOn = stateVal === 1;
+      btn.dataset.state = isOn ? 'on' : 'off';
+      
+      // Toggle class sesuai style asli Anda
+      btn.classList.toggle('active', isOn);
+      btn.classList.toggle('inactive', !isOn);
+      
+      // Update teks/status (sesuaikan jika ada tambahan elemen di tombol asli)
+      btn.innerHTML = isOn ? `Relay ${num} <span class="status-dot on"></span> ON` : `Relay ${num} <span class="status-dot off"></span> OFF`;
+    }
+  
+    // ✅ 4. Handler Klik Tombol (HANYA Publish, JANGAN ubah UI di sini!)
+    function sendRelayCommand(num) {
+      if (!mqttClient || !mqttClient.connected) return alert('⚠️ MQTT belum terhubung!');
+      const btn = document.getElementById(`btn-relay-${num}`);
+      const currentState = btn ? btn.dataset.state : 'off';
+      const cmd = currentState === 'on' ? 0 : 1;
+      mqttClient.publish(`${DEVICE}/relay/${num}/cmd`, String(cmd));
+      // UI akan update otomatis saat ESP publish balik ke /state
+    }
+  
+    function allOn() {
+      if (!mqttClient || !mqttClient.connected) return alert('⚠️ MQTT belum terhubung!');
+      mqttClient.publish(`${DEVICE}/all/on`, '1');
+    }
+  
+    function allOff() {
+      if (!mqttClient || !mqttClient.connected) return alert('⚠️ MQTT belum terhubung!');
+      mqttClient.publish(`${DEVICE}/all/off`, '1');
+    }
   </script>
 </body>
 </html>
