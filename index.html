@@ -553,5 +553,44 @@
             logToTerminal('🚀 Web UI Loaded. Klik Connect untuk mulai.');
         });
     </script>
+    <!-- 🌐 CARD SETTING NETWORK (ONLINE UI) -->
+<div class="card" style="margin-top:20px; border:1px solid #334155;">
+  <h3 style="margin:0 0 15px; color:#38bdf8;">🌐 Network Settings</h3>
+  <div style="margin-bottom:10px;">
+    <label style="display:block; margin:5px 0; color:#94a3b8;">SSID WiFi Baru</label>
+    <input type="text" id="netSsid" placeholder="Masukkan SSID WiFi" style="width:100%; padding:10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; box-sizing:border-box;">
+  </div>
+  <div style="margin-bottom:15px;">
+    <label style="display:block; margin:5px 0; color:#94a3b8;">Password WiFi Baru</label>
+    <input type="password" id="netPass" placeholder="Masukkan Password WiFi" style="width:100%; padding:10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#fff; box-sizing:border-box;">
+  </div>
+  <button onclick="updateNetwork()" style="width:100%; padding:12px; border:none; border-radius:6px; background:#10b981; color:#fff; font-weight:600; cursor:pointer;">💾 Update Network</button>
+  <button onclick="resetWifi()" style="width:100%; padding:12px; border:none; border-radius:6px; background:#ef4444; color:#fff; font-weight:600; cursor:pointer; margin-top:10px;">🔄 Reset WiFi (AP Mode)</button>
+</div>
+
+<script>
+  function updateNetwork() {
+    const ssid = document.getElementById('netSsid').value.trim();
+    const pass = document.getElementById('netPass').value.trim();
+    if (!ssid) return alert('⚠️ SSID wajib diisi!');
+    
+    // ✅ Ganti 'mqttClient' jika nama instance MQTT Anda berbeda di JS asli
+    if (typeof mqttClient !== 'undefined' && mqttClient.connected) {
+      const payload = JSON.stringify({ ssid: ssid, pass: pass });
+      mqttClient.publish('dmarch_relay_001/network/update', payload, 0);
+      alert('✅ Perintah Update Network terkirim. Device akan restart otomatis.');
+    } else {
+      alert('⚠️ MQTT tidak terhubung! Pastikan device online.');
+    }
+  }
+
+  function resetWifi() {
+    if (!confirm('⚠️ Reset konfigurasi WiFi?\nDevice akan restart ke Mode AP (192.168.4.1).')) return;
+    if (typeof mqttClient !== 'undefined' && mqttClient.connected) {
+      mqttClient.publish('dmarch_relay_001/network/reset', '1', 0);
+      alert('🔄 Perintah Reset WiFi terkirim.');
+    }
+  }
+</script>
 </body>
 </html>
