@@ -37,7 +37,7 @@
     "tg": {
       "token": "8773823890:AAE8t6TD6-UmuJtIAielTas2l6GvttAUcR8",
       "chatId": "6783331825",
-      "enabled": false,
+      "enabled": true,
       "connected": false
     },
     "wa": {
@@ -45,5 +45,5 @@
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:14:45.912Z"
+  "updatedAt": "2026-04-02T18:14:48.685Z"
 }
