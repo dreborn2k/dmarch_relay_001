@@ -10,7 +10,7 @@
     },
     "gotify": {
       "url": "http://192.168.18.190:8080",
-      "token": "••••••••••••••••",
+      "token": "AlMcTcdIOV-zRrc",
       "enabled": true,
       "connected": false
     },
@@ -19,5 +19,5 @@
       "connected": false
     }
   },
-  "updatedAt": "2026-04-02T18:57:30.660Z"
+  "updatedAt": "2026-04-02T18:57:38.139Z"
 }
