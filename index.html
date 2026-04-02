@@ -39,7 +39,6 @@
     <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
 
-    <!-- 1. CARD KONEKSI MQTT -->
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
@@ -56,138 +55,134 @@
 
     <button id="disconnectBtn" class="btn-danger hidden">🔌 Disconnect MQTT</button>
 
-    <!-- 2. APP CARDS -->
     <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div>
     
     <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
     
-    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org (Indonesia)</option><option value="pool.ntp.org">pool.ntp.org (Global)</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label>🕐 NTP Server</label><select id="ntpSelect"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label>Timezone (Jam)</label><input type="number" id="tzInput" value="7"></div><button class="btn-primary" id="saveNTPBtn">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label>🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25"></div><button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button></div>
     
-    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID WiFi"></div><div class="form-group"><label>Password WiFi Baru</label><input type="password" id="netPass" placeholder="Masukkan Password WiFi"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP Mode)</button></div>
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label>SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID"></div><div class="form-group"><label>Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password"></div><button class="btn-success" id="updateNetBtn">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset WiFi (AP)</button></div>
     
-    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div></div>
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
     
     <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn">🗑️ Clear Log</button></div>
   </div>
 
   <script>
-    // Pastikan semua fungsi global agar bisa dipanggil via onclick/event
-    let mqtt = null;
-    const DEVICE_ID = "dmarch_relay_001";
+    // ✅ Gunakan var agar tidak error jika script termuat 2x
+    var mqtt = null;
+    var DEVICE_ID = "dmarch_relay_001";
 
-    document.addEventListener('DOMContentLoaded', () => {
-      // Inisialisasi default values
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inisialisasi hanya sekali
       document.getElementById('clientId').value = 'web_' + Math.random().toString(16).substr(2, 8);
       document.getElementById('deviceId').value = DEVICE_ID;
 
       // Generate tombol relay
-      const relayContainer = document.getElementById('relayBtns');
-      for(let i=1; i<=5; i++) {
-        const btn = document.createElement('button');
+      var rBox = document.getElementById('relayBtns');
+      for(var i=1; i<=5; i++) {
+        var btn = document.createElement('button');
         btn.className = 'btn-secondary';
-        btn.textContent = `Relay ${i}`;
-        btn.dataset.num = i;
-        btn.onclick = () => pub(`${DEVICE_ID}/relay/${i}/cmd`, '1');
-        relayContainer.appendChild(btn);
+        btn.textContent = 'Relay ' + i;
+        btn.onclick = (function(num) { return function() { pub(DEVICE_ID + '/relay/' + num + '/cmd', '1'); }; })(i);
+        rBox.appendChild(btn);
       }
 
-      // Attach events to buttons
-      document.getElementById('btnConnect').addEventListener('click', toggleConnect);
-      document.getElementById('disconnectBtn').addEventListener('click', toggleConnect);
-      document.getElementById('allOnBtn').addEventListener('click', () => pub(`${DEVICE_ID}/all/on`, '1'));
-      document.getElementById('allOffBtn').addEventListener('click', () => pub(`${DEVICE_ID}/all/off`, '1'));
-      document.getElementById('saveNTPBtn').addEventListener('click', () => {
-        pub(`${DEVICE_ID}/ntp/set`, document.getElementById('ntpSelect').value);
-        pub(`${DEVICE_ID}/timezone/set`, document.getElementById('tzInput').value);
-      });
-      document.getElementById('updateGPIOBtn').addEventListener('click', () => pub(`${DEVICE_ID}/gpio/update`, document.getElementById('gpioInput').value));
-      document.getElementById('updateNetBtn').addEventListener('click', updateNetwork);
-      document.getElementById('resetNetBtn').addEventListener('click', resetWifi);
-      document.getElementById('otaBtn').addEventListener('click', () => pub(`${DEVICE_ID}/system/ota`, '1'));
-      document.getElementById('restartBtn').addEventListener('click', () => pub(`${DEVICE_ID}/system/restart`, '1'));
-      document.getElementById('clearLogBtn').addEventListener('click', () => document.getElementById('terminal').innerHTML = '');
+      // Attach events
+      document.getElementById('btnConnect').onclick = toggleConnect;
+      document.getElementById('disconnectBtn').onclick = toggleConnect;
+      document.getElementById('allOnBtn').onclick = function() { pub(DEVICE_ID + '/all/on', '1'); };
+      document.getElementById('allOffBtn').onclick = function() { pub(DEVICE_ID + '/all/off', '1'); };
+      document.getElementById('saveNTPBtn').onclick = function() {
+        pub(DEVICE_ID + '/ntp/set', document.getElementById('ntpSelect').value);
+        pub(DEVICE_ID + '/timezone/set', document.getElementById('tzInput').value);
+      };
+      document.getElementById('updateGPIOBtn').onclick = function() { pub(DEVICE_ID + '/gpio/update', document.getElementById('gpioInput').value); };
+      document.getElementById('updateNetBtn').onclick = updateNetwork;
+      document.getElementById('resetNetBtn').onclick = resetWifi;
+      document.getElementById('otaBtn').onclick = function() { pub(DEVICE_ID + '/system/ota', '1'); };
+      document.getElementById('restartBtn').onclick = function() { pub(DEVICE_ID + '/system/restart', '1'); };
+      document.getElementById('clearLogBtn').onclick = function() { document.getElementById('terminal').innerHTML = ''; };
     });
 
     function log(msg) {
-      const term = document.getElementById('terminal');
-      term.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + term.innerHTML;
+      var term = document.getElementById('terminal');
+      term.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + term.innerHTML;
     }
 
     function setConnectionState(connected) {
-      const connCard = document.getElementById('connCard');
-      const disconnectBtn = document.getElementById('disconnectBtn');
-      const appCards = document.querySelectorAll('.app-card');
-      const statusEl = document.getElementById('connStatus');
+      var connCard = document.getElementById('connCard');
+      var disBtn = document.getElementById('disconnectBtn');
+      var appCards = document.querySelectorAll('.app-card');
+      var statusEl = document.getElementById('connStatus');
 
       if (connected) {
         connCard.classList.add('hidden');
-        disconnectBtn.classList.remove('hidden');
-        appCards.forEach(c => c.classList.remove('hidden'));
-        statusEl.textContent = "Status: Connected";
+        disBtn.classList.remove('hidden');
+        appCards.forEach(function(c) { c.classList.remove('hidden'); });
+        statusEl.textContent = 'Status: Connected';
       } else {
         connCard.classList.remove('hidden');
-        disconnectBtn.classList.add('hidden');
-        appCards.forEach(c => c.classList.add('hidden'));
-        statusEl.textContent = "Status: Disconnected";
+        disBtn.classList.add('hidden');
+        appCards.forEach(function(c) { c.classList.add('hidden'); });
+        statusEl.textContent = 'Status: Disconnected';
       }
     }
 
     function toggleConnect() {
-      const btnConnect = document.getElementById('btnConnect');
-      const btnDisconnect = document.getElementById('disconnectBtn');
-      const statusEl = document.getElementById('connStatus');
+      var btn = document.getElementById('btnConnect');
+      var statusEl = document.getElementById('connStatus');
 
-      // Jika sedang connect → Disconnect
       if (mqtt && mqtt.connected) {
         mqtt.end();
-        statusEl.textContent = "Status: Disconnecting...";
+        statusEl.textContent = 'Status: Disconnecting...';
         return;
       }
 
-      const host = document.getElementById('broker').value.trim();
-      const port = document.getElementById('port').value.trim();
-      const user = document.getElementById('username').value.trim();
-      const pass = document.getElementById('password').value.trim();
-      const cid = document.getElementById('clientId').value.trim();
+      var host = document.getElementById('broker').value.trim();
+      var port = document.getElementById('port').value.trim();
+      var user = document.getElementById('username').value.trim();
+      var pass = document.getElementById('password').value.trim();
+      var cid = document.getElementById('clientId').value.trim();
 
       if (!host || !port) return alert('⚠️ Host dan Port wajib diisi!');
       if (port !== '8884') return alert('⚠️ HiveMQ Cloud WebSocket wajib pakai port 8884!');
 
-      const url = `wss://${host}:${port}/mqtt`;
-      log(`🔄 Connecting to ${url}...`);
-      statusEl.textContent = "Status: Connecting...";
-      btnConnect.textContent = '⏳ Connecting...';
+      var url = 'wss://' + host + ':' + port + '/mqtt';
+      log('🔄 Connecting to ' + url + '...');
+      statusEl.textContent = 'Status: Connecting...';
+      btn.textContent = '⏳ Connecting...';
 
       mqtt = mqtt.connect(url, {
         clientId: cid, username: user, password: pass,
         clean: true, reconnectPeriod: 0, connectTimeout: 10000
       });
 
-      mqtt.on('connect', () => {
+      mqtt.on('connect', function() {
         log('✅ MQTT Connected');
         setConnectionState(true);
         mqtt.subscribe(DEVICE_ID + '/#');
       });
 
-      mqtt.on('error', (err) => {
+      mqtt.on('error', function(err) {
         console.error('❌ MQTT Error:', err);
         log('❌ Error: ' + (err.message || 'Unknown'));
         setConnectionState(false);
-        btnConnect.textContent = '🔗 Connect';
+        btn.textContent = '🔗 Connect';
       });
 
-      mqtt.on('close', () => {
+      mqtt.on('close', function() {
         log('🔌 MQTT Disconnected');
         setConnectionState(false);
-        btnConnect.textContent = '🔗 Connect';
+        btn.textContent = '🔗 Connect';
       });
 
-      mqtt.on('message', (topic, message) => {
-        const msg = message.toString();
-        if (topic.includes('/terminal')) log(msg);
-        if (topic.includes('/status')) {
+      mqtt.on('message', function(topic, message) {
+        var msg = message.toString();
+        if (topic.indexOf('/terminal') !== -1) log(msg);
+        if (topic.indexOf('/status') !== -1) {
           try {
-            const d = JSON.parse(msg);
+            var d = JSON.parse(msg);
             document.getElementById('sigVal').textContent = (d.rssi || '--') + '%';
             document.getElementById('upVal').textContent = d.uptime || '--';
             document.getElementById('tempVal').textContent = (d.temp || '--') + '°C';
@@ -199,21 +194,23 @@
 
     function pub(topic, payload) {
       if (mqtt && mqtt.connected) {
-        mqtt.publish(topic, payload, { qos: 0 }, (err) => err ? log('❌ Publish Error') : log(`📤 ${topic} -> ${payload}`));
+        mqtt.publish(topic, payload, { qos: 0 }, function(err) {
+          if (err) log('❌ Publish Error'); else log('📤 ' + topic + ' -> ' + payload);
+        });
       } else log('⚠️ MQTT Disconnected');
     }
 
     function updateNetwork() {
-      const s = document.getElementById('netSsid').value.trim();
+      var s = document.getElementById('netSsid').value.trim();
       if (!s) return alert('⚠️ SSID wajib diisi!');
       pub(DEVICE_ID + '/network/update', JSON.stringify({ ssid: s, pass: document.getElementById('netPass').value.trim() }));
-      alert('✅ Perintah Update Network terkirim. Device akan restart otomatis.');
+      alert('✅ Perintah terkirim. Device akan restart.');
     }
 
     function resetWifi() {
-      if (!confirm('⚠️ Reset konfigurasi WiFi?\nDevice akan restart ke Mode AP (192.168.4.1).')) return;
+      if (!confirm('⚠️ Reset WiFi ke AP Mode (192.168.4.1)?')) return;
       pub(DEVICE_ID + '/network/reset', '1');
-      alert('🔄 Perintah Reset WiFi terkirim.');
+      alert('🔄 Reset terkirim.');
     }
   </script>
 </body>
