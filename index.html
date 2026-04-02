@@ -191,7 +191,7 @@
       if(ghConfig.owner && ghConfig.token) {
         document.getElementById('ghOwner').value = ghConfig.owner;
         document.getElementById('ghRepo').value = ghConfig.repo;
-        document.getElementById('ghToken').value = '••••••••••••••••'; // Masked
+        document.getElementById('ghToken').value = '••••••••••••••••';
         document.getElementById('ghDetails').textContent = `${ghConfig.owner}/${ghConfig.repo}/${ghConfig.path}`;
         setSyncStatus(true);
       }
@@ -228,7 +228,7 @@
       loadFromStorage();
       initRelayButtons();
       initScheduler();
-      initGitHubUI(); // ✅ Init GitHub UI state
+      initGitHubUI();
       
       document.getElementById('btnConnect').onclick = toggleConnect;
       document.getElementById('disconnectBtn').onclick = toggleConnect;
@@ -310,7 +310,6 @@
         setConnectionState(true); 
         mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`, `${DEVICE_ID}/status`, `${DEVICE_ID}/terminal`]);
         mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
-        // ✅ Auto-pull dari GitHub jika sync aktif
         if(ghSyncEnabled) loadFromGitHub();
       });
 
@@ -437,7 +436,6 @@
       document.querySelectorAll('.day-btn').forEach(btn => { btn.onclick = function() { this.classList.toggle('active'); }; });
       renderSchedules();
       startSchedulerEngine();
-      // Auto-load dari GitHub jika config sudah valid
       if(ghSyncEnabled && ghConfig?.token) loadFromGitHub();
     }
 
@@ -447,9 +445,12 @@
       const action = document.getElementById('schAction').value;
       const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b => parseInt(b.dataset.day));
       if(!time || activeDays.length === 0) return alert('⚠️ Waktu & minimal 1 hari wajib dipilih!');
+      
+      // ✅ Tambahkan _modified timestamp untuk merge yang lebih akurat
       const newSch = { 
         id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4), 
-        time, relay, action, days: activeDays, enabled: true 
+        time, relay, action, days: activeDays, enabled: true,
+        _modified: new Date().toISOString() // ✅ Timestamp untuk conflict resolution
       };
       schedules.push(newSch); 
       saveSchedules(); 
@@ -459,7 +460,11 @@
 
     function toggleSchedule(id) { 
       const sch = schedules.find(s => s.id === id); 
-      if(sch) { sch.enabled = !sch.enabled; saveSchedules(); renderSchedules(); } 
+      if(sch) { 
+        sch.enabled = !sch.enabled; 
+        sch._modified = new Date().toISOString(); // ✅ Update timestamp saat edit
+        saveSchedules(); renderSchedules(); 
+      } 
     }
     function deleteSchedule(id) { 
       if(!confirm('Hapus jadwal ini?')) return; 
@@ -467,23 +472,46 @@
       saveSchedules(); renderSchedules(); log('🗑️ Jadwal dihapus'); 
     }
 
-    // ✅ MERGE HELPER: ID-based merge untuk conflict resolution
+    // ✅✅✅ MERGE HELPER: ROBUST ID-BASED MERGE ✅✅✅
     function mergeScheduleArrays(localArr, serverArr) {
-      const map = new Map();
-      (serverArr || []).forEach(s => map.set(s.id, { ...s }));
-      (localArr || []).forEach(s => map.set(s.id, { ...s })); // Local override untuk ID sama
-      return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
+      const result = new Map();
+      
+      // 1. Masukkan semua dari server dulu
+      (serverArr || []).forEach(s => {
+        // Hapus metadata internal jika ada
+        const clean = { ...s };
+        delete clean._source;
+        result.set(clean.id, clean);
+      });
+      
+      // 2. Timpa dengan lokal HANYA jika _modified lokal lebih baru (atau tidak ada di server)
+      (localArr || []).forEach(s => {
+        const existing = result.get(s.id);
+        if(!existing || (s._modified && (!existing._modified || s._modified > existing._modified))) {
+          const clean = { ...s };
+          delete clean._source;
+          result.set(s.id, clean);
+        }
+      });
+      
+      // 3. Return array sorted by time
+      return Array.from(result.values()).sort((a, b) => {
+        if(a.time === b.time) return (a.relay||'').localeCompare(b.relay||'');
+        return a.time.localeCompare(b.time);
+      });
     }
 
-    // ✅ SAVE SCHEDULES: LocalStorage + Debounced GitHub Push
+    // ✅ SAVE SCHEDULES: LocalStorage + Debounced GitHub Push dengan Random Jitter
     function saveSchedules() {
       // 1. Selalu simpan ke localStorage
       try { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); } catch(e) {}
       
-      // 2. Jika GitHub sync aktif, jadwalkan push (debounced)
+      // 2. Jika GitHub sync aktif, jadwalkan push dengan random jitter (hindari collision)
       if(ghSyncEnabled && navigator.onLine && ghConfig?.token) {
         clearTimeout(ghSyncTimeout);
-        ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000);
+        // ✅ Random jitter 50-200ms untuk mengurangi kemungkinan 2 device push bersamaan
+        const jitter = Math.floor(Math.random() * 150) + 50;
+        ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000 + jitter);
       }
     }
 
@@ -543,7 +571,7 @@
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       setSyncStatus(true);
-      loadFromGitHub(); // Auto-pull setelah enable
+      loadFromGitHub();
     }
 
     function disableGitHubSync() {
@@ -571,10 +599,11 @@
         const content = JSON.parse(atob(data.content));
         
         if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
-          schedules = content.schedules;
-          saveSchedulesLocal(); // Update localStorage tanpa trigger sync
+          // ✅ Merge dengan data lokal (hindari overwrite jadwal yang baru dibuat lokal)
+          schedules = mergeScheduleArrays(schedules, content.schedules);
+          saveSchedulesLocal();
           renderSchedules();
-          log('✅ Pull dari GitHub sukses');
+          log(`✅ Pull dari GitHub sukses (${schedules.length} jadwal)`);
         }
       } catch(err) { log('❌ Pull failed: ' + err.message); }
       finally { 
@@ -583,27 +612,54 @@
       }
     }
 
+    // ✅✅✅ PUSH KE GITHUB DENGAN CONFLICT RESOLUTION ROBUST ✅✅✅
     async function pushToGitHub(retryCount = 0) {
       if(!ghSyncEnabled || !ghConfig?.token) return;
-      if(retryCount >= 3) { log('❌ Gagal sync setelah 3x retry'); return; }
+      if(retryCount >= 3) { 
+        log('❌ Gagal sync setelah 3x retry. Data aman di localStorage.'); 
+        return; 
+      }
 
       try {
         const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
         
-        // 🔁 SELALU fetch SHA terbaru sebelum push
+        // 🔁 SELALU fetch SHA terbaru SEBELUM push
         let sha = null;
+        let serverSchedules = null;
         const getRes = await fetch(url, { 
           headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } 
         });
-        if(getRes.ok) { sha = (await getRes.json()).sha; }
+        
+        if(getRes.ok) { 
+          const getData = await getRes.json(); 
+          sha = getData.sha;
+          // Parse content untuk merge jika nanti conflict
+          try {
+            const content = JSON.parse(atob(getData.content));
+            if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+              serverSchedules = content.schedules;
+            }
+          } catch(e) {}
+        }
         else if(getRes.status !== 404) throw new Error(`SHA fetch: ${getRes.status}`);
 
-        const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+        // Prepare payload - hapus metadata internal sebelum upload
+        const cleanSchedules = schedules.map(s => {
+          const { _source, ...clean } = s;
+          return clean;
+        });
+        
+        const payload = { 
+          device: DEVICE_ID, 
+          schedules: cleanSchedules, 
+          updatedAt: new Date().toISOString() 
+        };
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
         
         const body = { 
-          message: `🔄 Sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString('id-ID')}`, 
-          content, branch: ghConfig.branch || 'main' 
+          message: `🔄 Sync: ${DEVICE_ID} (${schedules.length} jadwal) @ ${new Date().toLocaleTimeString('id-ID')}`, 
+          content, 
+          branch: ghConfig.branch || 'main' 
         };
         if(sha) body.sha = sha;
 
@@ -613,28 +669,51 @@
           body: JSON.stringify(body) 
         });
 
-        if(putRes.ok) { log('💾 GitHub sync OK'); return; }
+        if(putRes.ok) { 
+          log(`💾 GitHub sync OK (${schedules.length} jadwal)`); 
+          return; 
+        }
 
         // 🔴 Conflict (409/422) → Auto-merge & retry
         if(putRes.status === 409 || putRes.status === 422) {
-          log(`⚠️ Conflict (retry ${retryCount+1}/3). Merging...`);
-          const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
-          if(freshRes.ok) {
-            const freshData = JSON.parse(atob((await freshRes.json()).content));
-            if(freshData.device === DEVICE_ID && Array.isArray(freshData.schedules)) {
-              schedules = mergeScheduleArrays(schedules, freshData.schedules);
-              saveSchedulesLocal();
-              renderSchedules();
-              log('🔄 Merge selesai, retry...');
-              return pushToGitHub(retryCount + 1);
+          log(`⚠️ Conflict terdeteksi (retry ${retryCount+1}/3). Merging...`);
+          
+          // Jika belum punya serverSchedules, fetch ulang
+          if(!serverSchedules) {
+            const freshRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` }});
+            if(freshRes.ok) {
+              const freshData = JSON.parse(atob((await freshRes.json()).content));
+              if(freshData.device === DEVICE_ID && Array.isArray(freshData.schedules)) {
+                serverSchedules = freshData.schedules;
+              }
             }
           }
-          return pushToGitHub(retryCount + 1);
+          
+          if(serverSchedules) {
+            // ✅ Merge: gabungkan semua jadwal unik dari lokal + server
+            const merged = mergeScheduleArrays(schedules, serverSchedules);
+            log(`🔄 Merge: ${serverSchedules.length} server + ${schedules.length} lokal → ${merged.length} total`);
+            
+            schedules = merged;
+            saveSchedulesLocal(); // Update localStorage
+            renderSchedules();    // Update UI
+            
+            // ✅ Retry dengan data yang sudah di-merge (AWAIT agar tidak race condition)
+            return await pushToGitHub(retryCount + 1);
+          }
+          
+          // Jika gagal fetch server, tetap retry dengan SHA baru
+          log('⚠️ Gagal fetch server untuk merge, retry dengan SHA baru...');
+          return await pushToGitHub(retryCount + 1);
         }
 
         const errData = await putRes.json().catch(()=>({}));
         throw new Error(errData.message || `HTTP ${putRes.status}`);
-      } catch(err) { log('❌ Push failed: ' + err.message); }
+        
+      } catch(err) { 
+        log('❌ Push failed: ' + err.message);
+        console.warn('GitHub sync error:', err);
+      }
     }
 
     // ✅ Online event listener untuk auto-retry
