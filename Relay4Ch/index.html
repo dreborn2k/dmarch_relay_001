@@ -11,10 +11,13 @@
     :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; width: 100%; } /* ✅ Lebar konsisten */
+    
+    /* ✅ CONTAINER & CARD - Lebar Konsisten */
+    .container { max-width: 600px; margin: 0 auto; width: 100%; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; }
+    
     h1 { text-align: center; margin-bottom: 5px; }
     .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; } /* ✅ Lebar sama */
     .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group { margin-bottom: 12px; }
@@ -33,7 +36,10 @@
     .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
     .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
     .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    
+    /* ✅ HIDDEN CLASS - Wajib ada !important */
     .hidden { display: none !important; }
+    
     #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
     #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
     .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
@@ -55,15 +61,18 @@
     .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
     .btn-del { background:transparent; color:var(--danger); border:1px solid var(--danger); }
     .btn-del:hover { background:var(--danger); color:#fff; }
+    
+    /* ✅ GitHub Sync UI */
     .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; }
     .sync-on { background:#064e3b; color:#10b981; } .sync-off { background:#334155; color:#94a3b8; }
-    .gh-input { margin-top:8px; font-size:0.85rem; transition: opacity 0.3s; }
-    .gh-input.hidden { opacity:0.5; pointer-events:none; }
+    .gh-input { margin-top:8px; font-size:0.85rem; }
     .gh-config-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:8px; background:var(--bg); border-radius:8px; }
     .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; }
     .gh-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-    .btn-gh { padding:6px 12px; font-size:0.8rem; width: auto; min-width: 100px; }
+    .btn-gh { padding:6px 12px; font-size:0.8rem; width: auto; min-width: 90px; }
     .form-label-text { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    
+    /* ✅ Notification Card */
     .notif-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
     .notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .notif-title { display:flex; align-items:center; gap:8px; font-weight:600; }
@@ -98,7 +107,7 @@
     
     <button id="disconnectBtn" class="btn-danger hidden" type="button">🔌 Disconnect MQTT</button>
     
-    <!-- ✅ System Health Card -->
+    <!-- ✅ System Health Card (Reference Width) -->
     <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div></div>
     
     <!-- ✅ Relay Control Card -->
@@ -122,13 +131,13 @@
           <div><span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span><div class="gh-details" id="ghDetails">dreborn2k/dmarch_relay_001/Relay4Ch/config/scheduler.json</div></div>
           <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
         </div>
+        <!-- ✅ Form Input (akan hidden saat online) -->
         <div id="ghInputForm" class="gh-input">
           <div class="grid-2">
             <div class="form-group"><label for="ghOwner">GitHub Username</label><input type="text" id="ghOwner" value="dreborn2k" autocomplete="off"></div>
             <div class="form-group"><label for="ghRepo">Repo Name</label><input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off"></div>
           </div>
-          <!-- ✅ Input Path (akan hidden saat online) -->
-          <div class="form-group" id="ghPathGroup"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
+          <div class="form-group"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
           <div class="form-group"><label for="ghToken">GitHub Personal Access Token</label><input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;"></div>
           <div class="gh-actions">
             <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan</button>
@@ -192,7 +201,7 @@
   <div id="qrModal" role="dialog" aria-modal="true"><div class="modal-box"><h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn" type="button">📷 Kamera</button><label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Gambar</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">Format: {"broker":"...","port":8884,"user":"...","pass":"..."}</p></div></div>
 
   <script>
-    // ✅ GLOBAL VARIABLES - Defensive
+    // ✅ GLOBAL VARIABLES
     let mqttClient = null, DEVICE_ID = "dmarch_relay_001", qrScanner = null;
     let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
     let schedulerInterval = null, lastTriggered = {};
@@ -202,14 +211,14 @@
     let gotifyEnabled = notifConfig.gotify?.enabled||false, gotifyConnected = notifConfig.gotify?.connected||false;
     let waEnabled = notifConfig.wa?.enabled||false, waConnected = notifConfig.wa?.connected||false;
 
-    // ✅ Helper Functions - Safe DOM Access
+    // ✅ HELPER FUNCTIONS - Safe DOM Access
     const $ = id => document.getElementById(id);
-    const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
-    const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; };
+    const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; return el; };
+    const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; return el; };
     const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
     const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
 
-    // ✅ GitHub UI Init - Defensive
+    // ✅ GITHUB UI INIT
     function initGitHubUI() {
       try {
         const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
@@ -225,35 +234,41 @@
       } catch(e) { console.warn('⚠️ initGitHubUI:', e); }
     }
 
-    // ✅ Sync Status - FIXED: Toggle button visibility
+    // ✅ SET SYNC STATUS - FIXED: Toggle visibility correctly
     function setSyncStatus(online) {
       ghSyncEnabled = online;
-      const statusEl = $('ghSyncStatus'), inputForm = $('ghInputForm');
-      const enableBtn = $('ghEnableBtn'), disableBtn = $('ghDisableBtn');
+      const statusEl = $('ghSyncStatus');
+      const inputForm = $('ghInputForm');
+      const enableBtn = $('ghEnableBtn');
+      const disableBtn = $('ghDisableBtn');
       
-      if(!statusEl || !inputForm || !enableBtn || !disableBtn) return;
+      // ✅ Pastikan semua elemen ada
+      if(!statusEl || !inputForm || !enableBtn || !disableBtn) {
+        console.warn('⚠️ GitHub UI elements missing');
+        return;
+      }
       
       if(online) {
-        // ✅ ONLINE: Show disable button, hide form
-        safeTxt('ghSyncStatus', '● Online');
-        $('ghSyncStatus').className = 'sync-status sync-on';
-        inputForm.classList.add('hidden');
-        enableBtn.classList.add('hidden');
-        disableBtn.classList.remove('hidden'); // ✅ TAMPILKAN tombol Nonaktifkan
+        // ✅ ONLINE: Show disable button, hide entire form (including path)
+        statusEl.textContent = '● Online';
+        statusEl.className = 'sync-status sync-on';
+        inputForm.classList.add('hidden');        // ✅ Sembunyikan FORM (termasuk path)
+        enableBtn.classList.add('hidden');         // Sembunyikan tombol Aktifkan
+        disableBtn.classList.remove('hidden');     // ✅ TAMPILKAN tombol Nonaktifkan
         log('☁️ GitHub Sync: ONLINE');
       } else {
         // ✅ OFFLINE: Show form, hide disable button
-        safeTxt('ghSyncStatus', '● Offline');
-        $('ghSyncStatus').className = 'sync-status sync-off';
-        inputForm.classList.remove('hidden');
-        enableBtn.classList.remove('hidden');
-        disableBtn.classList.add('hidden');
+        statusEl.textContent = '● Offline';
+        statusEl.className = 'sync-status sync-off';
+        inputForm.classList.remove('hidden');      // Tampilkan FORM
+        enableBtn.classList.remove('hidden');      // Tampilkan tombol Aktifkan
+        disableBtn.classList.add('hidden');        // Sembunyikan tombol Nonaktifkan
         safeVal('ghToken', '');
         log('☁️ GitHub Sync: OFFLINE');
       }
     }
 
-    // ✅ Enable Sync - Get path from UI
+    // ✅ ENABLE SYNC - Get values from UI
     function enableGitHubSync() {
       const owner = $('ghOwner')?.value.trim() || 'dreborn2k';
       const repo = $('ghRepo')?.value.trim() || 'dmarch_relay_001';
@@ -265,13 +280,15 @@
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       safeTxt('ghDetails', `${owner}/${repo}/${path}`);
-      setSyncStatus(true);
+      setSyncStatus(true); // ✅ Ini akan hide form + show disable button
       loadFromGitHub();
     }
 
     function disableGitHubSync() {
       if(!confirm('Nonaktifkan Sync?')) return;
-      ghConfig = {}; localStorage.removeItem('dm_gh_config'); setSyncStatus(false);
+      ghConfig = {}; 
+      localStorage.removeItem('dm_gh_config'); 
+      setSyncStatus(false);
     }
 
     async function loadFromGitHub() {
@@ -310,7 +327,7 @@
       } catch(err) { log('❌ Push: '+err.message); }
     }
 
-    // ✅ Notification UI Init
+    // ✅ NOTIFICATION UI
     function initNotifUI() {
       const tg = notifConfig.tg||{};
       if(tg.token&&tg.chatId) { safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
@@ -333,7 +350,7 @@
     function updateWaUI(){ const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); if(!b||!c||!d)return; if(!waEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(waConnected&&notifConfig.wa?.webhook){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
     function shortenUrl(u){try{const x=new URL(u);return x.hostname+(x.pathname.length>15?'...':x.pathname);}catch{return u.length>30?u.substring(0,30)+'...':u;}}
 
-    // ✅ DOM Ready
+    // ✅ DOM READY
     document.addEventListener('DOMContentLoaded', function() {
       safeVal('clientId','web_'+Math.random().toString(16).substr(2,8));
       safeVal('deviceId',DEVICE_ID);
@@ -351,12 +368,12 @@
       $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t)t.innerHTML=''; };
     });
 
-    // ✅ Relay Buttons
+    // ✅ RELAY BUTTONS
     function initRelayButtons(){ const rBox=$('relayBtns'); if(!rBox)return; rBox.innerHTML=''; for(let i=1;i<=5;i++){const btn=document.createElement('button');btn.id=`btn-relay-${i}`;btn.className='btn-secondary';btn.dataset.state='off';btn.textContent=`Relay ${i} (OFF)`;btn.onclick=()=>{sendRelayCommand(i);sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah`);};btn.type='button';rBox.appendChild(btn);}}
     function updateRelayUI(num,state){const btn=$(`btn-relay-${num}`);if(!btn)return;const isOn=(state==='1'||state===1||state===true||state==='true');btn.dataset.state=isOn?'on':'off';btn.textContent=`Relay ${num} (${isOn?'ON':'OFF'})`;btn.className=isOn?'btn-success':'btn-secondary';log(`🔄 Relay ${num}: ${isOn?'ON':'OFF'}`);}
     function sendRelayCommand(num){if(!mqttClient||!mqttClient.connected)return alert('⚠️ MQTT disconnected!');const btn=$(`btn-relay-${num}`);if(!btn)return;const cmd=btn.dataset.state==='on'?0:1;mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`,String(cmd));log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);}
     
-    // ✅ MQTT Connect
+    // ✅ MQTT CONNECT
     function toggleConnect(){const btn=$('btnConnect'),statusEl=$('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeTxt('connStatus','Disconnecting...');return;}const h=$('broker').value.trim(),pt=$('port').value.trim(),u=$('username').value.trim(),pw=$('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib!');if(pt!=='8884')return alert('⚠️ Port harus 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting...`);safeTxt('connStatus','Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:$('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled)loadFromGitHub();});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const p=t.split('/');updateRelayUI(p[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
     function updateSystemHealth(msg){try{const d=JSON.parse(msg);safeTxt('sigVal',(d.rssi||'--')+'%');safeTxt('upVal',d.uptime||'--');safeTxt('tempVal',(d.temp||'--')+'°C');safeTxt('fwVal',d.fw_version||'--');}catch(e){}}
     function pub(topic,payload){if(mqttClient&&mqttClient.connected)mqttClient.publish(topic,payload,{qos:0},e=>e?log('❌ Pub Error'):log(`📤 ${topic} -> ${payload}`));else log('⚠️ Disconnected');}
@@ -366,10 +383,10 @@
     function updateNetwork(){var s=$('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:$('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
     function resetWifi(){if(!confirm('Reset WiFi ke AP?'))return;pub(DEVICE_ID+'/network/reset','1');alert('🔄 Reset terkirim.');}
 
-    // ✅ QR Logic (simplified)
+    // ✅ QR LOGIC
     let qrImagePreview=null;function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}$('qrModal').onclick=function(e){if(e.target===this)closeQR();};async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){try{await qrScanner.stop();}catch(e){}qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeVal('qrFileInput','');safeTxt('qrMsg','Format: {"broker":"..."}');$('qrMsg').style.color='#94a3b8';}$('startCameraBtn').onclick=function(){if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';qrScanner=new Html5Qrcode("reader");qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{alert('❌ Kamera: '+err);safeTxt('qrMsg','⚠️ Izinkan kamera');$('qrMsg').style.color='#ef4444';});};$('qrFileInput').onchange=async function(e){const file=e.target.files[0];if(!file)return;if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';const reader=new FileReader();reader.onload=function(evt){const img=document.createElement('img');img.src=evt.target.result;img.style.maxWidth='100%';img.style.maxHeight='300px';img.style.borderRadius='8px';img.style.display='block';img.style.margin='0 auto';$('reader').appendChild(img);qrImagePreview=img;};reader.readAsDataURL(file);safeTxt('qrMsg','⏳ Memproses...');$('qrMsg').style.color='#94a3b8';try{qrScanner=new Html5Qrcode("reader");const decodedText=await qrScanner.scanFile(file,true);onQRSuccess(decodedText);}catch(err){console.error('❌ QR:',err);if(err.toString().includes("No MultiFormat")){$('qrMsg').innerHTML='⚠️ QR tidak terdeteksi.<br>• Gambar jelas<br>• JSON valid';}else{safeTxt('qrMsg','❌ Gagal: '+err.message);}$('qrMsg').style.color='#ef4444';}};function onQRSuccess(decodedText){try{const data=JSON.parse(decodedText);if(!data.broker||!data.port||!data.user||!data.pass)throw new Error('Field tidak lengkap');safeVal('broker',data.broker);safeVal('port',data.port);safeVal('username',data.user);safeVal('password',data.pass);saveToStorage();safeTxt('qrMsg','✅ QR berhasil!');$('qrMsg').style.color='#10b981';log('✅ QR loaded');setTimeout(()=>closeQR(),1000);}catch(err){console.error('❌ Parse:',err);$('qrMsg').innerHTML=`❌ Invalid:<br><code>${err.message}</code>`;$('qrMsg').style.color='#ef4444';}}
 
-    // ✅ Scheduler
+    // ✅ SCHEDULER
     function initScheduler(){document.querySelectorAll('.day-btn').forEach(btn=>{btn.onclick=function(){this.classList.toggle('active');}});renderSchedules();startSchedulerEngine();if(ghSyncEnabled&&ghConfig?.token)loadFromGitHub();}
     function addSchedule(){const time=$('schTime').value,relay=$('schRelay').value,action=$('schAction').value,activeDays=Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));if(!time||activeDays.length===0)return alert('⚠️ Waktu & hari wajib!');const newSch={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4),time,relay,action,days:activeDays,enabled:true,_modified:new Date().toISOString()};schedules.push(newSch);saveSchedules();renderSchedules();log(`⏰ Jadwal: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);}
     function toggleSchedule(id){const sch=schedules.find(s=>s.id===id);if(sch){sch.enabled=!sch.enabled;sch._modified=new Date().toISOString();saveSchedules();renderSchedules();}}
@@ -381,7 +398,7 @@
     function startSchedulerEngine(){if(schedulerInterval)clearInterval(schedulerInterval);schedulerInterval=setInterval(checkSchedules,30000);log('✅ Scheduler running');}
     function checkSchedules(){const now=new Date(),currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,currentDay=now.getDay(),dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;schedules.forEach(sch=>{if(!sch.enabled||sch.time!==currentTime||!sch.days.includes(currentDay))return;const triggerKey=`${sch.id}_${dateKey}`;if(lastTriggered[sch.id]===triggerKey)return;lastTriggered[sch.id]=triggerKey;if(mqttClient&&mqttClient.connected){pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`,sch.action);const actionText=sch.action=='1'?'ON':'OFF';log(`⏰ [AUTO] Relay ${sch.relay} ${actionText} @ ${currentTime}`);sendNotif(`⏰ Auto: Relay ${sch.relay} ${actionText}`,`Jadwal ${currentTime}`);}else log(`⚠️ [SCHEDULER] MQTT disconnected`);});}
 
-    // ✅ Notifications
+    // ✅ NOTIFICATIONS
     function saveNotifConfig(){notifConfig={tg:{token:notifConfig.tg?.token,chatId:notifConfig.tg?.chatId,enabled:tgEnabled,connected:tgConnected},gotify:{url:notifConfig.gotify?.url,token:notifConfig.gotify?.token,enabled:gotifyEnabled,connected:gotifyConnected},wa:{webhook:notifConfig.wa?.webhook,phone:notifConfig.wa?.phone,enabled:waEnabled,connected:waConnected}};localStorage.setItem('dm_notif_config',JSON.stringify(notifConfig));if(ghSyncEnabled){clearTimeout(ghSyncTimeout);ghSyncTimeout=setTimeout(()=>pushToGitHub(),1000);}}
     function saveTelegramConfig(){const token=$('tgToken').value.trim(),chatId=$('tgChatId').value.trim(),msgEl=$('tgMsg');if(!token||token.includes('•••')){safeTxt(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}if(!chatId){safeTxt(msgEl,'⚠️ Chat ID wajib!');msgEl.style.color='#ef4444';return;}notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false};saveNotifConfig();safeVal('tgToken','••••••••');safeTxt('tgChatDisplay',chatId);safeTxt(msgEl,'✅ Disimpan!');msgEl.style.color='#10b981';updateTgUI();}
     function editTelegramConfig(){safeVal('tgToken',notifConfig.tg?.token||'');$('tgConfig').classList.remove('hidden');$('tgConnected').classList.add('hidden');safeTxt('tgStatusBadge','⚙️ Editing');$('tgStatusBadge').className='notif-status status-inactive';}
