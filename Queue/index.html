@@ -1,165 +1,164 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch SSoT - Pro Dashboard</title>
+    <title>dMarch Queue - SSoT Dashboard</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #e2e8f0; --success: #10b981; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; width: 100%; max-width: 420px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center; }
-        h2 { color: var(--accent); margin-top: 0; }
-        .status-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1rem; }
-        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
-        button.secondary { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 10px; }
-        .log { margin-top: 15px; font-family: monospace; font-size: 0.75rem; color: var(--success); text-align: left; background: #000; padding: 12px; border-radius: 8px; height: 80px; overflow-y: auto; border: 1px solid #334155; }
+        /* Estetika mengacu pada dmarch_relay_001/Relay4Ch */
+        :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: var(--card); border-radius: 20px; padding: 30px; width: 90%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        h1 { color: var(--primary); font-size: 24px; margin-bottom: 5px; }
+        .status-bar { display: flex; justify-content: space-around; font-size: 12px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .status-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+        .dot.active { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { font-size: 13px; color: #94a3b8; margin-left: 5px; }
+        input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; margin-top: 5px; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); }
+        
+        button { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        .btn-sync { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 15px; }
+        
+        #log { margin-top: 20px; background: #000; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 11px; color: #10b981; height: 80px; overflow-y: auto; text-align: left; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>🌐 dMarch SSoT Pro</h2>
-    <div class="status-box">
-        <div id="mqtt-status">MQTT: Connecting...</div>
-        <div id="github-status">GitHub: Checking...</div>
+<div class="container">
+    <h1>dMarch Queue</h1>
+    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;">Single Source of Truth Dashboard</p>
+
+    <div class="status-bar">
+        <div class="status-item"><div id="mqtt-dot" class="dot"></div> MQTT</div>
+        <div class="status-item"><div id="github-dot" class="dot"></div> GitHub SSoT</div>
     </div>
 
-    <label style="display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Nomor Antrean & Loket</label>
-    <div style="display:flex; gap:10px;">
-        <input type="number" id="num" placeholder="No">
-        <input type="number" id="loket" placeholder="Loket">
+    <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex: 2;">
+            <label>Nomor Antrean</label>
+            <input type="number" id="num" placeholder="0">
+        </div>
+        <div class="input-group" style="flex: 1;">
+            <label>Loket</label>
+            <input type="number" id="loket" placeholder="1">
+        </div>
     </div>
-    
-    <label style="display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Pesan Running Text</label>
-    <input type="text" id="msg" placeholder="Teks Jalan P10">
-    
-    <button onclick="executeAction()">📢 PANGGIL & UPDATE SERVER</button>
-    <button class="secondary" onclick="syncOnly()">💾 SIMPAN TEKS SAJA</button>
 
-    <div class="log" id="terminal">> System initialized.</div>
+    <div class="input-group">
+        <label>Running Text (P10)</label>
+        <input type="text" id="marquee" placeholder="Teks antrean...">
+    </div>
+
+    <button onclick="panggilAntrean()">📢 PANGGIL SEKARANG</button>
+    <button class="btn-sync" onclick="syncOnly()">💾 HANYA UPDATE DATA.JSON</button>
+
+    <div id="log">Initializing system...</div>
 </div>
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
     // --- KONFIGURASI ---
     const CONFIG = {
-        githubToken: "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", // Gunakan token Anda
-        repo: "dreborn2k/dmarch_relay_001",
-        filePath: "Queue/Data/Data.json",
-        mqttServer: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
-        deviceId: "dmarch_queue_001"
+        mqtt: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
+        user: 'dmarchFF',
+        pass: 'dmarchFF2205',
+        topic: 'dmarch_queue_001',
+        github: {
+            token: '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',
+            repo: 'dreborn2k/dmarch_relay_001',
+            path: 'Queue/Data/Data.json'
+        }
     };
 
-    const client = mqtt.connect(CONFIG.mqttServer, { username: 'dmarchFF', password: 'dmarchFF2205' });
+    const client = mqtt.connect(CONFIG.mqtt, { username: CONFIG.user, password: CONFIG.pass });
 
-    client.on('connect', () => {
-        document.getElementById('mqtt-status').innerHTML = "MQTT: <span style='color:#10b981'>ONLINE</span>";
-        loadGitHubData();
-    });
-
-    function addLog(m) {
-        const t = document.getElementById('terminal');
-        t.innerHTML += `<br>> ${m}`;
-        t.scrollTop = t.scrollHeight;
-    }
-
-    async function updateGitHub(newNum, newLoket, newMsg) {
-        addLog("Sedang menyinkronkan ke GitHub...");
-        // Pastikan URL API benar (bukan URL raw)
-        const apiUrl = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.filePath}`;
-        
+    // --- SINKRONISASI GITHUB (SSoT) ---
+    async function updateGitHub(n, l, m) {
+        const url = `https://api.github.com/repos/${CONFIG.github.repo}/contents/${CONFIG.github.path}`;
         try {
-            // 1. Ambil SHA terbaru dari file (Wajib untuk Update)
-            const getRes = await fetch(apiUrl, {
-                headers: { 
-                    'Authorization': `token ${CONFIG.githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Cache-Control': 'no-cache'
-                }
-            });
+            const res = await fetch(url, { headers: { Authorization: `token ${CONFIG.github.token}` } });
+            const fileData = await res.json();
             
-            if (!getRes.ok) throw new Error("Gagal mengambil SHA file");
-            const fileData = await getRes.json();
-            const currentSha = fileData.sha;
-    
-            // 2. Siapkan Body JSON baru
-            const jsonContent = {
-                last_number: parseInt(newNum),
-                last_loket: parseInt(newLoket),
-                marquee_text: newMsg,
+            const body = JSON.stringify({
+                last_number: parseInt(n),
+                last_loket: parseInt(l),
+                marquee_text: m,
                 version: "3.1.0"
-            };
-    
-            // 3. Encode ke Base64 (Gunakan metode yang aman untuk karakter luas)
-            const utf8Bytes = new TextEncoder().encode(JSON.stringify(jsonContent, null, 2));
-            const base64Content = btoa(String.fromCharCode(...utf8Bytes));
-    
-            // 4. Kirim Update (PUT)
-            const putRes = await fetch(apiUrl, {
+            }, null, 2);
+
+            const putRes = await fetch(url, {
                 method: "PUT",
-                headers: {
-                    "Authorization": `token ${CONFIG.githubToken}`,
-                    "Content-Type": "application/json",
-                },
+                headers: { "Authorization": `token ${CONFIG.github.token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Update Antrean: A${newNum} Loket ${newLoket}`,
-                    content: base64Content,
-                    sha: currentSha
+                    message: `Queue Sync: A${n}`,
+                    content: btoa(unescape(encodeURIComponent(body))),
+                    sha: fileData.sha
                 })
             });
-    
+
             if (putRes.ok) {
-                addLog("Berhasil! Data JSON di GitHub telah terupdate ✅");
-                document.getElementById('github-status').innerHTML = "GitHub: <span style='color:#10b981'>SYNCHRONIZED</span>";
-            } else {
-                const errorData = await putRes.json();
-                addLog("Gagal Update: " + errorData.message);
+                printLog("GitHub Data.json Updated!");
+                document.getElementById('github-dot').classList.add('active');
             }
-        } catch (e) {
-            addLog("Error API: " + e.message);
-            console.error(e);
-        }
+        } catch (e) { printLog("GitHub Error: " + e.message); }
     }
 
-    // Ambil data awal saat dashboard dibuka
-    async function loadGitHubData() {
-        const url = `https://raw.githubusercontent.com/${CONFIG.repo}/main/${CONFIG.filePath}`;
+    async function loadInitialData() {
+        const url = `https://raw.githubusercontent.com/${CONFIG.github.repo}/main/${CONFIG.github.path}`;
         try {
-            const res = await fetch(url);
+            const res = await fetch(url + "?t=" + new Date().getTime());
             const data = await res.json();
             document.getElementById('num').value = data.last_number;
             document.getElementById('loket').value = data.last_loket;
-            document.getElementById('msg').value = data.marquee_text;
-            addLog("Initial data loaded from GitHub");
-            document.getElementById('github-status').innerHTML = "GitHub: <span style='color:#10b981'>READY</span>";
-        } catch(e) { addLog("Failed to fetch SSoT data"); }
+            document.getElementById('marquee').value = data.marquee_text;
+            printLog("Data SSoT loaded from GitHub");
+            document.getElementById('github-dot').classList.add('active');
+        } catch (e) { printLog("GitHub load failed."); }
     }
 
-    function executeAction() {
+    // --- MQTT & LOGIKA ---
+    client.on('connect', () => {
+        printLog("Connected to HiveMQ Cloud");
+        document.getElementById('mqtt-dot').classList.add('active');
+        loadInitialData();
+    });
+
+    function printLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML += `> ${msg}<br>`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function panggilAntrean() {
         const n = document.getElementById('num').value;
         const l = document.getElementById('loket').value;
-        const m = document.getElementById('msg').value;
+        const m = document.getElementById('marquee').value;
 
-        if(!n || !l || !m) return alert("Lengkapi semua data!");
+        if (!n || !l) return alert("Nomor/Loket kosong!");
 
         const payload = JSON.stringify({ nomor: parseInt(n), loket: parseInt(l) });
         
-        // Kirim ke MQTT (Real-time respons)
-        client.publish(`${CONFIG.deviceId}/call`, payload);
-        client.publish(`${CONFIG.deviceId}/msg/update`, m, { retain: true });
-        
-        // Kirim ke GitHub (Penyimpanan Permanen)
+        // 1. MQTT Real-time (Trigger Suara & Display Langsung)
+        client.publish(`${CONFIG.topic}/call`, payload, { qos: 1 });
+        client.publish(`${CONFIG.topic}/msg/update`, m, { retain: true });
+
+        // 2. GitHub API (Update JSON SSoT)
         updateGitHub(n, l, m);
+        printLog(`Calling A${n} to Loket ${l}...`);
     }
 
     function syncOnly() {
         const n = document.getElementById('num').value;
         const l = document.getElementById('loket').value;
-        const m = document.getElementById('msg').value;
+        const m = document.getElementById('marquee').value;
         updateGitHub(n, l, m);
     }
 </script>
+
 </body>
 </html>
