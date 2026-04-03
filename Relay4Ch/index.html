@@ -291,18 +291,15 @@
       if (!header) return;
       header.addEventListener('click', (e) => {
         e.stopPropagation();
-        vibrate(); // feedback getar
-        // If this card is collapsed, expand it and collapse all others
+        vibrate();
         if (card.classList.contains('collapsed')) {
           collapsibleCards.forEach(c => c.classList.add('collapsed'));
           card.classList.remove('collapsed');
           if (btn) btn.textContent = '▲';
         } else {
-          // If it's expanded, collapse it (optional, but we want only one open at a time)
           card.classList.add('collapsed');
           if (btn) btn.textContent = '▼';
         }
-        // Update all toggle buttons text
         collapsibleCards.forEach(c => {
           const b = c.querySelector('.toggle-btn');
           if (b) b.textContent = c.classList.contains('collapsed') ? '▼' : '▲';
@@ -506,7 +503,7 @@
     mqttClient.on('close', () => { log('🔌 Disconnected'); setConnectionState(false); });
   }
 
-  // ==================== GITHUB SYNC (same as before) ====================
+  // ==================== GITHUB SYNC ====================
   function setSyncStatus(online) {
     ghSyncEnabled = online;
     const statusEl = $('ghSyncStatus'), inputForm = $('ghInputForm'), enableBtn = $('ghEnableBtn'), disableBtn = $('ghDisableBtn'), details = $('ghDetailsContainer');
@@ -654,34 +651,222 @@
     });
   }
 
-  // ==================== NOTIFICATIONS (brief) ====================
-  function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected }, gotify: { url: notifConfig.gotify?.url, token: notifConfig.gotify?.token, enabled: gotifyEnabled, connected: gotifyConnected }, wa: { webhook: notifConfig.wa?.webhook, phone: notifConfig.wa?.phone, enabled: waEnabled, connected: waConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
-  function updateTgUI() { const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(tgConnected && notifConfig.tg?.token){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
-  function updateGotifyUI() { const b=$('gotifyStatusBadge'),c=$('gotifyConfig'),d=$('gotifyConnected'); if(!gotifyEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(gotifyConnected && notifConfig.gotify?.url){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
-  function updateWaUI() { const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); if(!waEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(waConnected && notifConfig.wa?.webhook){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  // ==================== NOTIFICATIONS ====================
+  function saveNotifConfig() { 
+    notifConfig = { 
+      tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected }, 
+      gotify: { url: notifConfig.gotify?.url, token: notifConfig.gotify?.token, enabled: gotifyEnabled, connected: gotifyConnected }, 
+      wa: { webhook: notifConfig.wa?.webhook, phone: notifConfig.wa?.phone, enabled: waEnabled, connected: waConnected } 
+    }; 
+    localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); 
+    if(ghSyncEnabled) pushToGitHub(); 
+  }
+  function updateTgUI() { 
+    const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); 
+    if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
+    else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
+    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
+  }
+  function updateGotifyUI() { 
+    const b=$('gotifyStatusBadge'),c=$('gotifyConfig'),d=$('gotifyConnected'); 
+    if(!gotifyEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
+    else if(gotifyConnected && notifConfig.gotify?.url && notifConfig.gotify?.token){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
+    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
+  }
+  function updateWaUI() { 
+    const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); 
+    if(!waEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
+    else if(waConnected && notifConfig.wa?.webhook){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
+    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
+  }
   function initNotifUI() {
-    const tg = notifConfig.tg||{}; if(tg.token&&tg.chatId){ safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
-    safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
-    const gf = notifConfig.gotify||{}; if(gf.url&&gf.token){ safeVal('gotifyUrl',gf.url); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); gotifyConnected=gf.connected||false; }
-    safeCls($('gotifyToggle'),'active',gotifyEnabled); updateGotifyUI();
-    const wa = notifConfig.wa||{}; if(wa.webhook){ safeVal('waWebhook',wa.webhook); safeVal('waPhone',wa.phone||'628551291055'); safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); waConnected=wa.connected||false; }
-    safeCls($('waToggle'),'active',waEnabled); updateWaUI();
+    const tg = notifConfig.tg||{}; 
+    if(tg.token && tg.chatId){ 
+      safeVal('tgToken','••••••••'); 
+      safeVal('tgChatId',tg.chatId); 
+      safeTxt('tgChatDisplay',tg.chatId); 
+      tgConnected = tg.connected || false; 
+    }
+    safeCls($('tgToggle'),'active',tgEnabled); 
+    updateTgUI();
+    
+    const gf = notifConfig.gotify||{}; 
+    if(gf.url && gf.token){ 
+      safeVal('gotifyUrl',gf.url); 
+      safeVal('gotifyToken','••••••••'); 
+      safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); 
+      gotifyConnected = gf.connected || false; 
+    }
+    safeCls($('gotifyToggle'),'active',gotifyEnabled); 
+    updateGotifyUI();
+    
+    const wa = notifConfig.wa||{}; 
+    if(wa.webhook){ 
+      safeVal('waWebhook',wa.webhook); 
+      safeVal('waPhone',wa.phone||'628551291055'); 
+      safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); 
+      waConnected = wa.connected || false; 
+    }
+    safeCls($('waToggle'),'active',waEnabled); 
+    updateWaUI();
+    
     $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); vibrate(); };
     $('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); vibrate(); };
     $('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); vibrate(); };
   }
   function shortenUrl(u){ try{ const x=new URL(u); return x.hostname+(x.pathname.length>15?'...':x.pathname); }catch{ return u.length>30?u.substring(0,30)+'...':u; } }
-  function saveTelegramConfig(){ vibrate(); const token=$('tgToken').value.trim(), chatId=$('tgChatId').value.trim(); if(!token||token.includes('•••')) return alert('Token required!'); if(!chatId) return alert('Chat ID required!'); notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false}; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay',chatId); updateTgUI(); alert('✅ Saved'); }
-  function editTelegramConfig(){ safeVal('tgToken',notifConfig.tg?.token||''); $('tgConfig').classList.remove('hidden'); $('tgConnected').classList.add('hidden'); updateTgUI(); }
-  async function testTelegram(){ if(!notifConfig.tg?.token) return alert('Save config first!'); try{ const res=await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:`✅ Test dMarch\nDevice: ${DEVICE_ID}`,parse_mode:'Markdown'})}); if((await res.json()).ok){ tgConnected=true; notifConfig.tg.connected=true; saveNotifConfig(); updateTgUI(); log('📱 Telegram OK'); } else throw new Error(); }catch(e){ tgConnected=false; updateTgUI(); log('❌ Telegram Failed'); } }
-  async function fetchChatId(){ const token=$('tgToken').value.trim(); if(!token||token.includes('•••')) return alert('Enter Token first!'); try{ const res=await fetch(`https://api.telegram.org/bot${token}/getUpdates`), data=await res.json(); if(data.ok && data.result?.[0]?.message?.chat?.id){ safeVal('tgChatId',data.result[0].message.chat.id); alert('✅ Chat ID found'); } else alert('⚠️ Send a message to the bot first'); }catch(e){ alert('Failed'); } }
+  
+  // TELEGRAM FIXES
+  function editTelegramConfig() {
+    const tgConfigDiv = $('tgConfig');
+    const tgConnectedDiv = $('tgConnected');
+    if (tgConfigDiv) tgConfigDiv.classList.remove('hidden');
+    if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden');
+    if (notifConfig.tg?.token) {
+      safeVal('tgToken', notifConfig.tg.token);
+    } else {
+      safeVal('tgToken', '');
+    }
+    if (notifConfig.tg?.chatId) {
+      safeVal('tgChatId', notifConfig.tg.chatId);
+    } else {
+      safeVal('tgChatId', '');
+    }
+    const badge = $('tgStatusBadge');
+    if (badge) {
+      badge.textContent = '⚙️ Editing';
+      badge.className = 'notif-status status-inactive';
+    }
+  }
+  
+  function saveTelegramConfig() { 
+    vibrate(); 
+    const token = $('tgToken').value.trim(); 
+    const chatId = $('tgChatId').value.trim(); 
+    if(!token) return alert('Bot Token required!'); 
+    if(!chatId) return alert('Chat ID required!'); 
+    notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false }; 
+    saveNotifConfig(); 
+    safeVal('tgToken','••••••••'); 
+    safeTxt('tgChatDisplay', chatId); 
+    updateTgUI(); 
+    alert('✅ Telegram config saved'); 
+  }
+  
+  async function testTelegram() { 
+    if (!notifConfig.tg?.token || !notifConfig.tg?.chatId) {
+      alert('Please save Telegram config first!');
+      return;
+    }
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: notifConfig.tg.chatId,
+          text: `✅ *dMarch Test*\nDevice: ${DEVICE_ID}\nTime: ${new Date().toLocaleString()}`,
+          parse_mode: 'Markdown'
+        })
+      });
+      const result = await response.json();
+      if (response.ok && result.ok) {
+        tgConnected = true;
+        notifConfig.tg.connected = true;
+        saveNotifConfig();
+        updateTgUI();
+        log('📱 Telegram test OK');
+        alert('✅ Telegram test message sent!');
+      } else {
+        throw new Error(result.description || 'Unknown error');
+      }
+    } catch (e) {
+      tgConnected = false;
+      notifConfig.tg.connected = false;
+      saveNotifConfig();
+      updateTgUI();
+      log(`❌ Telegram test failed: ${e.message}`);
+      alert(`❌ Telegram test failed: ${e.message}`);
+    }
+  }
+  
+  async function fetchChatId() { 
+    const token = $('tgToken').value.trim(); 
+    if(!token) return alert('Enter Bot Token first!'); 
+    try { 
+      const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); 
+      const data = await res.json(); 
+      if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { 
+        safeVal('tgChatId', data.result[0].message.chat.id); 
+        alert('✅ Chat ID found!'); 
+      } else { 
+        alert('⚠️ Send a message to the bot first, then try again.'); 
+      } 
+    } catch(e) { 
+      alert('Failed to fetch Chat ID'); 
+    } 
+  }
+  
+  // GOTIFY
   function saveGotifyConfig(){ vibrate(); const url=$('gotifyUrl').value.trim(), token=$('gotifyToken').value.trim(); if(!url||!token) return alert('URL & Token required!'); notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false}; saveNotifConfig(); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(url)); updateGotifyUI(); alert('✅ Saved'); }
   function editGotifyConfig(){ safeVal('gotifyUrl',notifConfig.gotify?.url||''); safeVal('gotifyToken','••••••••'); $('gotifyConfig').classList.remove('hidden'); $('gotifyConnected').classList.add('hidden'); updateGotifyUI(); }
-  async function testGotify(){ if(!notifConfig.gotify?.url) return alert('Save config first!'); try{ const url=notifConfig.gotify.url.replace(/\/$/,""); const res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})}); if(res.ok){ gotifyConnected=true; notifConfig.gotify.connected=true; saveNotifConfig(); updateGotifyUI(); log('📡 Gotify OK'); } else throw new Error(); }catch(e){ gotifyConnected=false; updateGotifyUI(); log('❌ Gotify Failed'); } }
+  async function testGotify(){ if(!notifConfig.gotify?.url) return alert('Save config first!'); try{ const url=notifConfig.gotify.url.replace(/\/$/,""); const res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})}); if(res.ok){ gotifyConnected=true; notifConfig.gotify.connected=true; saveNotifConfig(); updateGotifyUI(); log('📡 Gotify OK'); alert('✅ Gotify test sent'); } else throw new Error(); }catch(e){ gotifyConnected=false; updateGotifyUI(); log('❌ Gotify Failed'); alert('❌ Gotify test failed'); } }
+  // WHATSAPP
   function saveWhatsAppConfig(){ vibrate(); const webhook=$('waWebhook').value.trim(), phone=$('waPhone').value.trim(); if(!webhook) return alert('Webhook required!'); notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false}; saveNotifConfig(); safeTxt('waWebhookDisplay',shortenUrl(webhook)); updateWaUI(); alert('✅ Saved'); }
   function editWhatsAppConfig(){ $('waConfig').classList.remove('hidden'); $('waConnected').classList.add('hidden'); updateWaUI(); }
   async function testWhatsApp(){ if(!notifConfig.wa?.webhook) return alert('Save config first!'); try{ await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})}); waConnected=true; notifConfig.wa.connected=true; saveNotifConfig(); updateWaUI(); log('💬 WA OK'); alert('✅ Webhook triggered'); }catch(e){ waConnected=false; updateWaUI(); alert('❌ Webhook Error'); } }
-  async function sendNotif(title,message){ const timestamp=new Date().toLocaleString('en-US'), fullMsg=`*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Time: ${timestamp}_`; if(tgEnabled&&tgConnected&&notifConfig.tg?.token){ fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:fullMsg,parse_mode:'Markdown'})}).catch(e=>log('❌ TG Send')); } if(gotifyEnabled&&gotifyConnected&&notifConfig.gotify?.url){ try{ const url=notifConfig.gotify.url.replace(/\/$/,""); await fetch(`${url}/message`,{method:'POST',headers:{'X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title,message:`${message}\nDevice: ${DEVICE_ID}\nTime: ${timestamp}`,priority:8})}); }catch(e){} } if(waEnabled&&waConnected&&notifConfig.wa?.webhook){ fetch(notifConfig.wa.webhook,{method:'POST',body:JSON.stringify({phone:notifConfig.wa.phone,message:fullMsg.replace(/\*/g,''),device:DEVICE_ID})}).catch(e=>log('❌ WA Send')); } }
+  
+  // SEND NOTIFICATION (FIXED TELEGRAM)
+  async function sendNotif(title, message) {
+    const timestamp = new Date().toLocaleString('en-US');
+    const fullMsg = `*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Time: ${timestamp}_`;
+    // Telegram
+    if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: notifConfig.tg.chatId,
+            text: fullMsg,
+            parse_mode: 'Markdown',
+            disable_web_page_preview: true
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          log(`❌ Telegram send failed: ${response.status} - ${JSON.stringify(errorData)}`);
+          if (response.status === 400) {
+            tgConnected = false;
+            notifConfig.tg.connected = false;
+            saveNotifConfig();
+            updateTgUI();
+          }
+        }
+      } catch (e) {
+        log(`❌ Telegram send error: ${e.message}`);
+      }
+    }
+    // Gotify
+    if (gotifyEnabled && gotifyConnected && notifConfig.gotify?.url && notifConfig.gotify?.token) {
+      try {
+        const url = notifConfig.gotify.url.replace(/\/$/, "");
+        await fetch(`${url}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Gotify-Key': notifConfig.gotify.token },
+          body: JSON.stringify({ title, message: `${message}\nDevice: ${DEVICE_ID}\nTime: ${timestamp}`, priority: 8 })
+        });
+      } catch (e) {}
+    }
+    // WhatsApp
+    if (waEnabled && waConnected && notifConfig.wa?.webhook) {
+      try {
+        await fetch(notifConfig.wa.webhook, {
+          method: 'POST',
+          body: JSON.stringify({ phone: notifConfig.wa.phone, message: fullMsg.replace(/\*/g, ''), device: DEVICE_ID })
+        });
+      } catch (e) {}
+    }
+  }
 
   // ==================== QR ====================
   let qrImagePreview=null;
@@ -693,7 +878,7 @@
 
   // ==================== INIT ====================
   document.addEventListener('DOMContentLoaded', ()=>{
-    initAccordion();  // accordion behavior
+    initAccordion();
     safeVal('clientId', 'web_'+Math.random().toString(16).substr(2,8));
     const savedMqtt = JSON.parse(localStorage.getItem('dm_mqtt')||'{}');
     if(savedMqtt.b) safeVal('broker', savedMqtt.b);
@@ -702,7 +887,6 @@
     if(savedMqtt.pw) safeVal('password', savedMqtt.pw);
     initRelayButtons(); initScheduler(); initGitHubUI(); initNotifUI();
     
-    // Attach click handlers with vibration
     const attachVibration = (el, handler) => {
       if(!el) return;
       el.onclick = (e) => { vibrate(); if(handler) handler(e); };
