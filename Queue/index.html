@@ -65,45 +65,61 @@
         t.scrollTop = t.scrollHeight;
     }
 
-    // --- FUNGSI UTAMA: UPDATE GITHUB API ---
     async function updateGitHub(newNum, newLoket, newMsg) {
-        addLog("Updating GitHub...");
-        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.filePath}`;
+        addLog("Sedang menyinkronkan ke GitHub...");
+        // Pastikan URL API benar (bukan URL raw)
+        const apiUrl = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.filePath}`;
         
         try {
-            // 1. Ambil SHA file saat ini
-            const res = await fetch(url, { headers: { Authorization: `token ${CONFIG.githubToken}` } });
-            const data = await res.json();
-            const sha = data.sha;
-
-            // 2. Buat konten JSON baru
-            const jsonBody = {
+            // 1. Ambil SHA terbaru dari file (Wajib untuk Update)
+            const getRes = await fetch(apiUrl, {
+                headers: { 
+                    'Authorization': `token ${CONFIG.githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            if (!getRes.ok) throw new Error("Gagal mengambil SHA file");
+            const fileData = await getRes.json();
+            const currentSha = fileData.sha;
+    
+            // 2. Siapkan Body JSON baru
+            const jsonContent = {
                 last_number: parseInt(newNum),
                 last_loket: parseInt(newLoket),
                 marquee_text: newMsg,
                 version: "3.1.0"
             };
-
-            // 3. Kirim ke GitHub (PUT Request)
-            const updateRes = await fetch(url, {
+    
+            // 3. Encode ke Base64 (Gunakan metode yang aman untuk karakter luas)
+            const utf8Bytes = new TextEncoder().encode(JSON.stringify(jsonContent, null, 2));
+            const base64Content = btoa(String.fromCharCode(...utf8Bytes));
+    
+            // 4. Kirim Update (PUT)
+            const putRes = await fetch(apiUrl, {
                 method: "PUT",
                 headers: {
                     "Authorization": `token ${CONFIG.githubToken}`,
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    message: `Queue Update: A${newNum}`,
-                    content: btoa(JSON.stringify(jsonBody, null, 2)),
-                    sha: sha
+                    message: `Update Antrean: A${newNum} Loket ${newLoket}`,
+                    content: base64Content,
+                    sha: currentSha
                 })
             });
-
-            if(updateRes.ok) {
-                addLog("GitHub SSoT Updated ✅");
-                document.getElementById('github-status').innerHTML = "GitHub: <span style='color:#10b981'>SYNCED</span>";
+    
+            if (putRes.ok) {
+                addLog("Berhasil! Data JSON di GitHub telah terupdate ✅");
+                document.getElementById('github-status').innerHTML = "GitHub: <span style='color:#10b981'>SYNCHRONIZED</span>";
+            } else {
+                const errorData = await putRes.json();
+                addLog("Gagal Update: " + errorData.message);
             }
         } catch (e) {
-            addLog("GitHub Update Failed ❌");
+            addLog("Error API: " + e.message);
+            console.error(e);
         }
     }
 
