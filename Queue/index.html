@@ -3,156 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch Smart Queue - Dashboard</title>
+    <title>dMarch SSoT Dashboard</title>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #e2e8f0;
-            --accent: #38bdf8;
-            --danger: #ef4444;
-        }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 30px;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-        h2 { color: var(--accent); margin-bottom: 10px; }
-        .status { font-size: 0.9rem; margin-bottom: 20px; opacity: 0.8; }
-        .input-group { margin-bottom: 15px; text-align: left; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: white;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            border-radius: 8px;
-            border: none;
-            background: var(--accent);
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-        button:hover { filter: brightness(1.2); }
-        button.secondary { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-        .log {
-            margin-top: 20px;
-            background: #000;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            height: 80px;
-            overflow-y: auto;
-            text-align: left;
-            color: #10b981;
-        }
+        :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --accent: #38bdf8; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { background: var(--card); border-radius: 12px; padding: 25px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        h2 { color: var(--accent); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .status { font-size: 0.8rem; margin-bottom: 20px; color: #10b981; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🌐 dMarch Queue</h2>
-    <div class="status" id="mqtt-status">Status: Connecting...</div>
+    <h2>🌐 D'marcFF SSoT</h2>
+    <div id="status" class="status">Connecting to Server...</div>
 
-    <div class="input-group">
-        <label>Nomor Antrean (1-99)</label>
-        <input type="number" id="num" placeholder="Contoh: 5" min="1" max="99">
-    </div>
-    <div class="input-group">
-        <label>Nomor Loket (1-4)</label>
-        <input type="number" id="loket" placeholder="Contoh: 1" min="1" max="4">
-    </div>
-    <button onclick="callQueue()">🔔 PANGGIL SEKARANG</button>
+    <input type="number" id="num" placeholder="Nomor Antrean (Misal: 10)">
+    <input type="number" id="loket" placeholder="Nomor Loket (1-4)">
+    <button onclick="sendCall()">📢 PANGGIL & SIMPAN DI SERVER</button>
 
-    <hr style="border: 0.5px solid #334155; margin: 25px 0;">
+    <hr style="border: 0.5px solid #334155; margin: 20px 0;">
 
-    <div class="input-group">
-        <label>Update Teks Jalan (P10)</label>
-        <input type="text" id="marquee-text" placeholder="Masukkan pesan baru...">
-    </div>
-    <button class="secondary" onclick="updateMarquee()">💾 UPDATE DISPLAY</button>
-
-    <div class="log" id="log-console">Terminal: Ready to use.</div>
+    <input type="text" id="marquee" placeholder="Teks Jalan Baru">
+    <button style="background: transparent; border: 1px solid var(--accent); color: var(--accent);" onclick="sendMarquee()">💾 SIMPAN TEKS KE SERVER</button>
 </div>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
-    // Konfigurasi dari kode .ino [cite: 6, 7]
     const broker = 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt';
-    const options = {
-        clientId: 'web_dashboard_' + Math.random().toString(16).substr(2, 8),
+    const client = mqtt.connect(broker, {
         username: 'dmarchFF',
-        password: 'dmarchFF2205',
-    };
+        password: 'dmarchFF2205'
+    });
 
-    const client = mqtt.connect(broker, options);
     const DEVICE_ID = "dmarch_queue_001";
 
     client.on('connect', () => {
-        document.getElementById('mqtt-status').innerText = "Status: Online (Connected)";
-        document.getElementById('mqtt-status').style.color = "#10b981";
-        addLog("Connected to HiveMQ Cloud");
+        document.getElementById('status').innerText = "Server Status: ONLINE (SSoT Active)";
     });
 
-    client.on('error', (err) => {
-        addLog("Error: " + err.message);
-    });
+    function sendCall() {
+        const n = document.getElementById('num').value;
+        const l = document.getElementById('loket').value;
+        if(!n || !l) return;
 
-    function addLog(msg) {
-        const log = document.getElementById('log-console');
-        log.innerHTML += `<br>> ${msg}`;
-        log.scrollTop = log.scrollHeight;
+        const payload = JSON.stringify({ nomor: parseInt(n), loket: parseInt(l) });
+        
+        // Kirim ke Call (untuk trigger audio instan)
+        client.publish(`${DEVICE_ID}/call`, payload);
+        
+        // Kirim ke status/last_num dengan RETAIN (untuk SSoT)
+        client.publish(`${DEVICE_ID}/status/last_num`, payload, { retain: true, qos: 1 });
+        alert("Data antrean berhasil disinkronkan ke server!");
     }
 
-    // Fungsi Panggil Antrean (Sinkron dengan mqttCallback di .ino)
-    function callQueue() {
-        const num = document.getElementById('num').value;
-        const loket = document.getElementById('loket').value;
+    function sendMarquee() {
+        const txt = document.getElementById('marquee').value;
+        if(!txt) return;
 
-        if(!num || !loket) return alert("Isi nomor dan loket!");
-
-        const topic = `${DEVICE_ID}/call`;
-        const payload = JSON.stringify({ nomor: parseInt(num), loket: parseInt(loket) });
-
-        client.publish(topic, payload);
-        addLog(`Sent Call: A${num} to Loket ${loket}`);
-    }
-
-    // Fungsi Update Teks Jalan (Sinkron dengan mqttCallback di .ino)
-    function updateMarquee() {
-        const msg = document.getElementById('marquee-text').value;
-        if(!msg) return alert("Isi pesan teks jalan!");
-
-        const topic = `${DEVICE_ID}/msg/update`;
-        client.publish(topic, msg);
-        addLog(`Updated Marquee: ${msg}`);
+        // Kirim dengan RETAIN agar semua device (lama/baru) ambil data ini
+        client.publish(`${DEVICE_ID}/msg/update`, txt, { retain: true, qos: 1 });
+        alert("Teks jalan berhasil diperbarui di seluruh perangkat!");
     }
 </script>
-
 </body>
 </html>
