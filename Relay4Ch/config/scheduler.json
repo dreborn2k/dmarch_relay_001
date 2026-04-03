@@ -14,7 +14,21 @@
       ],
       "enabled": true,
       "_modified": "2026-04-03T09:42:38.293Z"
+    },
+    {
+      "id": "mniptnbgge58",
+      "time": "12:00",
+      "relay": "2",
+      "action": "1",
+      "days": [
+        2,
+        4,
+        6,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-03T09:42:48.652Z"
     }
   ],
-  "updatedAt": "2026-04-03T09:42:39.813Z"
+  "updatedAt": "2026-04-03T09:42:50.172Z"
 }
