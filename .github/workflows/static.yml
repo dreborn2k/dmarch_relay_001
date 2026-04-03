@@ -1,43 +1,67 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+# Nama workflow yang akan tampil di tab Actions GitHub
+name: Deploy Multi Static Sites to Pages
 
+# Menentukan kapan workflow ini akan dijalankan secara otomatis
 on:
-  # Runs on pushes targeting the default branch
+  # Pemicu 1: Setiap ada push ke branch 'main' atau 'master'
   push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches: ["main", "master"]
+  # Pemicu 2: Memungkinkan Anda menjalankan workflow secara manual dari tab Actions
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+# Mengatur izin yang diperlukan untuk deployment ke GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Menjamin hanya satu deployment yang berjalan dalam satu waktu untuk branch yang sama
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  # Satu job bernama 'deploy' yang akan menangani semua proyek
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # Langkah 1: Mengunduh (checkout) semua kode dari repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
+
+      # Langkah 2: Membangun struktur folder untuk deployment
+      # Kita akan mengumpulkan semua file statis ke dalam satu folder 'deploy_root'
+      - name: Build All Projects
+        run: |
+          # Buat folder root untuk deployment
+          mkdir -p deploy_root
+
+          # Salin seluruh folder Relay4Ch
+          echo "Copying Relay4Ch project..."
+          cp -r Relay4Ch deploy_root/
+
+          # Salin seluruh folder Queue
+          echo "Copying Queue project..."
+          cp -r Queue deploy_root/
+
+          # (Opsional) Buat file index.html sederhana di root sebagai halaman pembuka
+          echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>dMarch Projects</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;text-align:center;padding:50px;}a{color:#38bdf8;display:block;margin:10px;}</style></head><body><h1>dMarch Projects</h1><a href="/Relay4Ch/">🔌 Relay4Ch Panel</a><a href="/Queue/">⏳ Queue Panel</a></body></html>' > deploy_root/index.html
+
+      # Langkah 3: Mengonfigurasi environment GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Upload artifact
+
+      # Langkah 4: Mengunggah folder deploy_root sebagai artifact deployment
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: './Relay4Ch'
+          # Tentukan path ke folder yang berisi semua file statis
+          path: './deploy_root'
+
+      # Langkah 5: Menjalankan deployment ke GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
