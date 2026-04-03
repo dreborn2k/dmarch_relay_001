@@ -18,11 +18,11 @@
     .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     .card-content { padding: 0 20px 20px 20px; }
     .card.collapsed .card-content { display: none; }
-    .card.collapsed .card-header { padding-bottom: 20px; } /* saat collapsed, padding bawah tetap rapi */
+    .card.collapsed .card-header { padding-bottom: 20px; }
     .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
     .toggle-btn:hover { opacity: 0.7; }
     
-    /* Card tanpa collapsible (MQTT, System Health, Relay Control, Terminal) tetap menggunakan class .card dengan padding */
+    /* Card tanpa collapsible */
     .card:not(.collapsible) { padding: 20px; }
     .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     
@@ -91,7 +91,7 @@
     <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
     
-    <!-- MQTT Card (tidak bisa minimize) -->
+    <!-- MQTT Card -->
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
@@ -109,36 +109,28 @@
     
     <button id="disconnectBtn" class="btn-danger hidden" type="button">🔌 Disconnect MQTT</button>
     
-    <!-- System Health Card (tidak bisa minimize) -->
+    <!-- System Health Card -->
     <div class="card app-card hidden">
       <h3>📊 System Health</h3>
       <div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div>
     </div>
     
-    <!-- Relay Control Card (tidak bisa minimize) -->
+    <!-- Relay Control Card -->
     <div class="card app-card hidden">
       <h3>⚡ Relay Control</h3>
       <div class="grid-2"><button class="btn-success" id="allOnBtn" type="button">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" type="button">⏹️ ALL OFF</button></div>
       <div class="grid-2" style="margin-top:12px;" id="relayBtns"></div>
     </div>
     
-    <!-- Relay Scheduler Card (collapsible, default collapsed) -->
+    <!-- Relay Scheduler Card (collapsible, default collapsed) dengan Cloud Sync di bawah judul -->
     <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
       <div class="card-header">
         <h3>⏰ Relay Scheduler</h3>
         <button class="toggle-btn" type="button">▼</button>
       </div>
       <div class="card-content">
-        <div class="grid-2">
-          <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select></div>
-          <div class="form-group"><label for="schAction">⚡ Aksi</label><select id="schAction" autocomplete="off"><option value="1">ON</option><option value="0">OFF</option></select></div>
-        </div>
-        <div class="grid-2">
-          <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
-          <div class="form-group"><div class="form-label-text">📅 Hari Aktif</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1" type="button">Sen</button><button class="day-btn" data-day="2" type="button">Sel</button><button class="day-btn" data-day="3" type="button">Rab</button><button class="day-btn" data-day="4" type="button">Kam</button><button class="day-btn" data-day="5" type="button">Jum</button><button class="day-btn" data-day="6" type="button">Sab</button><button class="day-btn" data-day="0" type="button">Min</button></div></div>
-        </div>
-        <!-- GitHub Sync Section -->
-        <div style="margin-top:15px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
+        <!-- Cloud Sync Section dipindah ke sini (di bawah judul) -->
+        <div style="margin-bottom:20px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
           <div class="gh-config-row">
             <div><span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span></div>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -159,6 +151,16 @@
               <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull</button>
             </div>
           </div>
+        </div>
+        
+        <!-- Form input jadwal -->
+        <div class="grid-2">
+          <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select></div>
+          <div class="form-group"><label for="schAction">⚡ Aksi</label><select id="schAction" autocomplete="off"><option value="1">ON</option><option value="0">OFF</option></select></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
+          <div class="form-group"><div class="form-label-text">📅 Hari Aktif</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1" type="button">Sen</button><button class="day-btn" data-day="2" type="button">Sel</button><button class="day-btn" data-day="3" type="button">Rab</button><button class="day-btn" data-day="4" type="button">Kam</button><button class="day-btn" data-day="5" type="button">Jum</button><button class="day-btn" data-day="6" type="button">Sab</button><button class="day-btn" data-day="0" type="button">Min</button></div></div>
         </div>
         <button class="btn-primary" onclick="addSchedule()" style="margin-top:12px;" type="button">➕ Tambah Jadwal</button>
         <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
@@ -244,7 +246,7 @@
       </div>
     </div>
     
-    <!-- Terminal Card (tidak bisa minimize) -->
+    <!-- Terminal Card -->
     <div class="card app-card hidden">
       <h3>📝 Log</h3>
       <div class="terminal" id="terminal" role="log" aria-live="polite"></div>
@@ -441,7 +443,7 @@
     function updateNetwork(){var s=$('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:$('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
     function resetWifi(){if(!confirm('Reset WiFi ke AP?'))return;pub(DEVICE_ID+'/network/reset','1');alert('🔄 Reset terkirim.');}
 
-    // QR LOGIC (sama seperti sebelumnya)
+    // QR LOGIC
     let qrImagePreview=null;
     function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}
     $('qrModal').onclick=function(e){if(e.target===this)closeQR();};
