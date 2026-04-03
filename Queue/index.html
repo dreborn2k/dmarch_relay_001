@@ -3,69 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch SSoT Dashboard</title>
+    <title>dMarch Queue SSoT Dashboard</title>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --accent: #38bdf8; }
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #e2e8f0; }
         body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .container { background: var(--card); border-radius: 12px; padding: 25px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
-        h2 { color: var(--accent); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .status { font-size: 0.8rem; margin-bottom: 20px; color: #10b981; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+        h2 { color: var(--accent); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { filter: brightness(1.2); }
+        .log { margin-top: 15px; font-size: 0.75rem; color: #10b981; text-align: left; background: #000; padding: 10px; border-radius: 5px; height: 60px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🌐 D'marcFF SSoT</h2>
-    <div id="status" class="status">Connecting to Server...</div>
+<div class="card">
+    <h2>🌐 dMarch SSoT</h2>
+    <div id="status" style="color:orange; font-size: 0.8rem; margin-bottom: 15px;">Loading SSoT Data...</div>
 
-    <input type="number" id="num" placeholder="Nomor Antrean (Misal: 10)">
+    <input type="number" id="num" placeholder="Nomor Antrean">
     <input type="number" id="loket" placeholder="Nomor Loket (1-4)">
-    <button onclick="sendCall()">📢 PANGGIL & SIMPAN DI SERVER</button>
+    <button onclick="publishQueue()">📢 PANGGIL & SINKRON</button>
 
     <hr style="border: 0.5px solid #334155; margin: 20px 0;">
 
-    <input type="text" id="marquee" placeholder="Teks Jalan Baru">
-    <button style="background: transparent; border: 1px solid var(--accent); color: var(--accent);" onclick="sendMarquee()">💾 SIMPAN TEKS KE SERVER</button>
+    <input type="text" id="msg" placeholder="Teks Jalan P10">
+    <button style="background: transparent; border: 1px solid var(--accent); color: var(--accent);" onclick="publishMarquee()">💾 UPDATE TEKS GLOBAL</button>
+
+    <div class="log" id="terminal">> Dashboard ready.</div>
 </div>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
-    const broker = 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt';
-    const client = mqtt.connect(broker, {
-        username: 'dmarchFF',
-        password: 'dmarchFF2205'
-    });
-
+    const GITHUB_URL = "https://raw.githubusercontent.com/dreborn2k/dmarch_relay_001/main/Queue/Data/Data.json";
+    const MQTT_SERVER = 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt';
     const DEVICE_ID = "dmarch_queue_001";
+    
+    const client = mqtt.connect(MQTT_SERVER, { username: 'dmarchFF', password: 'dmarchFF2205' });
 
-    client.on('connect', () => {
-        document.getElementById('status').innerText = "Server Status: ONLINE (SSoT Active)";
-    });
-
-    function sendCall() {
-        const n = document.getElementById('num').value;
-        const l = document.getElementById('loket').value;
-        if(!n || !l) return;
-
-        const payload = JSON.stringify({ nomor: parseInt(n), loket: parseInt(l) });
-        
-        // Kirim ke Call (untuk trigger audio instan)
-        client.publish(`${DEVICE_ID}/call`, payload);
-        
-        // Kirim ke status/last_num dengan RETAIN (untuk SSoT)
-        client.publish(`${DEVICE_ID}/status/last_num`, payload, { retain: true, qos: 1 });
-        alert("Data antrean berhasil disinkronkan ke server!");
+    // 1. Ambil data SSoT dari GitHub saat Dashboard dibuka
+    async function loadSSoT() {
+        try {
+            const res = await fetch(GITHUB_URL);
+            const data = await res.json();
+            document.getElementById('num').value = data.last_number;
+            document.getElementById('loket').value = data.last_loket;
+            document.getElementById('msg').value = data.marquee_text;
+            addLog("Data SSoT dimuat dari GitHub");
+        } catch(e) { addLog("Gagal muat data GitHub"); }
     }
 
-    function sendMarquee() {
-        const txt = document.getElementById('marquee').value;
-        if(!txt) return;
+    client.on('connect', () => {
+        document.getElementById('status').innerText = "SSoT Online (Server Connected)";
+        document.getElementById('status').style.color = "#10b981";
+        loadSSoT();
+    });
 
-        // Kirim dengan RETAIN agar semua device (lama/baru) ambil data ini
-        client.publish(`${DEVICE_ID}/msg/update`, txt, { retain: true, qos: 1 });
-        alert("Teks jalan berhasil diperbarui di seluruh perangkat!");
+    function addLog(m) {
+        const t = document.getElementById('terminal');
+        t.innerHTML += `<br>> ${m}`;
+        t.scrollTop = t.scrollHeight;
+    }
+
+    function publishQueue() {
+        const n = document.getElementById('num').value;
+        const l = document.getElementById('loket').value;
+        const payload = JSON.stringify({ nomor: parseInt(n), loket: parseInt(l) });
+        
+        // Publish ke /call (Audio) dan /status/last_num (Retain SSoT)
+        client.publish(`${DEVICE_ID}/call`, payload);
+        client.publish(`${DEVICE_ID}/status/last_num`, payload, { retain: true, qos: 1 });
+        addLog(`Panggil A${n} ke Loket ${l}`);
+    }
+
+    function publishMarquee() {
+        const m = document.getElementById('msg').value;
+        client.publish(`${DEVICE_ID}/msg/update`, m, { retain: true, qos: 1 });
+        addLog(`Update Teks: ${m}`);
     }
 </script>
 </body>
