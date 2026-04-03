@@ -13,16 +13,26 @@
       "_modified": "2026-04-02T19:13:22.282Z"
     },
     {
-      "id": "mnhurp0xx9i2",
-      "time": "14:00",
+      "id": "mnhmabx6nles",
+      "time": "12:00",
       "relay": "1",
       "action": "1",
       "days": [
         1
       ],
       "enabled": true,
-      "_modified": "2026-04-02T19:13:29.457Z"
+      "_modified": "2026-04-02T15:16:02.394Z"
+    },
+    {
+      "id": "mnhmabjmfpjb",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        2
+      ],
+      "enabled": true
     }
   ],
-  "updatedAt": "2026-04-02T19:57:56.159Z"
+  "updatedAt": "2026-04-03T01:09:09.636Z"
 }
