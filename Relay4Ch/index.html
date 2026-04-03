@@ -401,11 +401,24 @@
     let waConnected = notifConfig.wa?.connected || false;
 
     function initGitHubUI() {
-      if(ghConfig.owner && ghConfig.token) {
-        document.getElementById('ghOwner').value = ghConfig.owner;
-        document.getElementById('ghRepo').value = ghConfig.repo;
+      // Load config dari localStorage
+      const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
+      
+      if(saved.owner && saved.token) {
+        // ✅ Isi semua field dari saved config
+        document.getElementById('ghOwner').value = saved.owner;
+        document.getElementById('ghRepo').value = saved.repo;
+        document.getElementById('ghPath').value = saved.path || 'Relay4Ch/config/scheduler.json';
         document.getElementById('ghToken').value = '••••••••••••••••';
-        document.getElementById('ghDetails').textContent = `${ghConfig.owner}/${ghConfig.repo}/${ghConfig.path}`;
+        
+        // ✅ Update detail text
+        document.getElementById('ghDetails').textContent = 
+          `${saved.owner}/${saved.repo}/${saved.path || 'Relay4Ch/config/scheduler.json'}`;
+        
+        // ✅ Update global vars
+        ghConfig = saved;
+        
+        // ✅ PENTING: Panggil setSyncStatus untuk render UI yang benar
         setSyncStatus(true);
       }
     }
@@ -417,19 +430,25 @@
       const enableBtn = document.getElementById('ghEnableBtn');
       const disableBtn = document.getElementById('ghDisableBtn');
       
+      // ✅ Pastikan elemen ada sebelum manipulasi
+      if(!statusEl || !inputForm || !enableBtn || !disableBtn) {
+        console.warn('⚠️ GitHub Sync UI elements not found');
+        return;
+      }
+      
       if(online) {
         statusEl.textContent = '● Online';
         statusEl.className = 'sync-status sync-on';
-        inputForm.classList.add('hidden');
-        enableBtn.classList.add('hidden');
-        disableBtn.classList.remove('hidden');
+        inputForm.classList.add('hidden');        // Sembunyikan form input
+        enableBtn.classList.add('hidden');         // Sembunyikan tombol Aktifkan
+        disableBtn.classList.remove('hidden');     // ✅ TAMPILKAN tombol Nonaktifkan
         log('☁️ GitHub Sync: ONLINE');
       } else {
         statusEl.textContent = '● Offline';
         statusEl.className = 'sync-status sync-off';
-        inputForm.classList.remove('hidden');
-        enableBtn.classList.remove('hidden');
-        disableBtn.classList.add('hidden');
+        inputForm.classList.remove('hidden');      // Tampilkan form input
+        enableBtn.classList.remove('hidden');      // Tampilkan tombol Aktifkan
+        disableBtn.classList.add('hidden');        // Sembunyikan tombol Nonaktifkan
         document.getElementById('ghToken').value = '';
         log('☁️ GitHub Sync: OFFLINE');
       }
@@ -1068,12 +1087,22 @@
     function enableGitHubSync() {
       const owner = document.getElementById('ghOwner').value.trim() || 'dreborn2k';
       const repo = document.getElementById('ghRepo').value.trim() || 'dmarch_relay_001';
+      const path = document.getElementById('ghPath').value.trim() || 'Relay4Ch/config/scheduler.json';
       const token = document.getElementById('ghToken').value.trim();
-      const path = 'Relay4Ch/config/scheduler.json';
-      if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
+      
+      if(!token || token.includes('•••')) return alert('⚠️ Token wajib diisi (bukan masked)!');
+      
+      // ✅ Simpan config lengkap ke localStorage
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      
+      // ✅ Update UI details
+      document.getElementById('ghDetails').textContent = `${owner}/${repo}/${path}`;
+      
+      // ✅ Render status online + tampilkan tombol Nonaktifkan
       setSyncStatus(true);
+      
+      // ✅ Auto-pull data
       loadFromGitHub();
     }
     function disableGitHubSync() {
