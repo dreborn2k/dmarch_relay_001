@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>D'marcFF Operator Antrian</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+</head>
+<body>
+    <h1>Loket 1 - Kontrol Antrian</h1>
+    <button onclick="panggil(1)">CALL (Nomor Berikutnya)</button>
+    <button onclick="recall(1)">RE-CALL</button>
+
+    <script>
+        // Konfigurasi Broker (Gunakan Public Broker untuk testing, misal HiveMQ)
+        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "operator_l1_" + Math.random());
+        let nomorSekarang = 0;
+
+        client.connect({onSuccess: () => console.log("Terhubung ke MQTT")});
+
+        function panggil(loket) {
+            nomorSekarang++;
+            let payload = {
+                nomor: nomorSekarang,
+                loket: loket,
+                tgl: new Date().toISOString().split('T')[0],
+                cmd: "panggil"
+            };
+            let message = new Paho.MQTT.Message(JSON.stringify(payload));
+            message.destinationName = "dmarcff/queue/call";
+            client.send(message);
+            console.log("Memanggil nomor: " + nomorSekarang);
+        }
+    </script>
+</body>
+</html>
