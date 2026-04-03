@@ -1,5 +1,17 @@
 {
   "device": "dmarch_relay_001",
-  "schedules": [],
-  "updatedAt": "2026-04-03T06:57:39.581Z"
+  "schedules": [
+    {
+      "id": "mnijzaydhvn4",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1
+      ],
+      "enabled": true,
+      "_modified": "2026-04-03T06:59:14.869Z"
+    }
+  ],
+  "updatedAt": "2026-04-03T06:59:15.991Z"
 }
