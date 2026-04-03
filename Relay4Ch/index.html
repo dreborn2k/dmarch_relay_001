@@ -11,10 +11,10 @@
     :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; }
+    .container { max-width: 600px; margin: 0 auto; width: 100%; } /* ✅ Lebar konsisten */
     h1 { text-align: center; margin-bottom: 5px; }
     .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; } /* ✅ Lebar sama */
     .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group { margin-bottom: 12px; }
@@ -62,7 +62,7 @@
     .gh-config-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:8px; background:var(--bg); border-radius:8px; }
     .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; }
     .gh-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-    .btn-gh { padding:6px 12px; font-size:0.8rem; }
+    .btn-gh { padding:6px 12px; font-size:0.8rem; width: auto; min-width: 100px; }
     .form-label-text { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
     .notif-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
     .notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -71,7 +71,7 @@
     .status-active { background:#064e3b; color:#10b981; } .status-inactive { background:#334155; color:#94a3b8; }
     .notif-config { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
     .notif-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-    .btn-notif { padding:6px 12px; font-size:0.8rem; }
+    .btn-notif { padding:6px 12px; font-size:0.8rem; width: auto; }
     .config-mask { color:#64748b; font-family:monospace; }
   </style>
 </head>
@@ -79,6 +79,8 @@
   <div class="container">
     <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
+    
+    <!-- ✅ MQTT Card -->
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
@@ -93,11 +95,16 @@
       <button class="btn-primary" id="btnConnect" style="margin-top:10px;" type="button">🔗 Connect</button>
       <p id="connStatus">Status: Disconnected</p>
     </div>
+    
     <button id="disconnectBtn" class="btn-danger hidden" type="button">🔌 Disconnect MQTT</button>
+    
+    <!-- ✅ System Health Card -->
     <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div></div>
+    
+    <!-- ✅ Relay Control Card -->
     <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn" type="button">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" type="button">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
     
-    <!-- ✅ SCHEDULER CARD dengan Cloud Sync -->
+    <!-- ✅ Scheduler Card dengan Cloud Sync -->
     <div class="card app-card hidden" id="schedulerCard">
       <h3>⏰ Relay Scheduler</h3>
       <div class="grid-2">
@@ -120,13 +127,13 @@
             <div class="form-group"><label for="ghOwner">GitHub Username</label><input type="text" id="ghOwner" value="dreborn2k" autocomplete="off"></div>
             <div class="form-group"><label for="ghRepo">Repo Name</label><input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off"></div>
           </div>
-          <!-- ✅ TAMBAHAN: Input Path File -->
+          <!-- ✅ Input Path (akan hidden saat online) -->
           <div class="form-group" id="ghPathGroup"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
           <div class="form-group"><label for="ghToken">GitHub Personal Access Token</label><input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;"></div>
           <div class="gh-actions">
-            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan Sync</button>
-            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull Data</button>
-            <button class="btn-danger btn-gh hidden" id="ghDisableBtn" onclick="disableGitHubSync()" type="button">🔌 Nonaktifkan</button>
+            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan</button>
+            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull</button>
+            <button class="btn-danger btn-gh hidden" onclick="disableGitHubSync()" id="ghDisableBtn" type="button">🔌 Nonaktifkan</button>
           </div>
         </div>
       </div>
@@ -134,7 +141,7 @@
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
     
-    <!-- ✅ NOTIFICATION CARD -->
+    <!-- ✅ Notification Card -->
     <div class="card app-card hidden" id="notifCard">
       <h3>🔔 Notifikasi</h3>
       <div class="notif-card">
@@ -142,13 +149,13 @@
         <div id="tgConfig" class="notif-config hidden">
           <div class="form-group"><label for="tgToken">Bot Token</label><input type="password" id="tgToken" placeholder="123456:ABC-DEF..." autocomplete="off"></div>
           <div class="form-group"><label for="tgChatId">Chat ID</label><input type="text" id="tgChatId" placeholder="123456789" autocomplete="off"></div>
-          <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()" type="button">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()" type="button">🔍 Auto-Detect ID</button></div>
+          <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()" type="button">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()" type="button">🔍 Auto-Detect</button></div>
           <span id="tgMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
         </div>
         <div id="tgConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay" class="config-mask"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editTelegramConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()" type="button">🧪 Test</button></div></div></div>
       </div>
       <div class="notif-card">
-        <div class="notif-header"><div class="notif-title"><span>📡 Gotify (Self-Hosted)</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="gotifyToggle"></label></div>
+        <div class="notif-header"><div class="notif-title"><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="gotifyToggle"></label></div>
         <div id="gotifyConfig" class="notif-config hidden">
           <div class="form-group"><label for="gotifyUrl">Server URL</label><input type="url" id="gotifyUrl" placeholder="http://192.168.1.100" autocomplete="off"></div>
           <div class="form-group"><label for="gotifyToken">App Token</label><input type="password" id="gotifyToken" placeholder="AH..." autocomplete="off"></div>
@@ -158,222 +165,237 @@
         <div id="gotifyConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>URL: <span class="config-mask" id="gotifyUrlDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editGotifyConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testGotify()" type="button">🧪 Test</button></div></div></div>
       </div>
       <div class="notif-card">
-        <div class="notif-header"><div class="notif-title"><span>💬 WhatsApp (Webhook)</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="waToggle"></label></div>
+        <div class="notif-header"><div class="notif-title"><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="waToggle"></label></div>
         <div id="waConfig" class="notif-config hidden">
-          <div class="form-group"><label for="waWebhook">Webhook URL</label><input type="url" id="waWebhook" placeholder="https://your-gateway.com/send" autocomplete="off"></div>
-          <div class="form-group"><label for="waPhone">Nomor Tujuan</label><input type="tel" id="waPhone" value="628551291055" placeholder="628xxxxxxxxxx" autocomplete="off"></div>
+          <div class="form-group"><label for="waWebhook">Webhook URL</label><input type="url" id="waWebhook" placeholder="https://gateway/send" autocomplete="off"></div>
+          <div class="form-group"><label for="waPhone">Nomor</label><input type="tel" id="waPhone" value="628551291055" autocomplete="off"></div>
           <div class="notif-actions"><button class="btn-primary btn-notif" onclick="saveWhatsAppConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testWhatsApp()" type="button">🧪 Test</button></div>
         </div>
         <div id="waConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Webhook: <span class="config-mask" id="waWebhookDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editWhatsAppConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testWhatsApp()" type="button">🧪 Test</button></div></div></div>
       </div>
     </div>
     
-    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label for="ntpSelect">🕐 NTP Server</label><select id="ntpSelect" autocomplete="off"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label for="tzInput">Timezone (Jam)</label><input type="number" id="tzInput" value="7" autocomplete="off"></div><button class="btn-primary" id="saveNTPBtn" type="button">💾 Save NTP & TZ</button><div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO Mapping</label><input type="text" id="gpioInput" placeholder="Contoh: 12,14,27,26,25" autocomplete="off"></div><button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update GPIO</button></div>
-    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network Settings</h3><div class="form-group"><label for="netSsid">SSID WiFi Baru</label><input type="text" id="netSsid" placeholder="Masukkan SSID" autocomplete="off"></div><div class="form-group"><label for="netPass">Password WiFi</label><input type="password" id="netPass" placeholder="Masukkan Password" autocomplete="new-password"></div><button class="btn-success" id="updateNetBtn" type="button">💾 Update Network</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;" type="button">🔄 Reset WiFi (AP)</button></div>
-    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn" type="button">⬇️ Check OTA</button><button class="btn-danger" id="restartBtn" type="button">🔄 Restart</button></div></div>
-    <div class="card app-card hidden"><h3>📝 Terminal Log</h3><div class="terminal" id="terminal" role="log" aria-live="polite"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn" type="button">🗑️ Clear Log</button></div>
+    <!-- ✅ Settings Card -->
+    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label for="ntpSelect">🕐 NTP Server</label><select id="ntpSelect" autocomplete="off"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label for="tzInput">Timezone</label><input type="number" id="tzInput" value="7" autocomplete="off"></div><button class="btn-primary" id="saveNTPBtn" type="button">💾 Save</button><div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO</label><input type="text" id="gpioInput" placeholder="12,14,27,26,25" autocomplete="off"></div><button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update</button></div>
+    
+    <!-- ✅ Network Card -->
+    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network</h3><div class="form-group"><label for="netSsid">SSID</label><input type="text" id="netSsid" autocomplete="off"></div><div class="form-group"><label for="netPass">Password</label><input type="password" id="netPass" autocomplete="new-password"></div><button class="btn-success" id="updateNetBtn" type="button">💾 Update</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;" type="button">🔄 Reset AP</button></div>
+    
+    <!-- ✅ System Card -->
+    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn" type="button">⬇️ OTA</button><button class="btn-danger" id="restartBtn" type="button">🔄 Restart</button></div></div>
+    
+    <!-- ✅ Terminal Card -->
+    <div class="card app-card hidden"><h3>📝 Log</h3><div class="terminal" id="terminal" role="log" aria-live="polite"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn" type="button">🗑️ Clear</button></div>
   </div>
-  <div id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
-    <div class="modal-box"><h3 id="qrTitle" style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR atau Upload Gambar</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn" type="button">📷 Buka Kamera</button><label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Pilih Gambar</label><input type="file" id="qrFileInput" accept="image/*" aria-label="Pilih gambar QR"></div><p class="qr-msg" id="qrMsg">Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}</p></div>
-  </div>
+  
+  <!-- QR Modal -->
+  <div id="qrModal" role="dialog" aria-modal="true"><div class="modal-box"><h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn" type="button">📷 Kamera</button><label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Gambar</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">Format: {"broker":"...","port":8884,"user":"...","pass":"..."}</p></div></div>
 
   <script>
-    // ✅ GLOBAL VARIABLES - DEFENSIVE
-    let mqttClient = null;
-    const DEVICE_ID = "dmarch_relay_001";
-    let qrScanner = null;
+    // ✅ GLOBAL VARIABLES - Defensive
+    let mqttClient = null, DEVICE_ID = "dmarch_relay_001", qrScanner = null;
     let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
-    let schedulerInterval = null;
-    let lastTriggered = {};
-    let ghSyncEnabled = false;
-    let ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
-    let ghSyncTimeout = null;
+    let schedulerInterval = null, lastTriggered = {};
+    let ghSyncEnabled = false, ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}'), ghSyncTimeout = null;
     let notifConfig = JSON.parse(localStorage.getItem('dm_notif_config') || '{}');
-    let tgEnabled = notifConfig.tg?.enabled || false, tgConnected = notifConfig.tg?.connected || false;
-    let gotifyEnabled = notifConfig.gotify?.enabled || false, gotifyConnected = notifConfig.gotify?.connected || false;
-    let waEnabled = notifConfig.wa?.enabled || false, waConnected = notifConfig.wa?.connected || false;
+    let tgEnabled = notifConfig.tg?.enabled||false, tgConnected = notifConfig.tg?.connected||false;
+    let gotifyEnabled = notifConfig.gotify?.enabled||false, gotifyConnected = notifConfig.gotify?.connected||false;
+    let waEnabled = notifConfig.wa?.enabled||false, waConnected = notifConfig.wa?.connected||false;
 
-    // ✅ HELPER: Safe element setter
-    function safeSetVal(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
-    function safeGetEl(id) { return document.getElementById(id); }
-    function safeClass(el, cls, add) { if(el) el.classList.toggle(cls, add); }
-    function safeText(el, txt) { if(el) el.textContent = txt; }
+    // ✅ Helper Functions - Safe DOM Access
+    const $ = id => document.getElementById(id);
+    const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
+    const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; };
+    const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
+    const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
 
+    // ✅ GitHub UI Init - Defensive
     function initGitHubUI() {
       try {
         const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
-        
         if(saved.owner && saved.token) {
-          // ✅ Isi field dari saved config (dengan cek elemen)
-          const ownerEl = document.getElementById('ghOwner');
-          const repoEl = document.getElementById('ghRepo');
-          const pathEl = document.getElementById('ghPath');
-          const tokenEl = document.getElementById('ghToken');
-          const detailsEl = document.getElementById('ghDetails');
-          
-          if(ownerEl) ownerEl.value = saved.owner;
-          if(repoEl) repoEl.value = saved.repo;
-          if(pathEl) pathEl.value = saved.path || 'Relay4Ch/config/scheduler.json';
-          if(tokenEl) tokenEl.value = '••••••••••••••••';
-          if(detailsEl) detailsEl.textContent = `${saved.owner}/${saved.repo}/${saved.path || 'Relay4Ch/config/scheduler.json'}`;
-          
-          // ✅ Update global var
+          safeVal('ghOwner', saved.owner);
+          safeVal('ghRepo', saved.repo);
+          safeVal('ghPath', saved.path || 'Relay4Ch/config/scheduler.json');
+          safeVal('ghToken', '••••••••••••••••');
+          safeTxt('ghDetails', `${saved.owner}/${saved.repo}/${saved.path||'Relay4Ch/config/scheduler.json'}`);
           ghConfig = saved;
-          
-          // ✅ PENTING: Render UI status online
-          setSyncStatus(true);
+          setSyncStatus(true); // ✅ Render UI online
         }
-      } catch(e) { 
-        console.warn('⚠️ initGitHubUI error:', e); 
-        // ✅ Jangan biarkan error ini menghentikan inisialisasi lain (MQTT, dll)
-      }
+      } catch(e) { console.warn('⚠️ initGitHubUI:', e); }
     }
 
+    // ✅ Sync Status - FIXED: Toggle button visibility
     function setSyncStatus(online) {
       ghSyncEnabled = online;
-      const statusEl = document.getElementById('ghSyncStatus');
-      const inputForm = document.getElementById('ghInputForm');
-      const enableBtn = document.getElementById('ghEnableBtn');
-      const disableBtn = document.getElementById('ghDisableBtn');
-      const pathGroup = document.getElementById('ghPathGroup'); // ✅ Grup input path
+      const statusEl = $('ghSyncStatus'), inputForm = $('ghInputForm');
+      const enableBtn = $('ghEnableBtn'), disableBtn = $('ghDisableBtn');
       
-      // ✅ Pastikan semua elemen ada sebelum manipulasi
-      if(!statusEl || !inputForm || !enableBtn || !disableBtn) {
-        console.warn('⚠️ GitHub Sync UI elements not found');
-        return;
-      }
+      if(!statusEl || !inputForm || !enableBtn || !disableBtn) return;
       
       if(online) {
-        // ✅ Status ONLINE: tampilkan tombol Nonaktifkan, sembunyikan form + path
-        statusEl.textContent = '● Online';
-        statusEl.className = 'sync-status sync-on';
-        inputForm.classList.add('hidden');           // Sembunyikan semua input
-        enableBtn.classList.add('hidden');            // Sembunyikan tombol Aktifkan
-        if(disableBtn) disableBtn.classList.remove('hidden');  // ✅ TAMPILKAN tombol Nonaktifkan
+        // ✅ ONLINE: Show disable button, hide form
+        safeTxt('ghSyncStatus', '● Online');
+        $('ghSyncStatus').className = 'sync-status sync-on';
+        inputForm.classList.add('hidden');
+        enableBtn.classList.add('hidden');
+        disableBtn.classList.remove('hidden'); // ✅ TAMPILKAN tombol Nonaktifkan
         log('☁️ GitHub Sync: ONLINE');
       } else {
-        // ✅ Status OFFLINE: tampilkan form + path, sembunyikan tombol Nonaktifkan
-        statusEl.textContent = '● Offline';
-        statusEl.className = 'sync-status sync-off';
-        inputForm.classList.remove('hidden');         // Tampilkan form input
-        enableBtn.classList.remove('hidden');         // Tampilkan tombol Aktifkan
-        if(disableBtn) disableBtn.classList.add('hidden');     // Sembunyikan tombol Nonaktifkan
-        const tokenEl = document.getElementById('ghToken');
-        if(tokenEl) tokenEl.value = '';
+        // ✅ OFFLINE: Show form, hide disable button
+        safeTxt('ghSyncStatus', '● Offline');
+        $('ghSyncStatus').className = 'sync-status sync-off';
+        inputForm.classList.remove('hidden');
+        enableBtn.classList.remove('hidden');
+        disableBtn.classList.add('hidden');
+        safeVal('ghToken', '');
         log('☁️ GitHub Sync: OFFLINE');
       }
     }
 
-    function initNotifUI() {
-      const tg = notifConfig.tg || {};
-      if(tg.token && tg.chatId) { safeSetVal('tgToken','••••••••••••••••'); safeSetVal('tgChatId',tg.chatId); safeText(safeGetEl('tgChatDisplay'),tg.chatId); tgConnected = tg.connected||false; }
-      safeClass(safeGetEl('tgToggle'),'active',tgEnabled); updateTgUI();
-      const gf = notifConfig.gotify || {};
-      if(gf.url && gf.token) { safeSetVal('gotifyUrl',gf.url); safeSetVal('gotifyToken','••••••••••••••••'); safeText(safeGetEl('gotifyUrlDisplay'),shortenUrl(gf.url)); gotifyConnected = gf.connected||false; }
-      safeClass(safeGetEl('gotifyToggle'),'active',gotifyEnabled); updateGotifyUI();
-      const wa = notifConfig.wa || {};
-      if(wa.webhook) { safeSetVal('waWebhook',wa.webhook); safeSetVal('waPhone',wa.phone||'628551291055'); safeText(safeGetEl('waWebhookDisplay'),shortenUrl(wa.webhook)); waConnected = wa.connected||false; }
-      safeClass(safeGetEl('waToggle'),'active',waEnabled); updateWaUI();
-      safeGetEl('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); };
-      safeGetEl('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); };
-      safeGetEl('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); };
+    // ✅ Enable Sync - Get path from UI
+    function enableGitHubSync() {
+      const owner = $('ghOwner')?.value.trim() || 'dreborn2k';
+      const repo = $('ghRepo')?.value.trim() || 'dmarch_relay_001';
+      const path = $('ghPath')?.value.trim() || 'Relay4Ch/config/scheduler.json';
+      const token = $('ghToken')?.value.trim();
+      
+      if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
+      
+      ghConfig = { owner, repo, token, path, branch: 'main' };
+      localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      safeTxt('ghDetails', `${owner}/${repo}/${path}`);
+      setSyncStatus(true);
+      loadFromGitHub();
     }
-    function updateTgUI(){ const b=safeGetEl('tgStatusBadge'),c=safeGetEl('tgConfig'),d=safeGetEl('tgConnected'); if(!b||!c||!d)return; if(!tgEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(tgConnected&&notifConfig.tg?.token){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
-    function updateGotifyUI(){ const b=safeGetEl('gotifyStatusBadge'),c=safeGetEl('gotifyConfig'),d=safeGetEl('gotifyConnected'); if(!b||!c||!d)return; if(!gotifyEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(gotifyConnected&&notifConfig.gotify?.url){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
-    function updateWaUI(){ const b=safeGetEl('waStatusBadge'),c=safeGetEl('waConfig'),d=safeGetEl('waConnected'); if(!b||!c||!d)return; if(!waEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(waConnected&&notifConfig.wa?.webhook){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
+
+    function disableGitHubSync() {
+      if(!confirm('Nonaktifkan Sync?')) return;
+      ghConfig = {}; localStorage.removeItem('dm_gh_config'); setSyncStatus(false);
+    }
+
+    async function loadFromGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(res.ok) {
+          const data = await res.json(), content = JSON.parse(atob(data.content));
+          if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+            schedules = mergeScheduleArrays(schedules, content.schedules);
+            saveSchedulesLocal(); renderSchedules();
+            log(`✅ Pull OK (${schedules.length} jadwal)`);
+          }
+        }
+      } catch(err) { log('❌ Pull: '+err.message); }
+    }
+
+    async function pushToGitHub(retryCount=0) {
+      if(!ghSyncEnabled || !ghConfig?.token || retryCount>=3) return;
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+        let sha = null;
+        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(getRes.ok) sha = (await getRes.json()).sha;
+        
+        const clean = schedules.map(s => { const {_source,...c} = JSON.parse(JSON.stringify(s)); return c; });
+        const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() };
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+        const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
+        if(sha) body.sha = sha;
+        
+        const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if(res.ok) { log('💾 GitHub OK'); return; }
+        if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retryCount+1}`); return await pushToGitHub(retryCount+1); }
+      } catch(err) { log('❌ Push: '+err.message); }
+    }
+
+    // ✅ Notification UI Init
+    function initNotifUI() {
+      const tg = notifConfig.tg||{};
+      if(tg.token&&tg.chatId) { safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
+      safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
+      
+      const gf = notifConfig.gotify||{};
+      if(gf.url&&gf.token) { safeVal('gotifyUrl',gf.url); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); gotifyConnected=gf.connected||false; }
+      safeCls($('gotifyToggle'),'active',gotifyEnabled); updateGotifyUI();
+      
+      const wa = notifConfig.wa||{};
+      if(wa.webhook) { safeVal('waWebhook',wa.webhook); safeVal('waPhone',wa.phone||'628551291055'); safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); waConnected=wa.connected||false; }
+      safeCls($('waToggle'),'active',waEnabled); updateWaUI();
+      
+      $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); };
+      $('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); };
+      $('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); };
+    }
+    function updateTgUI(){ const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); if(!b||!c||!d)return; if(!tgEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(tgConnected&&notifConfig.tg?.token){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
+    function updateGotifyUI(){ const b=$('gotifyStatusBadge'),c=$('gotifyConfig'),d=$('gotifyConnected'); if(!b||!c||!d)return; if(!gotifyEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(gotifyConnected&&notifConfig.gotify?.url){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
+    function updateWaUI(){ const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); if(!b||!c||!d)return; if(!waEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(waConnected&&notifConfig.wa?.webhook){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
     function shortenUrl(u){try{const x=new URL(u);return x.hostname+(x.pathname.length>15?'...':x.pathname);}catch{return u.length>30?u.substring(0,30)+'...':u;}}
 
+    // ✅ DOM Ready
     document.addEventListener('DOMContentLoaded', function() {
-      safeSetVal('clientId','web_'+Math.random().toString(16).substr(2,8));
-      safeSetVal('deviceId',DEVICE_ID);
+      safeVal('clientId','web_'+Math.random().toString(16).substr(2,8));
+      safeVal('deviceId',DEVICE_ID);
       loadFromStorage(); initRelayButtons(); initScheduler(); initGitHubUI(); initNotifUI();
-      safeGetEl('btnConnect').onclick = toggleConnect;
-      safeGetEl('disconnectBtn').onclick = toggleConnect;
-      safeGetEl('allOnBtn').onclick = () => { pub(DEVICE_ID+'/all/on','1'); sendNotif('🔌 ALL RELAY ON','Semua relay dinyalakan via web'); };
-      safeGetEl('allOffBtn').onclick = () => { pub(DEVICE_ID+'/all/off','1'); sendNotif('🔌 ALL RELAY OFF','Semua relay dimatikan via web'); };
-      safeGetEl('saveNTPBtn').onclick = () => { pub(DEVICE_ID+'/ntp/set',safeGetEl('ntpSelect').value); pub(DEVICE_ID+'/timezone/set',safeGetEl('tzInput').value); };
-      safeGetEl('updateGPIOBtn').onclick = () => pub(DEVICE_ID+'/gpio/update',safeGetEl('gpioInput').value);
-      safeGetEl('updateNetBtn').onclick = updateNetwork;
-      safeGetEl('resetNetBtn').onclick = resetWifi;
-      safeGetEl('otaBtn').onclick = () => pub(DEVICE_ID+'/system/ota','1');
-      safeGetEl('restartBtn').onclick = () => pub(DEVICE_ID+'/system/restart','1');
-      safeGetEl('clearLogBtn').onclick = () => { const t=safeGetEl('terminal'); if(t)t.innerHTML=''; };
+      $('btnConnect').onclick = toggleConnect;
+      $('disconnectBtn').onclick = toggleConnect;
+      $('allOnBtn').onclick = () => { pub(DEVICE_ID+'/all/on','1'); sendNotif('🔌 ALL ON','Semua relay ON'); };
+      $('allOffBtn').onclick = () => { pub(DEVICE_ID+'/all/off','1'); sendNotif('🔌 ALL OFF','Semua relay OFF'); };
+      $('saveNTPBtn').onclick = () => { pub(DEVICE_ID+'/ntp/set',$('ntpSelect').value); pub(DEVICE_ID+'/timezone/set',$('tzInput').value); };
+      $('updateGPIOBtn').onclick = () => pub(DEVICE_ID+'/gpio/update',$('gpioInput').value);
+      $('updateNetBtn').onclick = updateNetwork;
+      $('resetNetBtn').onclick = resetWifi;
+      $('otaBtn').onclick = () => pub(DEVICE_ID+'/system/ota','1');
+      $('restartBtn').onclick = () => pub(DEVICE_ID+'/system/restart','1');
+      $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t)t.innerHTML=''; };
     });
 
-    function initRelayButtons(){ const rBox=safeGetEl('relayBtns'); if(!rBox)return; rBox.innerHTML=''; for(let i=1;i<=5;i++){const btn=document.createElement('button');btn.id=`btn-relay-${i}`;btn.className='btn-secondary';btn.dataset.state='off';btn.textContent=`Relay ${i} (OFF)`;btn.onclick=()=>{sendRelayCommand(i);sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah via web`);};btn.type='button';rBox.appendChild(btn);}}
-    function updateRelayUI(num,state){const btn=safeGetEl(`btn-relay-${num}`);if(!btn)return;const isOn=(state==='1'||state===1||state===true||state==='true');btn.dataset.state=isOn?'on':'off';btn.textContent=`Relay ${num} (${isOn?'ON':'OFF'})`;btn.className=isOn?'btn-success':'btn-secondary';log(`🔄 State Relay ${num}: ${isOn?'ON':'OFF'}`);}
-    function sendRelayCommand(num){if(!mqttClient||!mqttClient.connected)return alert('⚠️ MQTT belum terhubung!');const btn=safeGetEl(`btn-relay-${num}`);if(!btn)return;const cmd=btn.dataset.state==='on'?0:1;mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`,String(cmd));log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);}
-    function toggleConnect(){const btn=safeGetEl('btnConnect'),statusEl=safeGetEl('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeText(statusEl,'Status: Disconnecting...');return;}const h=safeGetEl('broker').value.trim(),pt=safeGetEl('port').value.trim(),u=safeGetEl('username').value.trim(),pw=safeGetEl('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib diisi!');if(pt!=='8884')return alert('⚠️ HiveMQ WebSocket wajib port 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting to ${url}...`);safeText(statusEl,'Status: Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:safeGetEl('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`,`${DEVICE_ID}/notif/#`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled)loadFromGitHub();});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const parts=t.split('/');updateRelayUI(parts[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
-    function updateSystemHealth(msg){try{const d=JSON.parse(msg);safeText(safeGetEl('sigVal'),(d.rssi||'--')+'%');safeText(safeGetEl('upVal'),d.uptime||'--');safeText(safeGetEl('tempVal'),(d.temp||'--')+'°C');safeText(safeGetEl('fwVal'),d.fw_version||'--');}catch(e){}}
+    // ✅ Relay Buttons
+    function initRelayButtons(){ const rBox=$('relayBtns'); if(!rBox)return; rBox.innerHTML=''; for(let i=1;i<=5;i++){const btn=document.createElement('button');btn.id=`btn-relay-${i}`;btn.className='btn-secondary';btn.dataset.state='off';btn.textContent=`Relay ${i} (OFF)`;btn.onclick=()=>{sendRelayCommand(i);sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah`);};btn.type='button';rBox.appendChild(btn);}}
+    function updateRelayUI(num,state){const btn=$(`btn-relay-${num}`);if(!btn)return;const isOn=(state==='1'||state===1||state===true||state==='true');btn.dataset.state=isOn?'on':'off';btn.textContent=`Relay ${num} (${isOn?'ON':'OFF'})`;btn.className=isOn?'btn-success':'btn-secondary';log(`🔄 Relay ${num}: ${isOn?'ON':'OFF'}`);}
+    function sendRelayCommand(num){if(!mqttClient||!mqttClient.connected)return alert('⚠️ MQTT disconnected!');const btn=$(`btn-relay-${num}`);if(!btn)return;const cmd=btn.dataset.state==='on'?0:1;mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`,String(cmd));log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);}
+    
+    // ✅ MQTT Connect
+    function toggleConnect(){const btn=$('btnConnect'),statusEl=$('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeTxt('connStatus','Disconnecting...');return;}const h=$('broker').value.trim(),pt=$('port').value.trim(),u=$('username').value.trim(),pw=$('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib!');if(pt!=='8884')return alert('⚠️ Port harus 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting...`);safeTxt('connStatus','Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:$('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled)loadFromGitHub();});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const p=t.split('/');updateRelayUI(p[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
+    function updateSystemHealth(msg){try{const d=JSON.parse(msg);safeTxt('sigVal',(d.rssi||'--')+'%');safeTxt('upVal',d.uptime||'--');safeTxt('tempVal',(d.temp||'--')+'°C');safeTxt('fwVal',d.fw_version||'--');}catch(e){}}
     function pub(topic,payload){if(mqttClient&&mqttClient.connected)mqttClient.publish(topic,payload,{qos:0},e=>e?log('❌ Pub Error'):log(`📤 ${topic} -> ${payload}`));else log('⚠️ Disconnected');}
-    function setConnectionState(connected){safeClass(safeGetEl('connCard'),'hidden',connected);safeClass(safeGetEl('disconnectBtn'),'hidden',!connected);document.querySelectorAll('.app-card').forEach(c=>safeClass(c,'hidden',!connected));safeText(safeGetEl('connStatus'),connected?'Status: Connected':'Status: Disconnected');}
-    function saveToStorage(){localStorage.setItem('dm_mqtt',JSON.stringify({b:safeGetEl('broker').value,p:safeGetEl('port').value,u:safeGetEl('username').value,pw:safeGetEl('password').value}));}
-    function loadFromStorage(){try{var d=JSON.parse(localStorage.getItem('dm_mqtt'));if(d){safeSetVal('broker',d.b||'');safeSetVal('port',d.p||'');safeSetVal('username',d.u||'');safeSetVal('password',d.pw||'');}}catch(e){}}
-    function updateNetwork(){var s=safeGetEl('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:safeGetEl('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
+    function setConnectionState(connected){safeCls($('connCard'),'hidden',connected);safeCls($('disconnectBtn'),'hidden',!connected);document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected));safeTxt('connStatus',connected?'Status: Connected':'Status: Disconnected');}
+    function saveToStorage(){localStorage.setItem('dm_mqtt',JSON.stringify({b:$('broker').value,p:$('port').value,u:$('username').value,pw:$('password').value}));}
+    function loadFromStorage(){try{var d=JSON.parse(localStorage.getItem('dm_mqtt'));if(d){safeVal('broker',d.b||'');safeVal('port',d.p||'');safeVal('username',d.u||'');safeVal('password',d.pw||'');}}catch(e){}}
+    function updateNetwork(){var s=$('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:$('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
     function resetWifi(){if(!confirm('Reset WiFi ke AP?'))return;pub(DEVICE_ID+'/network/reset','1');alert('🔄 Reset terkirim.');}
-    function log(msg){const t=safeGetEl('terminal');if(t)t.innerHTML='['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML;}
 
-    // QR Logic (simplified for brevity - same as before)
-    let qrImagePreview=null;function openQR(){safeGetEl('qrModal').style.display='flex';safeText(safeGetEl('qrMsg'),'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}');safeGetEl('qrMsg').style.color='#94a3b8';safeGetEl('reader').innerHTML='';if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}safeGetEl('qrModal').onclick=function(e){if(e.target===this)closeQR();};async function closeQR(){safeGetEl('qrModal').style.display='none';if(qrScanner){try{await qrScanner.stop();}catch(e){}qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeSetVal('qrFileInput','');safeText(safeGetEl('qrMsg'),'Format QR: {"broker":"...","port":8884,"user":"...","pass":"..."}');safeGetEl('qrMsg').style.color='#94a3b8';}safeGetEl('startCameraBtn').onclick=function(){if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeGetEl('reader').innerHTML='';qrScanner=new Html5Qrcode("reader");qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{alert('❌ Gagal akses kamera: '+err);safeText(safeGetEl('qrMsg'),'⚠️ Izinkan akses kamera atau gunakan upload gambar.');safeGetEl('qrMsg').style.color='#ef4444';});};safeGetEl('qrFileInput').onchange=async function(e){const file=e.target.files[0];if(!file)return;if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeGetEl('reader').innerHTML='';const reader=new FileReader();reader.onload=function(evt){const img=document.createElement('img');img.src=evt.target.result;img.style.maxWidth='100%';img.style.maxHeight='300px';img.style.borderRadius='8px';img.style.display='block';img.style.margin='0 auto';safeGetEl('reader').appendChild(img);qrImagePreview=img;};reader.readAsDataURL(file);safeText(safeGetEl('qrMsg'),'⏳ Memproses gambar...');safeGetEl('qrMsg').style.color='#94a3b8';try{qrScanner=new Html5Qrcode("reader");const decodedText=await qrScanner.scanFile(file,true);console.log('✅ QR Decoded:',decodedText);onQRSuccess(decodedText);}catch(err){console.error('❌ QR Scan Error:',err);if(err.toString().includes("No MultiFormat Readers")||err.toString().includes("QR code parse error")){safeGetEl('qrMsg').innerHTML='⚠️ QR tidak terdeteksi.<br>• Pastikan gambar jelas, tidak blur<br>• QR berisi JSON valid<br>• Coba upload ulang';}else{safeText(safeGetEl('qrMsg'),'❌ Gagal: '+(err.message||'Format tidak didukung'));}safeGetEl('qrMsg').style.color='#ef4444';}};function onQRSuccess(decodedText){try{console.log('🔍 Parsing QR JSON:',decodedText);const data=JSON.parse(decodedText);if(!data.broker||!data.port||!data.user||!data.pass)throw new Error('Field wajib tidak lengkap');safeSetVal('broker',data.broker);safeSetVal('port',data.port);safeSetVal('username',data.user);safeSetVal('password',data.pass);saveToStorage();safeText(safeGetEl('qrMsg'),'✅ QR berhasil! Form terisi otomatis.');safeGetEl('qrMsg').style.color='#10b981';log('✅ QR Config loaded');setTimeout(()=>{closeQR();},1000);}catch(err){console.error('❌ Parse Error:',err);safeGetEl('qrMsg').innerHTML=`❌ Format QR tidak valid:<br><code>${err.message}</code>`;safeGetEl('qrMsg').style.color='#ef4444';}}
+    // ✅ QR Logic (simplified)
+    let qrImagePreview=null;function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}$('qrModal').onclick=function(e){if(e.target===this)closeQR();};async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){try{await qrScanner.stop();}catch(e){}qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeVal('qrFileInput','');safeTxt('qrMsg','Format: {"broker":"..."}');$('qrMsg').style.color='#94a3b8';}$('startCameraBtn').onclick=function(){if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';qrScanner=new Html5Qrcode("reader");qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{alert('❌ Kamera: '+err);safeTxt('qrMsg','⚠️ Izinkan kamera');$('qrMsg').style.color='#ef4444';});};$('qrFileInput').onchange=async function(e){const file=e.target.files[0];if(!file)return;if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';const reader=new FileReader();reader.onload=function(evt){const img=document.createElement('img');img.src=evt.target.result;img.style.maxWidth='100%';img.style.maxHeight='300px';img.style.borderRadius='8px';img.style.display='block';img.style.margin='0 auto';$('reader').appendChild(img);qrImagePreview=img;};reader.readAsDataURL(file);safeTxt('qrMsg','⏳ Memproses...');$('qrMsg').style.color='#94a3b8';try{qrScanner=new Html5Qrcode("reader");const decodedText=await qrScanner.scanFile(file,true);onQRSuccess(decodedText);}catch(err){console.error('❌ QR:',err);if(err.toString().includes("No MultiFormat")){$('qrMsg').innerHTML='⚠️ QR tidak terdeteksi.<br>• Gambar jelas<br>• JSON valid';}else{safeTxt('qrMsg','❌ Gagal: '+err.message);}$('qrMsg').style.color='#ef4444';}};function onQRSuccess(decodedText){try{const data=JSON.parse(decodedText);if(!data.broker||!data.port||!data.user||!data.pass)throw new Error('Field tidak lengkap');safeVal('broker',data.broker);safeVal('port',data.port);safeVal('username',data.user);safeVal('password',data.pass);saveToStorage();safeTxt('qrMsg','✅ QR berhasil!');$('qrMsg').style.color='#10b981';log('✅ QR loaded');setTimeout(()=>closeQR(),1000);}catch(err){console.error('❌ Parse:',err);$('qrMsg').innerHTML=`❌ Invalid:<br><code>${err.message}</code>`;$('qrMsg').style.color='#ef4444';}}
 
-    // Scheduler & GitHub Sync
+    // ✅ Scheduler
     function initScheduler(){document.querySelectorAll('.day-btn').forEach(btn=>{btn.onclick=function(){this.classList.toggle('active');}});renderSchedules();startSchedulerEngine();if(ghSyncEnabled&&ghConfig?.token)loadFromGitHub();}
-    function addSchedule(){const time=safeGetEl('schTime').value,relay=safeGetEl('schRelay').value,action=safeGetEl('schAction').value,activeDays=Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));if(!time||activeDays.length===0)return alert('⚠️ Waktu & minimal 1 hari wajib dipilih!');const newSch={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4),time,relay,action,days:activeDays,enabled:true,_modified:new Date().toISOString()};schedules.push(newSch);saveSchedules();renderSchedules();log(`⏰ Jadwal: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);}
+    function addSchedule(){const time=$('schTime').value,relay=$('schRelay').value,action=$('schAction').value,activeDays=Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));if(!time||activeDays.length===0)return alert('⚠️ Waktu & hari wajib!');const newSch={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4),time,relay,action,days:activeDays,enabled:true,_modified:new Date().toISOString()};schedules.push(newSch);saveSchedules();renderSchedules();log(`⏰ Jadwal: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);}
     function toggleSchedule(id){const sch=schedules.find(s=>s.id===id);if(sch){sch.enabled=!sch.enabled;sch._modified=new Date().toISOString();saveSchedules();renderSchedules();}}
-    function deleteSchedule(id){if(!confirm('Hapus jadwal ini?'))return;schedules=schedules.filter(s=>s.id!==id);saveSchedules();renderSchedules();log('🗑️ Jadwal dihapus');}
+    function deleteSchedule(id){if(!confirm('Hapus jadwal?'))return;schedules=schedules.filter(s=>s.id!==id);saveSchedules();renderSchedules();log('🗑️ Jadwal dihapus');}
     function mergeScheduleArrays(localArr,serverArr){const result=new Map();(serverArr||[]).forEach(s=>{const clean=JSON.parse(JSON.stringify(s));delete clean._source;result.set(clean.id,clean);});(localArr||[]).forEach(s=>{const existing=result.get(s.id);const isLocalNewer=s._modified&&(!existing?._modified||s._modified>existing._modified);if(!existing||isLocalNewer){const clean=JSON.parse(JSON.stringify(s));delete clean._source;result.set(s.id,clean);}});return Array.from(result.values()).sort((a,b)=>{if(a.time===b.time)return(a.relay||'').localeCompare(b.relay||'');return a.time.localeCompare(b.time);});}
     function saveSchedules(){try{localStorage.setItem('dm_schedules',JSON.stringify(schedules));}catch(e){}if(ghSyncEnabled&&navigator.onLine&&ghConfig?.token){clearTimeout(ghSyncTimeout);const jitter=Math.floor(Math.random()*150)+50;ghSyncTimeout=setTimeout(()=>pushToGitHub(),1000+jitter);}}
     function saveSchedulesLocal(){try{localStorage.setItem('dm_schedules',JSON.stringify(schedules));}catch(e){}}
-    function renderSchedules(){const list=safeGetEl('scheduleList');if(!list)return;list.innerHTML='';if(schedules.length===0){list.innerHTML='<p style="color:#64748b; text-align:center; font-size:0.85rem;">Belum ada jadwal.</p>';return;}const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];schedules.forEach(sch=>{const daysStr=sch.days.map(d=>dayNames[d]).join(', ');const item=document.createElement('div');item.className='schedule-item';item.innerHTML=`<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')" type="button">🗑️</button></div>`;list.appendChild(item);});}
-    function startSchedulerEngine(){if(schedulerInterval)clearInterval(schedulerInterval);schedulerInterval=setInterval(checkSchedules,30000);log('✅ Scheduler engine running');}
-    function checkSchedules(){const now=new Date(),currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,currentDay=now.getDay(),dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;schedules.forEach(sch=>{if(!sch.enabled||sch.time!==currentTime||!sch.days.includes(currentDay))return;const triggerKey=`${sch.id}_${dateKey}`;if(lastTriggered[sch.id]===triggerKey)return;lastTriggered[sch.id]=triggerKey;if(mqttClient&&mqttClient.connected){pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`,sch.action);const actionText=sch.action=='1'?'ON':'OFF';log(`⏰ [AUTO] Relay ${sch.relay} ${actionText} @ ${currentTime}`);sendNotif(`⏰ Auto: Relay ${sch.relay} ${actionText}`,`Jadwal ${currentTime} - Hari: ${dayNames[currentDay]}`);}else log(`⚠️ [SCHEDULER] MQTT disconnected`);});}
+    function renderSchedules(){const list=$('scheduleList');if(!list)return;list.innerHTML='';if(schedules.length===0){list.innerHTML='<p style="color:#64748b;text-align:center;font-size:0.85rem;">Belum ada jadwal.</p>';return;}const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];schedules.forEach(sch=>{const daysStr=sch.days.map(d=>dayNames[d]).join(', ');const item=document.createElement('div');item.className='schedule-item';item.innerHTML=`<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')" type="button">🗑️</button></div>`;list.appendChild(item);});}
+    function startSchedulerEngine(){if(schedulerInterval)clearInterval(schedulerInterval);schedulerInterval=setInterval(checkSchedules,30000);log('✅ Scheduler running');}
+    function checkSchedules(){const now=new Date(),currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,currentDay=now.getDay(),dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;schedules.forEach(sch=>{if(!sch.enabled||sch.time!==currentTime||!sch.days.includes(currentDay))return;const triggerKey=`${sch.id}_${dateKey}`;if(lastTriggered[sch.id]===triggerKey)return;lastTriggered[sch.id]=triggerKey;if(mqttClient&&mqttClient.connected){pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`,sch.action);const actionText=sch.action=='1'?'ON':'OFF';log(`⏰ [AUTO] Relay ${sch.relay} ${actionText} @ ${currentTime}`);sendNotif(`⏰ Auto: Relay ${sch.relay} ${actionText}`,`Jadwal ${currentTime}`);}else log(`⚠️ [SCHEDULER] MQTT disconnected`);});}
 
-    // Notification Functions
+    // ✅ Notifications
     function saveNotifConfig(){notifConfig={tg:{token:notifConfig.tg?.token,chatId:notifConfig.tg?.chatId,enabled:tgEnabled,connected:tgConnected},gotify:{url:notifConfig.gotify?.url,token:notifConfig.gotify?.token,enabled:gotifyEnabled,connected:gotifyConnected},wa:{webhook:notifConfig.wa?.webhook,phone:notifConfig.wa?.phone,enabled:waEnabled,connected:waConnected}};localStorage.setItem('dm_notif_config',JSON.stringify(notifConfig));if(ghSyncEnabled){clearTimeout(ghSyncTimeout);ghSyncTimeout=setTimeout(()=>pushToGitHub(),1000);}}
-    function saveTelegramConfig(){const token=safeGetEl('tgToken').value.trim(),chatId=safeGetEl('tgChatId').value.trim(),msgEl=safeGetEl('tgMsg');if(!token||token.includes('•••')){safeText(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}if(!chatId){safeText(msgEl,'⚠️ Chat ID wajib!');msgEl.style.color='#ef4444';return;}notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false};saveNotifConfig();safeSetVal('tgToken','••••••••••••••••');safeText(safeGetEl('tgChatDisplay'),chatId);safeText(msgEl,'✅ Disimpan! Klik Test.');msgEl.style.color='#10b981';updateTgUI();}
-    function editTelegramConfig(){safeSetVal('tgToken',notifConfig.tg?.token||'');safeGetEl('tgConfig').classList.remove('hidden');safeGetEl('tgConnected').classList.add('hidden');safeText(safeGetEl('tgStatusBadge'),'⚙️ Editing');safeGetEl('tgStatusBadge').className='notif-status status-inactive';}
-    async function testTelegram(){if(!notifConfig.tg?.token)return alert('Simpan config dulu!');try{const res=await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:`✅ *dMarch Relay Pro*\nTest OK\n_Device: ${DEVICE_ID}_`,parse_mode:'Markdown'})});if((await res.json()).ok){tgConnected=true;notifConfig.tg.connected=true;saveNotifConfig();updateTgUI();log('📱 Telegram OK');}else throw new Error('Gagal kirim');}catch(e){tgConnected=false;updateTgUI();log('❌ Telegram Failed');}}
-    async function fetchChatId(){const token=safeGetEl('tgToken').value.trim();if(!token||token.includes('•••'))return alert('Isi Token dulu!');try{const res=await fetch(`https://api.telegram.org/bot${token}/getUpdates`),data=await res.json();if(data.ok&&data.result?.[0]?.message?.chat?.id){safeSetVal('tgChatId',data.result[0].message.chat.id);safeText(safeGetEl('tgMsg'),'✅ ID ditemukan!');safeGetEl('tgMsg').style.color='#10b981';}else{alert('⚠️ Belum ada pesan dari bot. Kirim "test" dulu.');}}catch(e){alert('❌ Gagal fetch: '+e.message);}}
-    function saveGotifyConfig(){const url=safeGetEl('gotifyUrl').value.trim(),token=safeGetEl('gotifyToken').value.trim(),msgEl=safeGetEl('gotifyMsg');if(!url){safeText(msgEl,'⚠️ URL wajib!');msgEl.style.color='#ef4444';return;}if(!token){safeText(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false};saveNotifConfig();safeSetVal('gotifyToken','••••••••••••••••');safeText(safeGetEl('gotifyUrlDisplay'),shortenUrl(url));safeText(msgEl,'✅ Disimpan! Klik Test.');msgEl.style.color='#10b981';updateGotifyUI();}
-    function editGotifyConfig(){safeSetVal('gotifyUrl',notifConfig.gotify?.url||'');safeSetVal('gotifyToken','••••••••••••••••');safeGetEl('gotifyConfig').classList.remove('hidden');safeGetEl('gotifyConnected').classList.add('hidden');safeText(safeGetEl('gotifyStatusBadge'),'⚙️ Editing');safeGetEl('gotifyStatusBadge').className='notif-status status-inactive';}
-    async function testGotify(){if(!notifConfig.gotify?.url||!notifConfig.gotify?.token)return alert('Simpan config dulu!');const msgEl=safeGetEl('gotifyMsg');safeText(msgEl,'🔄 Testing...');msgEl.style.color='#94a3b8';try{const url=notifConfig.gotify.url.replace(/\/$/,""),res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test Gotify',message:`dMarch Relay Pro Test OK\nDevice: ${DEVICE_ID}`,priority:5})});if(res.ok){gotifyConnected=true;notifConfig.gotify.connected=true;saveNotifConfig();updateGotifyUI();safeText(msgEl,'✅ Test Sukses!');msgEl.style.color='#10b981';log('📡 Gotify Test OK');}else{const errData=await res.json().catch(()=>{});throw new Error(errData.error||`HTTP ${res.status}`);}}catch(err){gotifyConnected=false;notifConfig.gotify.connected=false;saveNotifConfig();updateGotifyUI();safeText(msgEl,'❌ Gagal: '+err.message);msgEl.style.color='#ef4444';log('❌ Gotify Test Failed');}}
-    async function sendGotifyMessage(title,message){if(!gotifyEnabled||!gotifyConnected||!notifConfig.gotify?.url)return;try{const url=notifConfig.gotify.url.replace(/\/$/,"");await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:title,message:message,priority:8})});log('📡 Gotify notif sent');}catch(err){log('❌ Gotify send failed: '+err.message);if(err.message.includes('401')||err.message.includes('403')){gotifyConnected=false;notifConfig.gotify.connected=false;updateGotifyUI();saveNotifConfig();}}}
-    function saveWhatsAppConfig(){const webhook=safeGetEl('waWebhook').value.trim(),phone=safeGetEl('waPhone').value.trim();if(!webhook)return alert('⚠️ Webhook URL wajib!');notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false};saveNotifConfig();safeText(safeGetEl('waWebhookDisplay'),shortenUrl(webhook));updateWaUI();log('💬 WhatsApp config saved');alert('✅ Config tersimpan. Klik Test untuk verifikasi.');}
-    function editWhatsAppConfig(){safeGetEl('waConfig').classList.remove('hidden');safeGetEl('waConnected').classList.add('hidden');safeText(safeGetEl('waStatusBadge'),'⚙️ Editing');safeGetEl('waStatusBadge').className='notif-status status-inactive';}
-    async function testWhatsApp(){if(!notifConfig.wa?.webhook)return alert('Simpan config dulu!');try{await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})});waConnected=true;notifConfig.wa.connected=true;saveNotifConfig();updateWaUI();log('💬 WA Webhook OK');alert('✅ Webhook triggered. Cek HP Anda.');}catch(e){waConnected=false;updateWaUI();alert('❌ Webhook Error');}}
-    async function sendNotif(title,message){const timestamp=new Date().toLocaleString('id-ID'),fullMsg=`*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Waktu: ${timestamp}_`;if(tgEnabled&&tgConnected&&notifConfig.tg?.token){try{fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:fullMsg,parse_mode:'Markdown'})}).catch(e=>log('❌ TG Send Error'));}catch(e){log('❌ TG Error');}}if(gotifyEnabled&&gotifyConnected&&notifConfig.gotify?.url){await sendGotifyMessage(title,`${message}\n\nDevice: ${DEVICE_ID}\nWaktu: ${timestamp}`);}if(waEnabled&&waConnected&&notifConfig.wa?.webhook){try{fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:fullMsg.replace(/\*/g,''),device:DEVICE_ID})}).catch(e=>log('❌ WA Send Error'));}catch(e){log('❌ WA Error');}}}
+    function saveTelegramConfig(){const token=$('tgToken').value.trim(),chatId=$('tgChatId').value.trim(),msgEl=$('tgMsg');if(!token||token.includes('•••')){safeTxt(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}if(!chatId){safeTxt(msgEl,'⚠️ Chat ID wajib!');msgEl.style.color='#ef4444';return;}notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false};saveNotifConfig();safeVal('tgToken','••••••••');safeTxt('tgChatDisplay',chatId);safeTxt(msgEl,'✅ Disimpan!');msgEl.style.color='#10b981';updateTgUI();}
+    function editTelegramConfig(){safeVal('tgToken',notifConfig.tg?.token||'');$('tgConfig').classList.remove('hidden');$('tgConnected').classList.add('hidden');safeTxt('tgStatusBadge','⚙️ Editing');$('tgStatusBadge').className='notif-status status-inactive';}
+    async function testTelegram(){if(!notifConfig.tg?.token)return alert('Simpan config dulu!');try{const res=await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:`✅ *dMarch*\nTest OK\n_Device: ${DEVICE_ID}_`,parse_mode:'Markdown'})});if((await res.json()).ok){tgConnected=true;notifConfig.tg.connected=true;saveNotifConfig();updateTgUI();log('📱 Telegram OK');}else throw new Error('Gagal');}catch(e){tgConnected=false;updateTgUI();log('❌ Telegram Failed');}}
+    async function fetchChatId(){const token=$('tgToken').value.trim();if(!token||token.includes('•••'))return alert('Isi Token dulu!');try{const res=await fetch(`https://api.telegram.org/bot${token}/getUpdates`),data=await res.json();if(data.ok&&data.result?.[0]?.message?.chat?.id){safeVal('tgChatId',data.result[0].message.chat.id);safeTxt('tgMsg','✅ ID ditemukan!');$('tgMsg').style.color='#10b981';}else{alert('⚠️ Kirim "test" ke bot dulu.');}}catch(e){alert('❌ Gagal: '+e.message);}}
+    function saveGotifyConfig(){const url=$('gotifyUrl').value.trim(),token=$('gotifyToken').value.trim(),msgEl=$('gotifyMsg');if(!url){safeTxt(msgEl,'⚠️ URL wajib!');msgEl.style.color='#ef4444';return;}if(!token){safeTxt(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false};saveNotifConfig();safeVal('gotifyToken','••••••••');safeTxt('gotifyUrlDisplay',shortenUrl(url));safeTxt(msgEl,'✅ Disimpan!');msgEl.style.color='#10b981';updateGotifyUI();}
+    function editGotifyConfig(){safeVal('gotifyUrl',notifConfig.gotify?.url||'');safeVal('gotifyToken','••••••••');$('gotifyConfig').classList.remove('hidden');$('gotifyConnected').classList.add('hidden');safeTxt('gotifyStatusBadge','⚙️ Editing');$('gotifyStatusBadge').className='notif-status status-inactive';}
+    async function testGotify(){if(!notifConfig.gotify?.url||!notifConfig.gotify?.token)return alert('Simpan config dulu!');const msgEl=$('gotifyMsg');safeTxt(msgEl,'🔄 Testing...');msgEl.style.color='#94a3b8';try{const url=notifConfig.gotify.url.replace(/\/$/,""),res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})});if(res.ok){gotifyConnected=true;notifConfig.gotify.connected=true;saveNotifConfig();updateGotifyUI();safeTxt(msgEl,'✅ Sukses!');msgEl.style.color='#10b981';log('📡 Gotify OK');}else{const err=await res.json().catch(()=>{});throw new Error(err.error||`HTTP ${res.status}`);}}catch(err){gotifyConnected=false;notifConfig.gotify.connected=false;saveNotifConfig();updateGotifyUI();safeTxt(msgEl,'❌ Gagal: '+err.message);msgEl.style.color='#ef4444';log('❌ Gotify Failed');}}
+    async function sendGotifyMessage(title,message){if(!gotifyEnabled||!gotifyConnected||!notifConfig.gotify?.url)return;try{const url=notifConfig.gotify.url.replace(/\/$/,"");await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title,message,priority:8})});log('📡 Gotify sent');}catch(err){log('❌ Gotify: '+err.message);if(err.message.includes('401')||err.message.includes('403')){gotifyConnected=false;notifConfig.gotify.connected=false;updateGotifyUI();saveNotifConfig();}}}
+    function saveWhatsAppConfig(){const webhook=$('waWebhook').value.trim(),phone=$('waPhone').value.trim();if(!webhook)return alert('⚠️ Webhook wajib!');notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false};saveNotifConfig();safeTxt('waWebhookDisplay',shortenUrl(webhook));updateWaUI();log('💬 WhatsApp saved');alert('✅ Config tersimpan.');}
+    function editWhatsAppConfig(){$('waConfig').classList.remove('hidden');$('waConnected').classList.add('hidden');safeTxt('waStatusBadge','⚙️ Editing');$('waStatusBadge').className='notif-status status-inactive';}
+    async function testWhatsApp(){if(!notifConfig.wa?.webhook)return alert('Simpan config dulu!');try{await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})});waConnected=true;notifConfig.wa.connected=true;saveNotifConfig();updateWaUI();log('💬 WA OK');alert('✅ Webhook triggered.');}catch(e){waConnected=false;updateWaUI();alert('❌ Webhook Error');}}
+    async function sendNotif(title,message){const timestamp=new Date().toLocaleString('id-ID'),fullMsg=`*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Waktu: ${timestamp}_`;if(tgEnabled&&tgConnected&&notifConfig.tg?.token){try{fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:fullMsg,parse_mode:'Markdown'})}).catch(e=>log('❌ TG Send'));}catch(e){log('❌ TG Error');}}if(gotifyEnabled&&gotifyConnected&&notifConfig.gotify?.url){await sendGotifyMessage(title,`${message}\n\nDevice: ${DEVICE_ID}\nWaktu: ${timestamp}`);}if(waEnabled&&waConnected&&notifConfig.wa?.webhook){try{fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:fullMsg.replace(/\*/g,''),device:DEVICE_ID})}).catch(e=>log('❌ WA Send'));}catch(e){log('❌ WA Error');}}}
 
-    // GitHub Sync Functions - DEFENSIVE
-    function enableGitHubSync() {
-      const ownerEl = document.getElementById('ghOwner');
-      const repoEl = document.getElementById('ghRepo');
-      const pathEl = document.getElementById('ghPath');
-      const tokenEl = document.getElementById('ghToken');
-      const detailsEl = document.getElementById('ghDetails');
-      
-      const owner = ownerEl?.value.trim() || 'dreborn2k';
-      const repo = repoEl?.value.trim() || 'dmarch_relay_001';
-      const path = pathEl?.value.trim() || 'Relay4Ch/config/scheduler.json';
-      const token = tokenEl?.value.trim();
-      
-      if(!token || token.includes('•••')) return alert('⚠️ Token wajib diisi (bukan masked)!');
-      
-      // ✅ Simpan config lengkap
-      ghConfig = { owner, repo, token, path, branch: 'main' };
-      localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
-      
-      // ✅ Update detail text
-      if(detailsEl) detailsEl.textContent = `${owner}/${repo}/${path}`;
-      
-      // ✅ Render status online + tampilkan tombol Nonaktifkan
-      setSyncStatus(true);
-      
-      // ✅ Auto-pull data
-      loadFromGitHub();
-    }
-    function disableGitHubSync(){if(!confirm('Nonaktifkan Sync?'))return;ghConfig={};localStorage.removeItem('dm_gh_config');setSyncStatus(false);}
-    async function loadFromGitHub(){if(!ghSyncEnabled||!ghConfig?.token)return;try{const url=`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`,res=await fetch(url,{headers:{'Authorization':`token ${ghConfig.token}`}});if(res.ok){const data=await res.json(),content=JSON.parse(atob(data.content));if(content.device===DEVICE_ID&&Array.isArray(content.schedules)){schedules=mergeScheduleArrays(schedules,content.schedules);saveSchedulesLocal();renderSchedules();log(`✅ Pull schedules OK (${schedules.length} jadwal)`);}}}catch(err){log('❌ Pull failed: '+err.message);}}
-    async function pushToGitHub(retryCount=0){if(!ghSyncEnabled||!ghConfig?.token||retryCount>=3)return;try{const url=`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;let sha=null;const getRes=await fetch(url,{headers:{'Authorization':`token ${ghConfig.token}`}});if(getRes.ok){sha=(await getRes.json()).sha;}const cleanSchedules=schedules.map(s=>{const{_source,...clean}=JSON.parse(JSON.stringify(s));return clean;});const payload={device:DEVICE_ID,schedules:cleanSchedules,updatedAt:new Date().toISOString()},content=btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))),body={message:`🔄 Sync: ${DEVICE_ID} @ ${new Date().toLocaleTimeString()}`,content,branch:ghConfig.branch||'main'};if(sha)body.sha=sha;const res=await fetch(url,{method:'PUT',headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});if(res.ok){log('💾 GitHub sync OK (schedules only)');return;}if(res.status===409||res.status===422){log(`⚠️ Conflict retry ${retryCount+1}`);return await pushToGitHub(retryCount+1);}}catch(err){log('❌ Push failed: '+err.message);}}
     window.addEventListener('online',()=>{if(ghSyncEnabled)pushToGitHub();});
   </script>
 </body>
