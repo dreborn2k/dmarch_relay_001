@@ -22,7 +22,6 @@
     .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
     .toggle-btn:hover { opacity: 0.7; }
     
-    /* Card tanpa collapsible */
     .card:not(.collapsible) { padding: 20px; }
     .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     
@@ -122,14 +121,14 @@
       <div class="grid-2" style="margin-top:12px;" id="relayBtns"></div>
     </div>
     
-    <!-- Relay Scheduler Card (collapsible, default collapsed) dengan Cloud Sync di bawah judul -->
+    <!-- Relay Scheduler Card (collapsible, default collapsed) -->
     <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
       <div class="card-header">
         <h3>⏰ Relay Scheduler</h3>
         <button class="toggle-btn" type="button">▼</button>
       </div>
       <div class="card-content">
-        <!-- Cloud Sync Section dipindah ke sini (di bawah judul) -->
+        <!-- Cloud Sync Section -->
         <div style="margin-bottom:20px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
           <div class="gh-config-row">
             <div><span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span></div>
@@ -144,7 +143,8 @@
               <div class="form-group"><label for="ghOwner">GitHub Username</label><input type="text" id="ghOwner" value="dreborn2k" autocomplete="off"></div>
               <div class="form-group"><label for="ghRepo">Repo Name</label><input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off"></div>
             </div>
-            <div class="form-group"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
+            <div class="form-group"><label for="ghPath">File Path (scheduler)</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
+            <div class="form-group"><label for="ghConfigPath">File Path (device config)</label><input type="text" id="ghConfigPath" value="Relay4Ch/config/device.json" autocomplete="off" placeholder="device.json"></div>
             <div class="form-group"><label for="ghToken">GitHub Personal Access Token</label><input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;"></div>
             <div class="gh-actions">
               <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan</button>
@@ -155,7 +155,7 @@
         
         <!-- Form input jadwal -->
         <div class="grid-2">
-          <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select></div>
+          <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"></select></div>
           <div class="form-group"><label for="schAction">⚡ Aksi</label><select id="schAction" autocomplete="off"><option value="1">ON</option><option value="0">OFF</option></select></div>
         </div>
         <div class="grid-2">
@@ -167,7 +167,7 @@
       </div>
     </div>
     
-    <!-- Notification Card (collapsible, default collapsed) -->
+    <!-- Notification Card -->
     <div class="card collapsible collapsed app-card hidden" id="notifCard">
       <div class="card-header">
         <h3>🔔 Notifikasi</h3>
@@ -206,7 +206,7 @@
       </div>
     </div>
     
-    <!-- Settings Card (collapsible, default collapsed) -->
+    <!-- Settings Card (collapsible, default collapsed) dengan konfigurasi jumlah relay -->
     <div class="card collapsible collapsed app-card hidden">
       <div class="card-header">
         <h3>⚙️ Settings</h3>
@@ -216,12 +216,17 @@
         <div class="form-group"><label for="ntpSelect">🕐 NTP Server</label><select id="ntpSelect" autocomplete="off"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div>
         <div class="form-group"><label for="tzInput">Timezone</label><input type="number" id="tzInput" value="7" autocomplete="off"></div>
         <button class="btn-primary" id="saveNTPBtn" type="button">💾 Save</button>
-        <div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO</label><input type="text" id="gpioInput" placeholder="12,14,27,26,25" autocomplete="off"></div>
-        <button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update</button>
+        
+        <!-- Jumlah Relay -->
+        <div class="form-group" style="margin-top:15px;"><label for="relayCount">🔌 Jumlah Relay (1-16)</label><input type="number" id="relayCount" min="1" max="16" value="5" autocomplete="off"></div>
+        <button class="btn-primary" id="applyRelayCountBtn" type="button">✅ Terapkan Jumlah Relay</button>
+        
+        <div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO (pisahkan koma)</label><input type="text" id="gpioInput" placeholder="12,14,27,26,25" autocomplete="off"></div>
+        <button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update GPIO</button>
       </div>
     </div>
     
-    <!-- Network Card (collapsible, default collapsed) -->
+    <!-- Network Card -->
     <div class="card collapsible collapsed app-card hidden" id="networkCard">
       <div class="card-header">
         <h3>🌐 Network</h3>
@@ -235,7 +240,7 @@
       </div>
     </div>
     
-    <!-- System Card (collapsible, default collapsed) -->
+    <!-- System Card -->
     <div class="card collapsible collapsed app-card hidden">
       <div class="card-header">
         <h3>🔄 System</h3>
@@ -267,13 +272,120 @@
     let tgEnabled = notifConfig.tg?.enabled||false, tgConnected = notifConfig.tg?.connected||false;
     let gotifyEnabled = notifConfig.gotify?.enabled||false, gotifyConnected = notifConfig.gotify?.connected||false;
     let waEnabled = notifConfig.wa?.enabled||false, waConnected = notifConfig.wa?.connected||false;
-
+    
+    // Konfigurasi relay count
+    let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
+    relayCount = Math.min(16, Math.max(1, relayCount));
+    
     // HELPER FUNCTIONS
     const $ = id => document.getElementById(id);
     const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; return el; };
     const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; return el; };
     const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
     const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
+
+    // RELAY UI GENERATION (dynamic based on relayCount)
+    function initRelayButtons() {
+      const rBox = $('relayBtns');
+      if(!rBox) return;
+      rBox.innerHTML = '';
+      for(let i=1; i<=relayCount; i++) {
+        const btn = document.createElement('button');
+        btn.id = `btn-relay-${i}`;
+        btn.className = 'btn-secondary';
+        btn.dataset.state = 'off';
+        btn.textContent = `Relay ${i} (OFF)`;
+        btn.onclick = () => { sendRelayCommand(i); sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah`); };
+        btn.type = 'button';
+        rBox.appendChild(btn);
+      }
+      // Update dropdown scheduler relay target
+      updateSchedulerRelaySelect();
+    }
+    
+    function updateSchedulerRelaySelect() {
+      const select = $('schRelay');
+      if(!select) return;
+      const currentVal = select.value;
+      select.innerHTML = '';
+      for(let i=1; i<=relayCount; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Relay ${i}`;
+        select.appendChild(opt);
+      }
+      if(currentVal && currentVal <= relayCount) select.value = currentVal;
+      else select.value = '1';
+    }
+    
+    function applyRelayCount(newCount) {
+      newCount = Math.min(16, Math.max(1, parseInt(newCount) || 5));
+      if(newCount === relayCount) return;
+      relayCount = newCount;
+      localStorage.setItem('dm_relay_count', relayCount);
+      initRelayButtons();   // re-generate buttons
+      // Optional: push ke device via MQTT jika perlu
+      if(mqttClient && mqttClient.connected) {
+        pub(DEVICE_ID+'/config/relayCount', String(relayCount));
+      }
+      log(`🔢 Jumlah relay diubah menjadi ${relayCount}`);
+      // Simpan ke GitHub sync jika aktif
+      if(ghSyncEnabled && ghConfig?.token) {
+        saveDeviceConfigToGitHub();
+      }
+    }
+    
+    // SAVE/LOAD DEVICE CONFIG (relayCount, GPIO, dll) ke GitHub
+    async function saveDeviceConfigToGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      const configPath = $('ghConfigPath')?.value.trim() || 'Relay4Ch/config/device.json';
+      const gpioRaw = $('gpioInput')?.value.trim() || '';
+      const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
+      const deviceConfig = {
+        device: DEVICE_ID,
+        relayCount: relayCount,
+        gpio: gpioList,
+        updatedAt: new Date().toISOString()
+      };
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${configPath}`;
+        let sha = null;
+        const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(getRes.ok) sha = (await getRes.json()).sha;
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2))));
+        const body = { message: `⚙️ Update device config @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
+        if(sha) body.sha = sha;
+        const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if(res.ok) log('💾 Device config saved to GitHub');
+        else log('⚠️ Gagal save device config ke GitHub');
+      } catch(err) { log('❌ Save device config error: '+err.message); }
+    }
+    
+    async function loadDeviceConfigFromGitHub() {
+      if(!ghSyncEnabled || !ghConfig?.token) return;
+      const configPath = $('ghConfigPath')?.value.trim() || 'Relay4Ch/config/device.json';
+      try {
+        const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${configPath}`;
+        const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+        if(res.ok) {
+          const data = await res.json();
+          const config = JSON.parse(atob(data.content));
+          if(config.device === DEVICE_ID) {
+            if(config.relayCount && config.relayCount !== relayCount) {
+              relayCount = Math.min(16, Math.max(1, config.relayCount));
+              localStorage.setItem('dm_relay_count', relayCount);
+              initRelayButtons();
+              log(`✅ Load dari GitHub: relayCount = ${relayCount}`);
+            }
+            if(config.gpio && config.gpio.length) {
+              safeVal('gpioInput', config.gpio.join(','));
+            }
+          }
+        } else {
+          log(`ℹ️ File device.json belum ada di GitHub, akan dibuat saat sync`);
+        }
+      } catch(err) { log('⚠️ Gagal load device config: '+err.message); }
+    }
 
     // MINIMIZE/MAXIMIZE TOGGLE
     function initCollapsible() {
@@ -297,6 +409,7 @@
           safeVal('ghOwner', saved.owner);
           safeVal('ghRepo', saved.repo);
           safeVal('ghPath', saved.path || 'Relay4Ch/config/scheduler.json');
+          safeVal('ghConfigPath', saved.configPath || 'Relay4Ch/config/device.json');
           safeVal('ghToken', '••••••••••••••••');
           safeTxt('ghDetails', `${saved.owner}/${saved.repo}/${saved.path||'Relay4Ch/config/scheduler.json'}`);
           ghConfig = saved;
@@ -339,13 +452,15 @@
       const owner = $('ghOwner')?.value.trim() || 'dreborn2k';
       const repo = $('ghRepo')?.value.trim() || 'dmarch_relay_001';
       const path = $('ghPath')?.value.trim() || 'Relay4Ch/config/scheduler.json';
+      const configPath = $('ghConfigPath')?.value.trim() || 'Relay4Ch/config/device.json';
       const token = $('ghToken')?.value.trim();
       if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
-      ghConfig = { owner, repo, token, path, branch: 'main' };
+      ghConfig = { owner, repo, token, path, configPath, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       safeTxt('ghDetails', `${owner}/${repo}/${path}`);
       setSyncStatus(true);
-      loadFromGitHub();
+      loadFromGitHub();      // load schedules
+      loadDeviceConfigFromGitHub(); // load relayCount dll
     }
 
     function disableGitHubSync() {
@@ -368,7 +483,7 @@
             log(`✅ Pull OK (${schedules.length} jadwal)`);
           }
         }
-      } catch(err) { log('❌ Pull: '+err.message); }
+      } catch(err) { log('❌ Pull schedules: '+err.message); }
     }
 
     async function pushToGitHub(retryCount=0) {
@@ -384,12 +499,12 @@
         const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
         if(sha) body.sha = sha;
         const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        if(res.ok) { log('💾 GitHub OK'); return; }
+        if(res.ok) { log('💾 Schedules saved to GitHub'); return; }
         if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retryCount+1}`); return await pushToGitHub(retryCount+1); }
-      } catch(err) { log('❌ Push: '+err.message); }
+      } catch(err) { log('❌ Push schedules: '+err.message); }
     }
 
-    // NOTIFICATION UI
+    // NOTIFICATION UI (sama seperti sebelumnya, tidak diubah)
     function initNotifUI() {
       const tg = notifConfig.tg||{};
       if(tg.token&&tg.chatId) { safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
@@ -414,27 +529,55 @@
       initCollapsible();
       safeVal('clientId','web_'+Math.random().toString(16).substr(2,8));
       safeVal('deviceId',DEVICE_ID);
-      loadFromStorage(); initRelayButtons(); initScheduler(); initGitHubUI(); initNotifUI();
+      safeVal('relayCount', relayCount);
+      loadFromStorage(); 
+      initRelayButtons(); 
+      initScheduler(); 
+      initGitHubUI(); 
+      initNotifUI();
+      
       $('btnConnect').onclick = toggleConnect;
       $('disconnectBtn').onclick = toggleConnect;
       $('allOnBtn').onclick = () => { pub(DEVICE_ID+'/all/on','1'); sendNotif('🔌 ALL ON','Semua relay ON'); };
       $('allOffBtn').onclick = () => { pub(DEVICE_ID+'/all/off','1'); sendNotif('🔌 ALL OFF','Semua relay OFF'); };
       $('saveNTPBtn').onclick = () => { pub(DEVICE_ID+'/ntp/set',$('ntpSelect').value); pub(DEVICE_ID+'/timezone/set',$('tzInput').value); };
-      $('updateGPIOBtn').onclick = () => pub(DEVICE_ID+'/gpio/update',$('gpioInput').value);
+      $('updateGPIOBtn').onclick = () => { 
+        pub(DEVICE_ID+'/gpio/update',$('gpioInput').value);
+        if(ghSyncEnabled) saveDeviceConfigToGitHub();
+      };
       $('updateNetBtn').onclick = updateNetwork;
       $('resetNetBtn').onclick = resetWifi;
       $('otaBtn').onclick = () => pub(DEVICE_ID+'/system/ota','1');
       $('restartBtn').onclick = () => pub(DEVICE_ID+'/system/restart','1');
       $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t)t.innerHTML=''; };
+      $('applyRelayCountBtn').onclick = () => {
+        const newCount = parseInt($('relayCount').value);
+        applyRelayCount(newCount);
+        if(ghSyncEnabled) saveDeviceConfigToGitHub();
+      };
     });
 
-    // RELAY BUTTONS
-    function initRelayButtons(){ const rBox=$('relayBtns'); if(!rBox)return; rBox.innerHTML=''; for(let i=1;i<=5;i++){const btn=document.createElement('button');btn.id=`btn-relay-${i}`;btn.className='btn-secondary';btn.dataset.state='off';btn.textContent=`Relay ${i} (OFF)`;btn.onclick=()=>{sendRelayCommand(i);sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah`);};btn.type='button';rBox.appendChild(btn);}}
-    function updateRelayUI(num,state){const btn=$(`btn-relay-${num}`);if(!btn)return;const isOn=(state==='1'||state===1||state===true||state==='true');btn.dataset.state=isOn?'on':'off';btn.textContent=`Relay ${num} (${isOn?'ON':'OFF'})`;btn.className=isOn?'btn-success':'btn-secondary';log(`🔄 Relay ${num}: ${isOn?'ON':'OFF'}`);}
-    function sendRelayCommand(num){if(!mqttClient||!mqttClient.connected)return alert('⚠️ MQTT disconnected!');const btn=$(`btn-relay-${num}`);if(!btn)return;const cmd=btn.dataset.state==='on'?0:1;mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`,String(cmd));log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);}
+    function updateRelayUI(num,state){
+      const btn = $(`btn-relay-${num}`);
+      if(!btn) return;
+      const isOn = (state==='1'||state===1||state===true||state==='true');
+      btn.dataset.state = isOn ? 'on' : 'off';
+      btn.textContent = `Relay ${num} (${isOn?'ON':'OFF'})`;
+      btn.className = isOn ? 'btn-success' : 'btn-secondary';
+      log(`🔄 Relay ${num}: ${isOn?'ON':'OFF'}`);
+    }
+    
+    function sendRelayCommand(num){
+      if(!mqttClient||!mqttClient.connected) return alert('⚠️ MQTT disconnected!');
+      const btn = $(`btn-relay-${num}`);
+      if(!btn) return;
+      const cmd = btn.dataset.state === 'on' ? 0 : 1;
+      mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
+      log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);
+    }
     
     // MQTT CONNECT
-    function toggleConnect(){const btn=$('btnConnect'),statusEl=$('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeTxt('connStatus','Disconnecting...');return;}const h=$('broker').value.trim(),pt=$('port').value.trim(),u=$('username').value.trim(),pw=$('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib!');if(pt!=='8884')return alert('⚠️ Port harus 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting...`);safeTxt('connStatus','Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:$('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled)loadFromGitHub();});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const p=t.split('/');updateRelayUI(p[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
+    function toggleConnect(){const btn=$('btnConnect'),statusEl=$('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeTxt('connStatus','Disconnecting...');return;}const h=$('broker').value.trim(),pt=$('port').value.trim(),u=$('username').value.trim(),pw=$('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib!');if(pt!=='8884')return alert('⚠️ Port harus 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting...`);safeTxt('connStatus','Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:$('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled){loadFromGitHub(); loadDeviceConfigFromGitHub();}});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const p=t.split('/');updateRelayUI(p[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
     function updateSystemHealth(msg){try{const d=JSON.parse(msg);safeTxt('sigVal',(d.rssi||'--')+'%');safeTxt('upVal',d.uptime||'--');safeTxt('tempVal',(d.temp||'--')+'°C');safeTxt('fwVal',d.fw_version||'--');}catch(e){}}
     function pub(topic,payload){if(mqttClient&&mqttClient.connected)mqttClient.publish(topic,payload,{qos:0},e=>e?log('❌ Pub Error'):log(`📤 ${topic} -> ${payload}`));else log('⚠️ Disconnected');}
     function setConnectionState(connected){safeCls($('connCard'),'hidden',connected);safeCls($('disconnectBtn'),'hidden',!connected);document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected));safeTxt('connStatus',connected?'Status: Connected':'Status: Disconnected');}
@@ -443,7 +586,7 @@
     function updateNetwork(){var s=$('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:$('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
     function resetWifi(){if(!confirm('Reset WiFi ke AP?'))return;pub(DEVICE_ID+'/network/reset','1');alert('🔄 Reset terkirim.');}
 
-    // QR LOGIC
+    // QR LOGIC (sama seperti sebelumnya)
     let qrImagePreview=null;
     function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}
     $('qrModal').onclick=function(e){if(e.target===this)closeQR();};
@@ -464,7 +607,7 @@
     function startSchedulerEngine(){if(schedulerInterval)clearInterval(schedulerInterval);schedulerInterval=setInterval(checkSchedules,30000);log('✅ Scheduler running');}
     function checkSchedules(){const now=new Date(),currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,currentDay=now.getDay(),dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;schedules.forEach(sch=>{if(!sch.enabled||sch.time!==currentTime||!sch.days.includes(currentDay))return;const triggerKey=`${sch.id}_${dateKey}`;if(lastTriggered[sch.id]===triggerKey)return;lastTriggered[sch.id]=triggerKey;if(mqttClient&&mqttClient.connected){pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`,sch.action);const actionText=sch.action=='1'?'ON':'OFF';log(`⏰ [AUTO] Relay ${sch.relay} ${actionText} @ ${currentTime}`);sendNotif(`⏰ Auto: Relay ${sch.relay} ${actionText}`,`Jadwal ${currentTime}`);}else log(`⚠️ [SCHEDULER] MQTT disconnected`);});}
 
-    // NOTIFICATIONS
+    // NOTIFICATIONS (sama seperti sebelumnya)
     function saveNotifConfig(){notifConfig={tg:{token:notifConfig.tg?.token,chatId:notifConfig.tg?.chatId,enabled:tgEnabled,connected:tgConnected},gotify:{url:notifConfig.gotify?.url,token:notifConfig.gotify?.token,enabled:gotifyEnabled,connected:gotifyConnected},wa:{webhook:notifConfig.wa?.webhook,phone:notifConfig.wa?.phone,enabled:waEnabled,connected:waConnected}};localStorage.setItem('dm_notif_config',JSON.stringify(notifConfig));if(ghSyncEnabled){clearTimeout(ghSyncTimeout);ghSyncTimeout=setTimeout(()=>pushToGitHub(),1000);}}
     function saveTelegramConfig(){const token=$('tgToken').value.trim(),chatId=$('tgChatId').value.trim(),msgEl=$('tgMsg');if(!token||token.includes('•••')){safeTxt(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}if(!chatId){safeTxt(msgEl,'⚠️ Chat ID wajib!');msgEl.style.color='#ef4444';return;}notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false};saveNotifConfig();safeVal('tgToken','••••••••');safeTxt('tgChatDisplay',chatId);safeTxt(msgEl,'✅ Disimpan!');msgEl.style.color='#10b981';updateTgUI();}
     function editTelegramConfig(){safeVal('tgToken',notifConfig.tg?.token||'');$('tgConfig').classList.remove('hidden');$('tgConnected').classList.add('hidden');safeTxt('tgStatusBadge','⚙️ Editing');$('tgStatusBadge').className='notif-status status-inactive';}
