@@ -166,7 +166,7 @@
         <div class="gh-config-row">
           <div>
             <span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span>
-            <div class="gh-details" id="ghDetails">dreborn2k/dmarch_relay_001/config/scheduler.json</div>
+            <div class="gh-details" id="ghDetails">dreborn2k/dmarch_relay_001/Relay4Ch/config/scheduler.json</div>
           </div>
           <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
         </div>
@@ -1069,7 +1069,7 @@
       const owner = document.getElementById('ghOwner').value.trim() || 'dreborn2k';
       const repo = document.getElementById('ghRepo').value.trim() || 'dmarch_relay_001';
       const token = document.getElementById('ghToken').value.trim();
-      const path = 'config/scheduler.json';
+      const path = 'Relay4Ch/config/scheduler.json';
       if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
