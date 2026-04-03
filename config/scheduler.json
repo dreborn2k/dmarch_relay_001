@@ -17,7 +17,18 @@
       ],
       "enabled": true,
       "_modified": "2026-04-03T07:40:25.682Z"
+    },
+    {
+      "id": "mniklsyp8398",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1
+      ],
+      "enabled": true,
+      "_modified": "2026-04-03T07:16:44.641Z"
     }
   ],
-  "updatedAt": "2026-04-03T07:40:39.815Z"
+  "updatedAt": "2026-04-03T08:08:03.053Z"
 }
