@@ -1,23 +1,5 @@
 {
   "device": "dmarch_relay_001",
-  "schedules": [
-    {
-      "id": "mnilo46iure8",
-      "time": "12:00",
-      "relay": "1",
-      "action": "1",
-      "days": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        0
-      ],
-      "enabled": true,
-      "_modified": "2026-04-03T07:46:32.106Z"
-    }
-  ],
-  "updatedAt": "2026-04-03T09:25:34.371Z"
+  "schedules": [],
+  "updatedAt": "2026-04-03T09:42:26.760Z"
 }
