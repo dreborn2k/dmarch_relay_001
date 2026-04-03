@@ -1,34 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>D'marcFF Operator Antrian</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dMarch Smart Queue - Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #e2e8f0;
+            --accent: #38bdf8;
+            --danger: #ef4444;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h2 { color: var(--accent); margin-bottom: 10px; }
+        .status { font-size: 0.9rem; margin-bottom: 20px; opacity: 0.8; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        button:hover { filter: brightness(1.2); }
+        button.secondary { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .log {
+            margin-top: 20px;
+            background: #000;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            height: 80px;
+            overflow-y: auto;
+            text-align: left;
+            color: #10b981;
+        }
+    </style>
 </head>
 <body>
-    <h1>Loket 1 - Kontrol Antrian</h1>
-    <button onclick="panggil(1)">CALL (Nomor Berikutnya)</button>
-    <button onclick="recall(1)">RE-CALL</button>
 
-    <script>
-        // Konfigurasi Broker (Gunakan Public Broker untuk testing, misal HiveMQ)
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "operator_l1_" + Math.random());
-        let nomorSekarang = 0;
+<div class="container">
+    <h2>🌐 dMarch Queue</h2>
+    <div class="status" id="mqtt-status">Status: Connecting...</div>
 
-        client.connect({onSuccess: () => console.log("Terhubung ke MQTT")});
+    <div class="input-group">
+        <label>Nomor Antrean (1-99)</label>
+        <input type="number" id="num" placeholder="Contoh: 5" min="1" max="99">
+    </div>
+    <div class="input-group">
+        <label>Nomor Loket (1-4)</label>
+        <input type="number" id="loket" placeholder="Contoh: 1" min="1" max="4">
+    </div>
+    <button onclick="callQueue()">🔔 PANGGIL SEKARANG</button>
 
-        function panggil(loket) {
-            nomorSekarang++;
-            let payload = {
-                nomor: nomorSekarang,
-                loket: loket,
-                tgl: new Date().toISOString().split('T')[0],
-                cmd: "panggil"
-            };
-            let message = new Paho.MQTT.Message(JSON.stringify(payload));
-            message.destinationName = "dmarcff/queue/call";
-            client.send(message);
-            console.log("Memanggil nomor: " + nomorSekarang);
-        }
-    </script>
+    <hr style="border: 0.5px solid #334155; margin: 25px 0;">
+
+    <div class="input-group">
+        <label>Update Teks Jalan (P10)</label>
+        <input type="text" id="marquee-text" placeholder="Masukkan pesan baru...">
+    </div>
+    <button class="secondary" onclick="updateMarquee()">💾 UPDATE DISPLAY</button>
+
+    <div class="log" id="log-console">Terminal: Ready to use.</div>
+</div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+    // Konfigurasi dari kode .ino [cite: 6, 7]
+    const broker = 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt';
+    const options = {
+        clientId: 'web_dashboard_' + Math.random().toString(16).substr(2, 8),
+        username: 'dmarchFF',
+        password: 'dmarchFF2205',
+    };
+
+    const client = mqtt.connect(broker, options);
+    const DEVICE_ID = "dmarch_queue_001";
+
+    client.on('connect', () => {
+        document.getElementById('mqtt-status').innerText = "Status: Online (Connected)";
+        document.getElementById('mqtt-status').style.color = "#10b981";
+        addLog("Connected to HiveMQ Cloud");
+    });
+
+    client.on('error', (err) => {
+        addLog("Error: " + err.message);
+    });
+
+    function addLog(msg) {
+        const log = document.getElementById('log-console');
+        log.innerHTML += `<br>> ${msg}`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    // Fungsi Panggil Antrean (Sinkron dengan mqttCallback di .ino)
+    function callQueue() {
+        const num = document.getElementById('num').value;
+        const loket = document.getElementById('loket').value;
+
+        if(!num || !loket) return alert("Isi nomor dan loket!");
+
+        const topic = `${DEVICE_ID}/call`;
+        const payload = JSON.stringify({ nomor: parseInt(num), loket: parseInt(loket) });
+
+        client.publish(topic, payload);
+        addLog(`Sent Call: A${num} to Loket ${loket}`);
+    }
+
+    // Fungsi Update Teks Jalan (Sinkron dengan mqttCallback di .ino)
+    function updateMarquee() {
+        const msg = document.getElementById('marquee-text').value;
+        if(!msg) return alert("Isi pesan teks jalan!");
+
+        const topic = `${DEVICE_ID}/msg/update`;
+        client.publish(topic, msg);
+        addLog(`Updated Marquee: ${msg}`);
+    }
+</script>
+
 </body>
 </html>
