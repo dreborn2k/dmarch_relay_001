@@ -32,7 +32,24 @@
         2
       ],
       "enabled": true
+    },
+    {
+      "id": "mnif5f1dkb71",
+      "time": "01:00",
+      "relay": "3",
+      "action": "1",
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-03T04:44:02.017Z"
     }
   ],
-  "updatedAt": "2026-04-03T01:10:29.460Z"
+  "updatedAt": "2026-04-03T04:44:04.473Z"
 }
