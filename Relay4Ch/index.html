@@ -75,12 +75,12 @@
     .notif-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
     .btn-notif { padding:6px 12px; font-size:0.8rem; width: auto; }
     .config-mask { color:#64748b; font-family:monospace; }
-    /* Info Hardware */
     .info-panel { background: #0f172a; border-radius: 12px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
     .badge-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
     .pin-badge { background: #1e293b; color: var(--accent); padding: 4px 8px; border-radius: 20px; font-size: 0.75rem; font-family: monospace; border: 1px solid var(--border); }
     .gpio-suggest { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
     .gpio-suggest button { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; width: auto; padding: 0; font-size: 0.7rem; }
+    .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
   </style>
 </head>
 <body>
@@ -122,11 +122,11 @@
     <div class="card-content">
       <div class="info-panel">
         <div class="grid-3" style="margin-bottom: 12px;">
-          <div><span class="info-label">Hardware:</span><br><strong id="hwType">--</strong></div>
-          <div><span class="info-label">Max Relay:</span><br><strong id="maxRelay">--</strong></div>
-          <div><span class="info-label">Active Relay:</span><br><strong id="activeRelay">--</strong></div>
+          <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
+          <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
+          <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
         </div>
-        <div><span class="info-label">Pin Mapping:</span><div class="badge-container" id="relayPinsContainer"></div></div>
+        <div><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
       </div>
     </div>
   </div>
@@ -340,7 +340,6 @@
     btn.className = isOn ? 'btn-success' : 'btn-secondary';
   }
   
-  // Menampilkan pin mapping sebagai badge
   function renderPinBadges(pinStr) {
     const container = $('relayPinsContainer');
     if(!container) return;
@@ -358,7 +357,6 @@
     });
   }
   
-  // Update info hardware & saran GPIO default
   function updateSystemHealth(msg) {
     try {
       const d = JSON.parse(msg);
@@ -396,7 +394,6 @@
     } catch(e) {}
   }
   
-  // Menambahkan saran pin ke datalist berdasarkan hardware
   function updateGPIOSuggestions() {
     const datalist = $('gpioSuggestions');
     if(!datalist) return;
@@ -418,7 +415,6 @@
     });
   }
   
-  // Suggest default pins berdasarkan hardware DAN relayCount
   function suggestDefaultPins() {
     let defaultPinsAll = [];
     if(currentHardware.includes('ESP32S2')) {
@@ -432,7 +428,6 @@
     } else {
       defaultPinsAll = [12,14,27,26,25];
     }
-    // Batasi sesuai jumlah relay aktif
     let pinCount = relayCount;
     if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length;
     const suggested = defaultPinsAll.slice(0, pinCount);
@@ -502,45 +497,151 @@
     loadFromGitHub(); loadDeviceConfigFromGitHub();
   }
   function disableGitHubSync() { if(confirm('Nonaktifkan Sync?')) { ghConfig={}; localStorage.removeItem('dm_gh_config'); setSyncStatus(false); } }
-  async function loadFromGitHub() { /* sama seperti sebelumnya, tidak diubah */ }
-  async function loadDeviceConfigFromGitHub() { /* sama */ }
-  async function saveDeviceConfigToGitHub() { /* sama */ }
-  async function pushToGitHub(retry=0) { /* sama */ }
+  async function loadFromGitHub() {
+    if(!ghSyncEnabled||!ghConfig.token) return;
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+      const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(res.ok) {
+        const data = await res.json(), content = JSON.parse(atob(data.content));
+        if(content.device === DEVICE_ID && Array.isArray(content.schedules)) {
+          schedules = mergeScheduleArrays(schedules, content.schedules);
+          saveSchedulesLocal(); renderSchedules();
+          log(`✅ Pull OK (${schedules.length} jadwal)`);
+        }
+      }
+    } catch(e) { log('❌ Pull schedules: '+e.message); }
+  }
+  async function loadDeviceConfigFromGitHub() {
+    if(!ghSyncEnabled||!ghConfig.token) return;
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.configPath}`;
+      const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(res.ok) {
+        const data = await res.json(), config = JSON.parse(atob(data.content));
+        if(config.device === DEVICE_ID && config.relayCount) {
+          relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
+          localStorage.setItem('dm_relay_count', relayCount);
+          initRelayButtons(); safeVal('relayCount', relayCount);
+          log(`✅ Load device config: relayCount=${relayCount}`);
+        }
+        if(config.gpio) safeVal('gpioInput', config.gpio.join(','));
+      }
+    } catch(e) { log('ℹ️ device.json belum ada'); }
+  }
+  async function saveDeviceConfigToGitHub() {
+    if(!ghSyncEnabled||!ghConfig.token) return;
+    const gpioRaw = $('gpioInput').value.trim();
+    const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
+    const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() };
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.configPath}`;
+      let sha = null;
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(getRes.ok) sha = (await getRes.json()).sha;
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig,null,2))));
+      const body = { message: `⚙️ Update device config`, content, branch: 'main' };
+      if(sha) body.sha = sha;
+      const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(res.ok) log('💾 Device config saved to GitHub');
+    } catch(e) { log('❌ Save device config error'); }
+  }
+  async function pushToGitHub(retry=0) {
+    if(!ghSyncEnabled||!ghConfig.token||retry>=3) return;
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+      let sha = null;
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(getRes.ok) sha = (await getRes.json()).sha;
+      const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; });
+      const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() };
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2))));
+      const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
+      if(sha) body.sha = sha;
+      const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(res.ok) { log('💾 Schedules saved to GitHub'); return; }
+      if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retry+1}`); return await pushToGitHub(retry+1); }
+    } catch(e) { log('❌ Push schedules: '+e.message); }
+  }
 
-  // ==================== SCHEDULER (ringkas) ====================
+  // ==================== SCHEDULER ====================
   function initScheduler() {
     document.querySelectorAll('.day-btn').forEach(btn=>{ btn.onclick=function(){ this.classList.toggle('active'); }; });
     renderSchedules(); startSchedulerEngine();
   }
-  function addSchedule() { /* sama */ }
-  function toggleSchedule(id) { /* sama */ }
-  function deleteSchedule(id) { /* sama */ }
-  function mergeScheduleArrays(localArr, serverArr) { /* sama */ }
-  function saveSchedules() { /* sama */ }
-  function saveSchedulesLocal() { /* sama */ }
-  function renderSchedules() { /* sama */ }
-  function startSchedulerEngine() { /* sama */ }
-  function checkSchedules() { /* sama */ }
+  function addSchedule() {
+    const time = $('schTime').value, relay = $('schRelay').value, action = $('schAction').value;
+    const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));
+    if(!time||activeDays.length===0) return alert('⚠️ Waktu & hari wajib!');
+    const newSch = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() };
+    schedules.push(newSch); saveSchedules(); renderSchedules();
+    log(`⏰ Jadwal: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);
+  }
+  function toggleSchedule(id) { const sch = schedules.find(s=>s.id===id); if(sch){ sch.enabled=!sch.enabled; sch._modified=new Date().toISOString(); saveSchedules(); renderSchedules(); } }
+  function deleteSchedule(id) { if(confirm('Hapus jadwal?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); } }
+  function mergeScheduleArrays(localArr, serverArr) {
+    const map = new Map();
+    (serverArr||[]).forEach(s=>{ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(clean.id,clean); });
+    (localArr||[]).forEach(s=>{ const existing=map.get(s.id); const isNewer = s._modified && (!existing?._modified || s._modified > existing._modified); if(!existing||isNewer){ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(s.id,clean); } });
+    return Array.from(map.values()).sort((a,b)=>a.time.localeCompare(b.time));
+  }
+  function saveSchedules() {
+    localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+    if(ghSyncEnabled && navigator.onLine && ghConfig?.token) { clearTimeout(ghSyncTimeout); ghSyncTimeout = setTimeout(()=>pushToGitHub(), 1000+Math.random()*150); }
+  }
+  function saveSchedulesLocal() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
+  function renderSchedules() {
+    const list = $('scheduleList'); if(!list) return;
+    list.innerHTML = '';
+    if(schedules.length===0) { list.innerHTML='<p style="color:#64748b;text-align:center;">Belum ada jadwal.</p>'; return; }
+    const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    schedules.forEach(sch=>{
+      const daysStr = sch.days.map(d=>dayNames[d]).join(', ');
+      const div = document.createElement('div'); div.className='schedule-item';
+      div.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`;
+      list.appendChild(div);
+    });
+  }
+  function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('✅ Scheduler running'); }
+  function checkSchedules() {
+    const now = new Date(), curTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`, curDay = now.getDay(), dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    schedules.forEach(sch=>{
+      if(!sch.enabled || sch.time!==curTime || !sch.days.includes(curDay)) return;
+      const key = `${sch.id}_${dateKey}`;
+      if(lastTriggered[sch.id]===key) return;
+      lastTriggered[sch.id]=key;
+      if(mqttClient && mqttClient.connected) { pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action); log(`⏰ [AUTO] Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'} @ ${curTime}`); sendNotif(`⏰ Auto: Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'}`,`Jadwal ${curTime}`); }
+    });
+  }
 
   // ==================== NOTIFIKASI (ringkas) ====================
-  function saveNotifConfig() { /* sama */ }
-  function updateTgUI() { /* sama */ }
-  function updateGotifyUI() { /* sama */ }
-  function updateWaUI() { /* sama */ }
-  function initNotifUI() { /* sama */ }
-  function shortenUrl(u){ /* sama */ }
-  function saveTelegramConfig(){ /* sama */ }
-  function editTelegramConfig(){ /* sama */ }
-  async function testTelegram(){ /* sama */ }
-  async function fetchChatId(){ /* sama */ }
-  function saveGotifyConfig(){ /* sama */ }
-  function editGotifyConfig(){ /* sama */ }
-  async function testGotify(){ /* sama */ }
-  async function sendGotifyMessage(title,message){ /* sama */ }
-  function saveWhatsAppConfig(){ /* sama */ }
-  function editWhatsAppConfig(){ /* sama */ }
-  async function testWhatsApp(){ /* sama */ }
-  async function sendNotif(title,message){ /* sama */ }
+  function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected }, gotify: { url: notifConfig.gotify?.url, token: notifConfig.gotify?.token, enabled: gotifyEnabled, connected: gotifyConnected }, wa: { webhook: notifConfig.wa?.webhook, phone: notifConfig.wa?.phone, enabled: waEnabled, connected: waConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
+  function updateTgUI() { const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(tgConnected && notifConfig.tg?.token){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  function updateGotifyUI() { const b=$('gotifyStatusBadge'),c=$('gotifyConfig'),d=$('gotifyConnected'); if(!gotifyEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(gotifyConnected && notifConfig.gotify?.url){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  function updateWaUI() { const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); if(!waEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(waConnected && notifConfig.wa?.webhook){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  function initNotifUI() {
+    const tg = notifConfig.tg||{}; if(tg.token&&tg.chatId){ safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
+    safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
+    const gf = notifConfig.gotify||{}; if(gf.url&&gf.token){ safeVal('gotifyUrl',gf.url); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); gotifyConnected=gf.connected||false; }
+    safeCls($('gotifyToggle'),'active',gotifyEnabled); updateGotifyUI();
+    const wa = notifConfig.wa||{}; if(wa.webhook){ safeVal('waWebhook',wa.webhook); safeVal('waPhone',wa.phone||'628551291055'); safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); waConnected=wa.connected||false; }
+    safeCls($('waToggle'),'active',waEnabled); updateWaUI();
+    $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); };
+    $('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); };
+    $('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); };
+  }
+  function shortenUrl(u){ try{ const x=new URL(u); return x.hostname+(x.pathname.length>15?'...':x.pathname); }catch{ return u.length>30?u.substring(0,30)+'...':u; } }
+  function saveTelegramConfig(){ const token=$('tgToken').value.trim(), chatId=$('tgChatId').value.trim(); if(!token||token.includes('•••')) return alert('Token wajib!'); if(!chatId) return alert('Chat ID wajib!'); notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false}; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay',chatId); updateTgUI(); alert('✅ Tersimpan'); }
+  function editTelegramConfig(){ safeVal('tgToken',notifConfig.tg?.token||''); $('tgConfig').classList.remove('hidden'); $('tgConnected').classList.add('hidden'); updateTgUI(); }
+  async function testTelegram(){ if(!notifConfig.tg?.token) return alert('Simpan dulu!'); try{ const res=await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:`✅ Test dMarch\nDevice: ${DEVICE_ID}`,parse_mode:'Markdown'})}); if((await res.json()).ok){ tgConnected=true; notifConfig.tg.connected=true; saveNotifConfig(); updateTgUI(); log('📱 Telegram OK'); } else throw new Error(); }catch(e){ tgConnected=false; updateTgUI(); log('❌ Telegram Failed'); } }
+  async function fetchChatId(){ const token=$('tgToken').value.trim(); if(!token||token.includes('•••')) return alert('Isi Token dulu!'); try{ const res=await fetch(`https://api.telegram.org/bot${token}/getUpdates`), data=await res.json(); if(data.ok && data.result?.[0]?.message?.chat?.id){ safeVal('tgChatId',data.result[0].message.chat.id); alert('✅ Chat ID ditemukan'); } else alert('⚠️ Kirim pesan ke bot dulu'); }catch(e){ alert('Gagal'); } }
+  function saveGotifyConfig(){ const url=$('gotifyUrl').value.trim(), token=$('gotifyToken').value.trim(); if(!url||!token) return alert('URL & Token wajib!'); notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false}; saveNotifConfig(); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(url)); updateGotifyUI(); alert('✅ Tersimpan'); }
+  function editGotifyConfig(){ safeVal('gotifyUrl',notifConfig.gotify?.url||''); safeVal('gotifyToken','••••••••'); $('gotifyConfig').classList.remove('hidden'); $('gotifyConnected').classList.add('hidden'); updateGotifyUI(); }
+  async function testGotify(){ if(!notifConfig.gotify?.url) return alert('Simpan dulu!'); try{ const url=notifConfig.gotify.url.replace(/\/$/,""); const res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})}); if(res.ok){ gotifyConnected=true; notifConfig.gotify.connected=true; saveNotifConfig(); updateGotifyUI(); log('📡 Gotify OK'); } else throw new Error(); }catch(e){ gotifyConnected=false; updateGotifyUI(); log('❌ Gotify Failed'); } }
+  function saveWhatsAppConfig(){ const webhook=$('waWebhook').value.trim(), phone=$('waPhone').value.trim(); if(!webhook) return alert('Webhook wajib!'); notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false}; saveNotifConfig(); safeTxt('waWebhookDisplay',shortenUrl(webhook)); updateWaUI(); alert('✅ Tersimpan'); }
+  function editWhatsAppConfig(){ $('waConfig').classList.remove('hidden'); $('waConnected').classList.add('hidden'); updateWaUI(); }
+  async function testWhatsApp(){ if(!notifConfig.wa?.webhook) return alert('Simpan dulu!'); try{ await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})}); waConnected=true; notifConfig.wa.connected=true; saveNotifConfig(); updateWaUI(); log('💬 WA OK'); alert('✅ Webhook triggered'); }catch(e){ waConnected=false; updateWaUI(); alert('❌ Webhook Error'); } }
+  async function sendNotif(title,message){ const timestamp=new Date().toLocaleString('id-ID'), fullMsg=`*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Waktu: ${timestamp}_`; if(tgEnabled&&tgConnected&&notifConfig.tg?.token){ fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`,{method:'POST',body:JSON.stringify({chat_id:notifConfig.tg.chatId,text:fullMsg,parse_mode:'Markdown'})}).catch(e=>log('❌ TG Send')); } if(gotifyEnabled&&gotifyConnected&&notifConfig.gotify?.url){ try{ const url=notifConfig.gotify.url.replace(/\/$/,""); await fetch(`${url}/message`,{method:'POST',headers:{'X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title,message:`${message}\nDevice: ${DEVICE_ID}\nWaktu: ${timestamp}`,priority:8})}); }catch(e){} } if(waEnabled&&waConnected&&notifConfig.wa?.webhook){ fetch(notifConfig.wa.webhook,{method:'POST',body:JSON.stringify({phone:notifConfig.wa.phone,message:fullMsg.replace(/\*/g,''),device:DEVICE_ID})}).catch(e=>log('❌ WA Send')); } }
 
   // ==================== QR ====================
   let qrImagePreview=null;
