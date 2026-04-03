@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>d'marchFF Projects</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .tagline {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 3rem;
+      font-size: 1.1rem;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+
+    .project-card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 2rem 1.5rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      text-align: center;
+      box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
+    }
+
+    .project-card:hover {
+      transform: translateY(-8px);
+      border-color: #38bdf8;
+      box-shadow: 0 25px 40px -12px rgba(56, 189, 248, 0.3);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .project-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(120deg, #e2e8f0, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .project-description {
+      color: #cbd5e1;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #0f172a;
+      padding: 0.5rem 1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      transition: 0.2s;
+    }
+
+    .project-card:hover .badge {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: #38bdf8;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 4rem;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 700px) {
+      h1 { font-size: 2.2rem; }
+      .projects-grid { grid-template-columns: 1fr; }
+      .project-card { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ d'marchFF</h1>
+    <p class="tagline">Industrial IoT Control Panels</p>
+
+    <div class="projects-grid">
+      <!-- Relay4Ch Card -->
+      <a href="Relay4Ch/" class="project-card">
+        <div class="icon">🔌</div>
+        <div class="project-title">Relay Pro</div>
+        <div class="project-description">
+          Kontrol 5-16 relay, jadwal otomatis, notifikasi Telegram/Gotify/WA, sinkronisasi GitHub Cloud.
+        </div>
+        <span class="badge">🚀 Open Panel →</span>
+      </a>
+
+      <!-- Queue Card -->
+      <a href="Queue/" class="project-card">
+        <div class="icon">⏳</div>
+        <div class="project-title">Queue Manager</div>
+        <div class="project-description">
+          Manajemen antrian, tampilan antarmuka pelanggan, kontrol panggilan suara, dan notifikasi real-time.
+        </div>
+        <span class="badge">📋 Open Panel →</span>
+      </a>
+    </div>
+
+    <div class="footer">
+      © 2025 d'marchFF | Powered by GitHub Pages
+    </div>
+  </div>
+</body>
+</html>
