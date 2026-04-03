@@ -12,13 +12,22 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
     
-    /* ✅ CONTAINER & CARD - Lebar Konsisten */
     .container { max-width: 600px; margin: 0 auto; width: 100%; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; width: 100%; overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0 20px; cursor: pointer; }
+    .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .card-content { padding: 0 20px 20px 20px; }
+    .card.collapsed .card-content { display: none; }
+    .card.collapsed .card-header { padding-bottom: 20px; } /* saat collapsed, padding bawah tetap rapi */
+    .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
+    .toggle-btn:hover { opacity: 0.7; }
+    
+    /* Card tanpa collapsible (MQTT, System Health, Relay Control, Terminal) tetap menggunakan class .card dengan padding */
+    .card:not(.collapsible) { padding: 20px; }
+    .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     
     h1 { text-align: center; margin-bottom: 5px; }
     .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
-    .card h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
@@ -36,10 +45,7 @@
     .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
     .stat-lbl { font-size: 0.75rem; color: #94a3b8; }
     .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
-    
-    /* ✅ HIDDEN CLASS - Wajib ada !important */
     .hidden { display: none !important; }
-    
     #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
     #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
     .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
@@ -61,18 +67,14 @@
     .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
     .btn-del { background:transparent; color:var(--danger); border:1px solid var(--danger); }
     .btn-del:hover { background:var(--danger); color:#fff; }
-    
-    /* ✅ GitHub Sync UI */
     .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; }
     .sync-on { background:#064e3b; color:#10b981; } .sync-off { background:#334155; color:#94a3b8; }
     .gh-input { margin-top:8px; font-size:0.85rem; }
     .gh-config-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:8px; background:var(--bg); border-radius:8px; }
-    .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; }
+    .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; margin-bottom:8px; }
     .gh-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
     .btn-gh { padding:6px 12px; font-size:0.8rem; width: auto; min-width: 90px; }
     .form-label-text { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
-    
-    /* ✅ Notification Card */
     .notif-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
     .notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .notif-title { display:flex; align-items:center; gap:8px; font-weight:600; }
@@ -89,7 +91,7 @@
     <h1>🔌 dMarch Relay Pro</h1>
     <p class="subtitle">Web Control Panel - HiveMQ Cloud</p>
     
-    <!-- ✅ MQTT Card -->
+    <!-- MQTT Card (tidak bisa minimize) -->
     <div class="card" id="connCard">
       <h3>🔗 Koneksi MQTT</h3>
       <div class="grid-2">
@@ -107,101 +109,154 @@
     
     <button id="disconnectBtn" class="btn-danger hidden" type="button">🔌 Disconnect MQTT</button>
     
-    <!-- ✅ System Health Card (Reference Width) -->
-    <div class="card app-card hidden"><h3>📊 System Health</h3><div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div></div></div>
-    
-    <!-- ✅ Relay Control Card -->
-    <div class="card app-card hidden"><h3>⚡ Relay Control</h3><div class="grid-2"><button class="btn-success" id="allOnBtn" type="button">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" type="button">⏹️ ALL OFF</button></div><div class="grid-2" style="margin-top:12px;" id="relayBtns"></div></div>
-    
-    <!-- ✅ Scheduler Card dengan Cloud Sync -->
-    <div class="card app-card hidden" id="schedulerCard">
-      <h3>⏰ Relay Scheduler</h3>
-      <div class="grid-2">
-        <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select></div>
-        <div class="form-group"><label for="schAction">⚡ Aksi</label><select id="schAction" autocomplete="off"><option value="1">ON</option><option value="0">OFF</option></select></div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
-        <div class="form-group"><div class="form-label-text">📅 Hari Aktif</div><div class="day-grid" id="daySelector" role="group" aria-label="Pilih hari aktif"><button class="day-btn" data-day="1" type="button">Sen</button><button class="day-btn" data-day="2" type="button">Sel</button><button class="day-btn" data-day="3" type="button">Rab</button><button class="day-btn" data-day="4" type="button">Kam</button><button class="day-btn" data-day="5" type="button">Jum</button><button class="day-btn" data-day="6" type="button">Sab</button><button class="day-btn" data-day="0" type="button">Min</button></div></div>
-      </div>
-      
-      <!-- ☁️ GitHub Sync Section -->
-      <div style="margin-top:15px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
-        <div class="gh-config-row">
-          <div><span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span><div class="gh-details" id="ghDetails">dreborn2k/dmarch_relay_001/Relay4Ch/config/scheduler.json</div></div>
-          <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
-        </div>
-        <!-- ✅ Form Input (akan hidden saat online) -->
-        <div id="ghInputForm" class="gh-input">
-          <div class="grid-2">
-            <div class="form-group"><label for="ghOwner">GitHub Username</label><input type="text" id="ghOwner" value="dreborn2k" autocomplete="off"></div>
-            <div class="form-group"><label for="ghRepo">Repo Name</label><input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off"></div>
-          </div>
-          <div class="form-group"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
-          <div class="form-group"><label for="ghToken">GitHub Personal Access Token</label><input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;"></div>
-          <div class="gh-actions">
-            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan</button>
-            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull</button>
-            <button class="btn-danger btn-gh hidden" onclick="disableGitHubSync()" id="ghDisableBtn" type="button">🔌 Nonaktifkan</button>
-          </div>
-        </div>
-      </div>
-      <button class="btn-primary" onclick="addSchedule()" style="margin-top:12px;" type="button">➕ Tambah Jadwal</button>
-      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+    <!-- System Health Card (tidak bisa minimize) -->
+    <div class="card app-card hidden">
+      <h3>📊 System Health</h3>
+      <div class="stat-grid"><div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">Signal</div></div><div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">Uptime</div></div><div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">Temp</div></div><div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">FW</div></div></div>
     </div>
     
-    <!-- ✅ Notification Card -->
-    <div class="card app-card hidden" id="notifCard">
-      <h3>🔔 Notifikasi</h3>
-      <div class="notif-card">
-        <div class="notif-header"><div class="notif-title"><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
-        <div id="tgConfig" class="notif-config hidden">
-          <div class="form-group"><label for="tgToken">Bot Token</label><input type="password" id="tgToken" placeholder="123456:ABC-DEF..." autocomplete="off"></div>
-          <div class="form-group"><label for="tgChatId">Chat ID</label><input type="text" id="tgChatId" placeholder="123456789" autocomplete="off"></div>
-          <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()" type="button">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()" type="button">🔍 Auto-Detect</button></div>
-          <span id="tgMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
-        </div>
-        <div id="tgConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay" class="config-mask"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editTelegramConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()" type="button">🧪 Test</button></div></div></div>
+    <!-- Relay Control Card (tidak bisa minimize) -->
+    <div class="card app-card hidden">
+      <h3>⚡ Relay Control</h3>
+      <div class="grid-2"><button class="btn-success" id="allOnBtn" type="button">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" type="button">⏹️ ALL OFF</button></div>
+      <div class="grid-2" style="margin-top:12px;" id="relayBtns"></div>
+    </div>
+    
+    <!-- Relay Scheduler Card (collapsible, default collapsed) -->
+    <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
+      <div class="card-header">
+        <h3>⏰ Relay Scheduler</h3>
+        <button class="toggle-btn" type="button">▼</button>
       </div>
-      <div class="notif-card">
-        <div class="notif-header"><div class="notif-title"><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="gotifyToggle"></label></div>
-        <div id="gotifyConfig" class="notif-config hidden">
-          <div class="form-group"><label for="gotifyUrl">Server URL</label><input type="url" id="gotifyUrl" placeholder="http://192.168.1.100" autocomplete="off"></div>
-          <div class="form-group"><label for="gotifyToken">App Token</label><input type="password" id="gotifyToken" placeholder="AH..." autocomplete="off"></div>
-          <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveGotifyConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testGotify()" type="button">🧪 Test</button></div>
-          <span id="gotifyMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
+      <div class="card-content">
+        <div class="grid-2">
+          <div class="form-group"><label for="schRelay">🔌 Relay Target</label><select id="schRelay" autocomplete="off"><option value="1">Relay 1</option><option value="2">Relay 2</option><option value="3">Relay 3</option><option value="4">Relay 4</option><option value="5">Relay 5</option></select></div>
+          <div class="form-group"><label for="schAction">⚡ Aksi</label><select id="schAction" autocomplete="off"><option value="1">ON</option><option value="0">OFF</option></select></div>
         </div>
-        <div id="gotifyConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>URL: <span class="config-mask" id="gotifyUrlDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editGotifyConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testGotify()" type="button">🧪 Test</button></div></div></div>
-      </div>
-      <div class="notif-card">
-        <div class="notif-header"><div class="notif-title"><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="waToggle"></label></div>
-        <div id="waConfig" class="notif-config hidden">
-          <div class="form-group"><label for="waWebhook">Webhook URL</label><input type="url" id="waWebhook" placeholder="https://gateway/send" autocomplete="off"></div>
-          <div class="form-group"><label for="waPhone">Nomor</label><input type="tel" id="waPhone" value="628551291055" autocomplete="off"></div>
-          <div class="notif-actions"><button class="btn-primary btn-notif" onclick="saveWhatsAppConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testWhatsApp()" type="button">🧪 Test</button></div>
+        <div class="grid-2">
+          <div class="form-group"><label for="schTime">🕐 Waktu</label><input type="time" id="schTime" value="12:00" autocomplete="off"></div>
+          <div class="form-group"><div class="form-label-text">📅 Hari Aktif</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1" type="button">Sen</button><button class="day-btn" data-day="2" type="button">Sel</button><button class="day-btn" data-day="3" type="button">Rab</button><button class="day-btn" data-day="4" type="button">Kam</button><button class="day-btn" data-day="5" type="button">Jum</button><button class="day-btn" data-day="6" type="button">Sab</button><button class="day-btn" data-day="0" type="button">Min</button></div></div>
         </div>
-        <div id="waConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Webhook: <span class="config-mask" id="waWebhookDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editWhatsAppConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testWhatsApp()" type="button">🧪 Test</button></div></div></div>
+        <!-- GitHub Sync Section -->
+        <div style="margin-top:15px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
+          <div class="gh-config-row">
+            <div><span style="font-size:0.9rem; color:var(--accent);">☁️ Cloud Sync</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+              <button class="btn-danger btn-gh hidden" onclick="disableGitHubSync()" id="ghDisableBtn" type="button">🔌 Nonaktifkan</button>
+            </div>
+          </div>
+          <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">dreborn2k/dmarch_relay_001/Relay4Ch/config/scheduler.json</span></div>
+          <div id="ghInputForm" class="gh-input">
+            <div class="grid-2">
+              <div class="form-group"><label for="ghOwner">GitHub Username</label><input type="text" id="ghOwner" value="dreborn2k" autocomplete="off"></div>
+              <div class="form-group"><label for="ghRepo">Repo Name</label><input type="text" id="ghRepo" value="dmarch_relay_001" autocomplete="off"></div>
+            </div>
+            <div class="form-group"><label for="ghPath">File Path</label><input type="text" id="ghPath" value="Relay4Ch/config/scheduler.json" autocomplete="off" placeholder="Contoh: config/scheduler.json"></div>
+            <div class="form-group"><label for="ghToken">GitHub Personal Access Token</label><input type="password" id="ghToken" placeholder="scope: repo" autocomplete="off" style="margin-top:4px;"></div>
+            <div class="gh-actions">
+              <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn" type="button">🔗 Aktifkan</button>
+              <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn" type="button">🔄 Pull</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="addSchedule()" style="margin-top:12px;" type="button">➕ Tambah Jadwal</button>
+        <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
       </div>
     </div>
     
-    <!-- ✅ Settings Card -->
-    <div class="card app-card hidden"><h3>⚙️ Settings</h3><div class="form-group"><label for="ntpSelect">🕐 NTP Server</label><select id="ntpSelect" autocomplete="off"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div><div class="form-group"><label for="tzInput">Timezone</label><input type="number" id="tzInput" value="7" autocomplete="off"></div><button class="btn-primary" id="saveNTPBtn" type="button">💾 Save</button><div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO</label><input type="text" id="gpioInput" placeholder="12,14,27,26,25" autocomplete="off"></div><button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update</button></div>
+    <!-- Notification Card (collapsible, default collapsed) -->
+    <div class="card collapsible collapsed app-card hidden" id="notifCard">
+      <div class="card-header">
+        <h3>🔔 Notifikasi</h3>
+        <button class="toggle-btn" type="button">▼</button>
+      </div>
+      <div class="card-content">
+        <div class="notif-card">
+          <div class="notif-header"><div class="notif-title"><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
+          <div id="tgConfig" class="notif-config hidden">
+            <div class="form-group"><label for="tgToken">Bot Token</label><input type="password" id="tgToken" placeholder="123456:ABC-DEF..." autocomplete="off"></div>
+            <div class="form-group"><label for="tgChatId">Chat ID</label><input type="text" id="tgChatId" placeholder="123456789" autocomplete="off"></div>
+            <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()" type="button">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()" type="button">🔍 Auto-Detect</button></div>
+            <span id="tgMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
+          </div>
+          <div id="tgConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay" class="config-mask"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editTelegramConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()" type="button">🧪 Test</button></div></div></div>
+        </div>
+        <div class="notif-card">
+          <div class="notif-header"><div class="notif-title"><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="gotifyToggle"></label></div>
+          <div id="gotifyConfig" class="notif-config hidden">
+            <div class="form-group"><label for="gotifyUrl">Server URL</label><input type="url" id="gotifyUrl" placeholder="http://192.168.1.100" autocomplete="off"></div>
+            <div class="form-group"><label for="gotifyToken">App Token</label><input type="password" id="gotifyToken" placeholder="AH..." autocomplete="off"></div>
+            <div class="notif-actions"><button class="btn-success btn-notif" onclick="saveGotifyConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testGotify()" type="button">🧪 Test</button></div>
+            <span id="gotifyMsg" style="font-size:0.8rem; color:#64748b; margin-left:8px;"></span>
+          </div>
+          <div id="gotifyConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>URL: <span class="config-mask" id="gotifyUrlDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editGotifyConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testGotify()" type="button">🧪 Test</button></div></div></div>
+        </div>
+        <div class="notif-card">
+          <div class="notif-header"><div class="notif-title"><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="waToggle"></label></div>
+          <div id="waConfig" class="notif-config hidden">
+            <div class="form-group"><label for="waWebhook">Webhook URL</label><input type="url" id="waWebhook" placeholder="https://gateway/send" autocomplete="off"></div>
+            <div class="form-group"><label for="waPhone">Nomor</label><input type="tel" id="waPhone" value="628551291055" autocomplete="off"></div>
+            <div class="notif-actions"><button class="btn-primary btn-notif" onclick="saveWhatsAppConfig()" type="button">💾 Save</button><button class="btn-secondary btn-notif" onclick="testWhatsApp()" type="button">🧪 Test</button></div>
+          </div>
+          <div id="waConnected" class="hidden" style="margin-top:8px;"><div style="display:flex; align-items:center; justify-content:space-between; font-size:0.85rem;"><span>Webhook: <span class="config-mask" id="waWebhookDisplay"></span></span><div style="display:flex; gap:6px;"><button class="btn-sm btn-secondary" onclick="editWhatsAppConfig()" type="button">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testWhatsApp()" type="button">🧪 Test</button></div></div></div>
+        </div>
+      </div>
+    </div>
     
-    <!-- ✅ Network Card -->
-    <div class="card app-card hidden" id="networkCard"><h3>🌐 Network</h3><div class="form-group"><label for="netSsid">SSID</label><input type="text" id="netSsid" autocomplete="off"></div><div class="form-group"><label for="netPass">Password</label><input type="password" id="netPass" autocomplete="new-password"></div><button class="btn-success" id="updateNetBtn" type="button">💾 Update</button><button class="btn-danger" id="resetNetBtn" style="margin-top:10px;" type="button">🔄 Reset AP</button></div>
+    <!-- Settings Card (collapsible, default collapsed) -->
+    <div class="card collapsible collapsed app-card hidden">
+      <div class="card-header">
+        <h3>⚙️ Settings</h3>
+        <button class="toggle-btn" type="button">▼</button>
+      </div>
+      <div class="card-content">
+        <div class="form-group"><label for="ntpSelect">🕐 NTP Server</label><select id="ntpSelect" autocomplete="off"><option value="id.pool.ntp.org">id.pool.ntp.org</option><option value="pool.ntp.org">pool.ntp.org</option><option value="time.google.com">time.google.com</option><option value="time.cloudflare.com">time.cloudflare.com</option><option value="time.windows.com">time.windows.com</option></select></div>
+        <div class="form-group"><label for="tzInput">Timezone</label><input type="number" id="tzInput" value="7" autocomplete="off"></div>
+        <button class="btn-primary" id="saveNTPBtn" type="button">💾 Save</button>
+        <div class="form-group" style="margin-top:15px;"><label for="gpioInput">🔌 GPIO</label><input type="text" id="gpioInput" placeholder="12,14,27,26,25" autocomplete="off"></div>
+        <button class="btn-primary" id="updateGPIOBtn" type="button">💾 Update</button>
+      </div>
+    </div>
     
-    <!-- ✅ System Card -->
-    <div class="card app-card hidden"><h3>🔄 System</h3><div class="grid-2"><button class="btn-primary" id="otaBtn" type="button">⬇️ OTA</button><button class="btn-danger" id="restartBtn" type="button">🔄 Restart</button></div></div>
+    <!-- Network Card (collapsible, default collapsed) -->
+    <div class="card collapsible collapsed app-card hidden" id="networkCard">
+      <div class="card-header">
+        <h3>🌐 Network</h3>
+        <button class="toggle-btn" type="button">▼</button>
+      </div>
+      <div class="card-content">
+        <div class="form-group"><label for="netSsid">SSID</label><input type="text" id="netSsid" autocomplete="off"></div>
+        <div class="form-group"><label for="netPass">Password</label><input type="password" id="netPass" autocomplete="new-password"></div>
+        <button class="btn-success" id="updateNetBtn" type="button">💾 Update</button>
+        <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;" type="button">🔄 Reset AP</button>
+      </div>
+    </div>
     
-    <!-- ✅ Terminal Card -->
-    <div class="card app-card hidden"><h3>📝 Log</h3><div class="terminal" id="terminal" role="log" aria-live="polite"></div><button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn" type="button">🗑️ Clear</button></div>
+    <!-- System Card (collapsible, default collapsed) -->
+    <div class="card collapsible collapsed app-card hidden">
+      <div class="card-header">
+        <h3>🔄 System</h3>
+        <button class="toggle-btn" type="button">▼</button>
+      </div>
+      <div class="card-content">
+        <div class="grid-2"><button class="btn-primary" id="otaBtn" type="button">⬇️ OTA</button><button class="btn-danger" id="restartBtn" type="button">🔄 Restart</button></div>
+      </div>
+    </div>
+    
+    <!-- Terminal Card (tidak bisa minimize) -->
+    <div class="card app-card hidden">
+      <h3>📝 Log</h3>
+      <div class="terminal" id="terminal" role="log" aria-live="polite"></div>
+      <button class="btn-secondary" style="margin-top:10px;" id="clearLogBtn" type="button">🗑️ Clear</button>
+    </div>
   </div>
   
   <!-- QR Modal -->
   <div id="qrModal" role="dialog" aria-modal="true"><div class="modal-box"><h3 style="text-align:center; margin-bottom:15px; color:var(--accent);">📷 Scan QR</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn" type="button">📷 Kamera</button><label class="btn-secondary" for="qrFileInput" style="text-align:center; display:inline-block; flex:1; cursor:pointer;">📁 Gambar</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">Format: {"broker":"...","port":8884,"user":"...","pass":"..."}</p></div></div>
 
   <script>
-    // ✅ GLOBAL VARIABLES
+    // GLOBAL VARIABLES
     let mqttClient = null, DEVICE_ID = "dmarch_relay_001", qrScanner = null;
     let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
     let schedulerInterval = null, lastTriggered = {};
@@ -211,14 +266,28 @@
     let gotifyEnabled = notifConfig.gotify?.enabled||false, gotifyConnected = notifConfig.gotify?.connected||false;
     let waEnabled = notifConfig.wa?.enabled||false, waConnected = notifConfig.wa?.connected||false;
 
-    // ✅ HELPER FUNCTIONS - Safe DOM Access
+    // HELPER FUNCTIONS
     const $ = id => document.getElementById(id);
     const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; return el; };
     const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; return el; };
     const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
     const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
 
-    // ✅ GITHUB UI INIT
+    // MINIMIZE/MAXIMIZE TOGGLE
+    function initCollapsible() {
+      document.querySelectorAll('.card.collapsible').forEach(card => {
+        const btn = card.querySelector('.toggle-btn');
+        if(btn) {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            card.classList.toggle('collapsed');
+            btn.textContent = card.classList.contains('collapsed') ? '▼' : '▲';
+          });
+        }
+      });
+    }
+
+    // GITHUB UI INIT
     function initGitHubUI() {
       try {
         const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}');
@@ -229,58 +298,51 @@
           safeVal('ghToken', '••••••••••••••••');
           safeTxt('ghDetails', `${saved.owner}/${saved.repo}/${saved.path||'Relay4Ch/config/scheduler.json'}`);
           ghConfig = saved;
-          setSyncStatus(true); // ✅ Render UI online
+          setSyncStatus(true);
+        } else {
+          setSyncStatus(false);
         }
-      } catch(e) { console.warn('⚠️ initGitHubUI:', e); }
+      } catch(e) { console.warn('initGitHubUI:', e); }
     }
 
-    // ✅ SET SYNC STATUS - FIXED: Toggle visibility correctly
     function setSyncStatus(online) {
       ghSyncEnabled = online;
       const statusEl = $('ghSyncStatus');
       const inputForm = $('ghInputForm');
       const enableBtn = $('ghEnableBtn');
       const disableBtn = $('ghDisableBtn');
-      
-      // ✅ Pastikan semua elemen ada
-      if(!statusEl || !inputForm || !enableBtn || !disableBtn) {
-        console.warn('⚠️ GitHub UI elements missing');
-        return;
-      }
-      
+      const detailsContainer = $('ghDetailsContainer');
+      if(!statusEl || !inputForm || !enableBtn || !disableBtn || !detailsContainer) return;
       if(online) {
-        // ✅ ONLINE: Show disable button, hide entire form (including path)
         statusEl.textContent = '● Online';
         statusEl.className = 'sync-status sync-on';
-        inputForm.classList.add('hidden');        // ✅ Sembunyikan FORM (termasuk path)
-        enableBtn.classList.add('hidden');         // Sembunyikan tombol Aktifkan
-        disableBtn.classList.remove('hidden');     // ✅ TAMPILKAN tombol Nonaktifkan
+        inputForm.classList.add('hidden');
+        enableBtn.classList.add('hidden');
+        disableBtn.classList.remove('hidden');
+        detailsContainer.classList.add('hidden');
         log('☁️ GitHub Sync: ONLINE');
       } else {
-        // ✅ OFFLINE: Show form, hide disable button
         statusEl.textContent = '● Offline';
         statusEl.className = 'sync-status sync-off';
-        inputForm.classList.remove('hidden');      // Tampilkan FORM
-        enableBtn.classList.remove('hidden');      // Tampilkan tombol Aktifkan
-        disableBtn.classList.add('hidden');        // Sembunyikan tombol Nonaktifkan
+        inputForm.classList.remove('hidden');
+        enableBtn.classList.remove('hidden');
+        disableBtn.classList.add('hidden');
+        detailsContainer.classList.remove('hidden');
         safeVal('ghToken', '');
         log('☁️ GitHub Sync: OFFLINE');
       }
     }
 
-    // ✅ ENABLE SYNC - Get values from UI
     function enableGitHubSync() {
       const owner = $('ghOwner')?.value.trim() || 'dreborn2k';
       const repo = $('ghRepo')?.value.trim() || 'dmarch_relay_001';
       const path = $('ghPath')?.value.trim() || 'Relay4Ch/config/scheduler.json';
       const token = $('ghToken')?.value.trim();
-      
       if(!token || token.includes('•••')) return alert('⚠️ Token wajib!');
-      
       ghConfig = { owner, repo, token, path, branch: 'main' };
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       safeTxt('ghDetails', `${owner}/${repo}/${path}`);
-      setSyncStatus(true); // ✅ Ini akan hide form + show disable button
+      setSyncStatus(true);
       loadFromGitHub();
     }
 
@@ -314,33 +376,28 @@
         let sha = null;
         const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
         if(getRes.ok) sha = (await getRes.json()).sha;
-        
         const clean = schedules.map(s => { const {_source,...c} = JSON.parse(JSON.stringify(s)); return c; });
         const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() };
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
         const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
         if(sha) body.sha = sha;
-        
         const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
         if(res.ok) { log('💾 GitHub OK'); return; }
         if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retryCount+1}`); return await pushToGitHub(retryCount+1); }
       } catch(err) { log('❌ Push: '+err.message); }
     }
 
-    // ✅ NOTIFICATION UI
+    // NOTIFICATION UI
     function initNotifUI() {
       const tg = notifConfig.tg||{};
       if(tg.token&&tg.chatId) { safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected=tg.connected||false; }
       safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
-      
       const gf = notifConfig.gotify||{};
       if(gf.url&&gf.token) { safeVal('gotifyUrl',gf.url); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); gotifyConnected=gf.connected||false; }
       safeCls($('gotifyToggle'),'active',gotifyEnabled); updateGotifyUI();
-      
       const wa = notifConfig.wa||{};
       if(wa.webhook) { safeVal('waWebhook',wa.webhook); safeVal('waPhone',wa.phone||'628551291055'); safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); waConnected=wa.connected||false; }
       safeCls($('waToggle'),'active',waEnabled); updateWaUI();
-      
       $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); };
       $('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); };
       $('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); };
@@ -350,8 +407,9 @@
     function updateWaUI(){ const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); if(!b||!c||!d)return; if(!waEnabled){b.textContent='Inactive';b.className='notif-status status-inactive';c.classList.add('hidden');d.classList.add('hidden');}else if(waConnected&&notifConfig.wa?.webhook){b.textContent='● Active';b.className='notif-status status-active';c.classList.add('hidden');d.classList.remove('hidden');}else{b.textContent='⚙️ Config';b.className='notif-status status-inactive';c.classList.remove('hidden');d.classList.add('hidden');}}
     function shortenUrl(u){try{const x=new URL(u);return x.hostname+(x.pathname.length>15?'...':x.pathname);}catch{return u.length>30?u.substring(0,30)+'...':u;}}
 
-    // ✅ DOM READY
+    // DOM READY
     document.addEventListener('DOMContentLoaded', function() {
+      initCollapsible();
       safeVal('clientId','web_'+Math.random().toString(16).substr(2,8));
       safeVal('deviceId',DEVICE_ID);
       loadFromStorage(); initRelayButtons(); initScheduler(); initGitHubUI(); initNotifUI();
@@ -368,12 +426,12 @@
       $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t)t.innerHTML=''; };
     });
 
-    // ✅ RELAY BUTTONS
+    // RELAY BUTTONS
     function initRelayButtons(){ const rBox=$('relayBtns'); if(!rBox)return; rBox.innerHTML=''; for(let i=1;i<=5;i++){const btn=document.createElement('button');btn.id=`btn-relay-${i}`;btn.className='btn-secondary';btn.dataset.state='off';btn.textContent=`Relay ${i} (OFF)`;btn.onclick=()=>{sendRelayCommand(i);sendNotif(`🔌 Relay ${i}`,`Relay ${i} diubah`);};btn.type='button';rBox.appendChild(btn);}}
     function updateRelayUI(num,state){const btn=$(`btn-relay-${num}`);if(!btn)return;const isOn=(state==='1'||state===1||state===true||state==='true');btn.dataset.state=isOn?'on':'off';btn.textContent=`Relay ${num} (${isOn?'ON':'OFF'})`;btn.className=isOn?'btn-success':'btn-secondary';log(`🔄 Relay ${num}: ${isOn?'ON':'OFF'}`);}
     function sendRelayCommand(num){if(!mqttClient||!mqttClient.connected)return alert('⚠️ MQTT disconnected!');const btn=$(`btn-relay-${num}`);if(!btn)return;const cmd=btn.dataset.state==='on'?0:1;mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`,String(cmd));log(`📤 ${DEVICE_ID}/relay/${num}/cmd -> ${cmd}`);}
     
-    // ✅ MQTT CONNECT
+    // MQTT CONNECT
     function toggleConnect(){const btn=$('btnConnect'),statusEl=$('connStatus');if(!btn||!statusEl)return;if(mqttClient&&mqttClient.connected){mqttClient.end(true);safeTxt('connStatus','Disconnecting...');return;}const h=$('broker').value.trim(),pt=$('port').value.trim(),u=$('username').value.trim(),pw=$('password').value.trim();if(!h||!pt)return alert('⚠️ Broker & Port wajib!');if(pt!=='8884')return alert('⚠️ Port harus 8884!');saveToStorage();const url=`wss://${h}:${pt}/mqtt`;log(`🔄 Connecting...`);safeTxt('connStatus','Connecting...');btn.textContent='⏳ Connecting...';mqttClient=mqtt.connect(url,{clientId:$('clientId').value,username:u,password:pw,clean:true,reconnectPeriod:0});mqttClient.on('connect',function(){log('✅ MQTT Connected');setConnectionState(true);mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');if(ghSyncEnabled)loadFromGitHub();});mqttClient.on('message',function(topic,msg){const t=topic.toString(),m=msg.toString().trim();if(t.includes('/terminal')){log(m);return;}if(t.includes('/status')){updateSystemHealth(m);return;}if(t.includes('/relay/')&&t.endsWith('/state')){const p=t.split('/');updateRelayUI(p[2],m);}});mqttClient.on('error',function(err){console.error(err);log('❌ Error: '+(err.message||'Unknown'));setConnectionState(false);btn.textContent='🔗 Connect';});mqttClient.on('close',function(){log('🔌 Disconnected');setConnectionState(false);btn.textContent='🔗 Connect';});}
     function updateSystemHealth(msg){try{const d=JSON.parse(msg);safeTxt('sigVal',(d.rssi||'--')+'%');safeTxt('upVal',d.uptime||'--');safeTxt('tempVal',(d.temp||'--')+'°C');safeTxt('fwVal',d.fw_version||'--');}catch(e){}}
     function pub(topic,payload){if(mqttClient&&mqttClient.connected)mqttClient.publish(topic,payload,{qos:0},e=>e?log('❌ Pub Error'):log(`📤 ${topic} -> ${payload}`));else log('⚠️ Disconnected');}
@@ -383,10 +441,16 @@
     function updateNetwork(){var s=$('netSsid').value.trim();if(!s)return alert('SSID wajib!');pub(DEVICE_ID+'/network/update',JSON.stringify({ssid:s,pass:$('netPass').value.trim()}));alert('✅ Perintah terkirim.');}
     function resetWifi(){if(!confirm('Reset WiFi ke AP?'))return;pub(DEVICE_ID+'/network/reset','1');alert('🔄 Reset terkirim.');}
 
-    // ✅ QR LOGIC
-    let qrImagePreview=null;function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}$('qrModal').onclick=function(e){if(e.target===this)closeQR();};async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){try{await qrScanner.stop();}catch(e){}qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeVal('qrFileInput','');safeTxt('qrMsg','Format: {"broker":"..."}');$('qrMsg').style.color='#94a3b8';}$('startCameraBtn').onclick=function(){if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';qrScanner=new Html5Qrcode("reader");qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{alert('❌ Kamera: '+err);safeTxt('qrMsg','⚠️ Izinkan kamera');$('qrMsg').style.color='#ef4444';});};$('qrFileInput').onchange=async function(e){const file=e.target.files[0];if(!file)return;if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';const reader=new FileReader();reader.onload=function(evt){const img=document.createElement('img');img.src=evt.target.result;img.style.maxWidth='100%';img.style.maxHeight='300px';img.style.borderRadius='8px';img.style.display='block';img.style.margin='0 auto';$('reader').appendChild(img);qrImagePreview=img;};reader.readAsDataURL(file);safeTxt('qrMsg','⏳ Memproses...');$('qrMsg').style.color='#94a3b8';try{qrScanner=new Html5Qrcode("reader");const decodedText=await qrScanner.scanFile(file,true);onQRSuccess(decodedText);}catch(err){console.error('❌ QR:',err);if(err.toString().includes("No MultiFormat")){$('qrMsg').innerHTML='⚠️ QR tidak terdeteksi.<br>• Gambar jelas<br>• JSON valid';}else{safeTxt('qrMsg','❌ Gagal: '+err.message);}$('qrMsg').style.color='#ef4444';}};function onQRSuccess(decodedText){try{const data=JSON.parse(decodedText);if(!data.broker||!data.port||!data.user||!data.pass)throw new Error('Field tidak lengkap');safeVal('broker',data.broker);safeVal('port',data.port);safeVal('username',data.user);safeVal('password',data.pass);saveToStorage();safeTxt('qrMsg','✅ QR berhasil!');$('qrMsg').style.color='#10b981';log('✅ QR loaded');setTimeout(()=>closeQR(),1000);}catch(err){console.error('❌ Parse:',err);$('qrMsg').innerHTML=`❌ Invalid:<br><code>${err.message}</code>`;$('qrMsg').style.color='#ef4444';}}
+    // QR LOGIC (sama seperti sebelumnya)
+    let qrImagePreview=null;
+    function openQR(){ $('qrModal').style.display='flex'; safeTxt('qrMsg','Format: {"broker":"..."}'); $('qrMsg').style.color='#94a3b8'; $('reader').innerHTML=''; if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}}
+    $('qrModal').onclick=function(e){if(e.target===this)closeQR();};
+    async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){try{await qrScanner.stop();}catch(e){}qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}safeVal('qrFileInput','');safeTxt('qrMsg','Format: {"broker":"..."}');$('qrMsg').style.color='#94a3b8';}
+    $('startCameraBtn').onclick=function(){if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';qrScanner=new Html5Qrcode("reader");qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{alert('❌ Kamera: '+err);safeTxt('qrMsg','⚠️ Izinkan kamera');$('qrMsg').style.color='#ef4444';});};
+    $('qrFileInput').onchange=async function(e){const file=e.target.files[0];if(!file)return;if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner.clear();qrScanner=null;}if(qrImagePreview){qrImagePreview.remove();qrImagePreview=null;}$('reader').innerHTML='';const reader=new FileReader();reader.onload=function(evt){const img=document.createElement('img');img.src=evt.target.result;img.style.maxWidth='100%';img.style.maxHeight='300px';img.style.borderRadius='8px';img.style.display='block';img.style.margin='0 auto';$('reader').appendChild(img);qrImagePreview=img;};reader.readAsDataURL(file);safeTxt('qrMsg','⏳ Memproses...');$('qrMsg').style.color='#94a3b8';try{qrScanner=new Html5Qrcode("reader");const decodedText=await qrScanner.scanFile(file,true);onQRSuccess(decodedText);}catch(err){console.error('❌ QR:',err);if(err.toString().includes("No MultiFormat")){$('qrMsg').innerHTML='⚠️ QR tidak terdeteksi.<br>• Gambar jelas<br>• JSON valid';}else{safeTxt('qrMsg','❌ Gagal: '+err.message);}$('qrMsg').style.color='#ef4444';}};
+    function onQRSuccess(decodedText){try{const data=JSON.parse(decodedText);if(!data.broker||!data.port||!data.user||!data.pass)throw new Error('Field tidak lengkap');safeVal('broker',data.broker);safeVal('port',data.port);safeVal('username',data.user);safeVal('password',data.pass);saveToStorage();safeTxt('qrMsg','✅ QR berhasil!');$('qrMsg').style.color='#10b981';log('✅ QR loaded');setTimeout(()=>closeQR(),1000);}catch(err){console.error('❌ Parse:',err);$('qrMsg').innerHTML=`❌ Invalid:<br><code>${err.message}</code>`;$('qrMsg').style.color='#ef4444';}}
 
-    // ✅ SCHEDULER
+    // SCHEDULER
     function initScheduler(){document.querySelectorAll('.day-btn').forEach(btn=>{btn.onclick=function(){this.classList.toggle('active');}});renderSchedules();startSchedulerEngine();if(ghSyncEnabled&&ghConfig?.token)loadFromGitHub();}
     function addSchedule(){const time=$('schTime').value,relay=$('schRelay').value,action=$('schAction').value,activeDays=Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));if(!time||activeDays.length===0)return alert('⚠️ Waktu & hari wajib!');const newSch={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4),time,relay,action,days:activeDays,enabled:true,_modified:new Date().toISOString()};schedules.push(newSch);saveSchedules();renderSchedules();log(`⏰ Jadwal: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`);}
     function toggleSchedule(id){const sch=schedules.find(s=>s.id===id);if(sch){sch.enabled=!sch.enabled;sch._modified=new Date().toISOString();saveSchedules();renderSchedules();}}
@@ -398,7 +462,7 @@
     function startSchedulerEngine(){if(schedulerInterval)clearInterval(schedulerInterval);schedulerInterval=setInterval(checkSchedules,30000);log('✅ Scheduler running');}
     function checkSchedules(){const now=new Date(),currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,currentDay=now.getDay(),dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;schedules.forEach(sch=>{if(!sch.enabled||sch.time!==currentTime||!sch.days.includes(currentDay))return;const triggerKey=`${sch.id}_${dateKey}`;if(lastTriggered[sch.id]===triggerKey)return;lastTriggered[sch.id]=triggerKey;if(mqttClient&&mqttClient.connected){pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`,sch.action);const actionText=sch.action=='1'?'ON':'OFF';log(`⏰ [AUTO] Relay ${sch.relay} ${actionText} @ ${currentTime}`);sendNotif(`⏰ Auto: Relay ${sch.relay} ${actionText}`,`Jadwal ${currentTime}`);}else log(`⚠️ [SCHEDULER] MQTT disconnected`);});}
 
-    // ✅ NOTIFICATIONS
+    // NOTIFICATIONS
     function saveNotifConfig(){notifConfig={tg:{token:notifConfig.tg?.token,chatId:notifConfig.tg?.chatId,enabled:tgEnabled,connected:tgConnected},gotify:{url:notifConfig.gotify?.url,token:notifConfig.gotify?.token,enabled:gotifyEnabled,connected:gotifyConnected},wa:{webhook:notifConfig.wa?.webhook,phone:notifConfig.wa?.phone,enabled:waEnabled,connected:waConnected}};localStorage.setItem('dm_notif_config',JSON.stringify(notifConfig));if(ghSyncEnabled){clearTimeout(ghSyncTimeout);ghSyncTimeout=setTimeout(()=>pushToGitHub(),1000);}}
     function saveTelegramConfig(){const token=$('tgToken').value.trim(),chatId=$('tgChatId').value.trim(),msgEl=$('tgMsg');if(!token||token.includes('•••')){safeTxt(msgEl,'⚠️ Token wajib!');msgEl.style.color='#ef4444';return;}if(!chatId){safeTxt(msgEl,'⚠️ Chat ID wajib!');msgEl.style.color='#ef4444';return;}notifConfig.tg={token,chatId,enabled:tgEnabled,connected:false};saveNotifConfig();safeVal('tgToken','••••••••');safeTxt('tgChatDisplay',chatId);safeTxt(msgEl,'✅ Disimpan!');msgEl.style.color='#10b981';updateTgUI();}
     function editTelegramConfig(){safeVal('tgToken',notifConfig.tg?.token||'');$('tgConfig').classList.remove('hidden');$('tgConnected').classList.add('hidden');safeTxt('tgStatusBadge','⚙️ Editing');$('tgStatusBadge').className='notif-status status-inactive';}
