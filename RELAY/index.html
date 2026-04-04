@@ -24,8 +24,8 @@
     h1 { text-align: center; margin-bottom: 5px; }
     .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .grid-4-relay { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
     input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
@@ -54,7 +54,8 @@
     .sch-info { flex:1; }
     .sch-time { font-weight:bold; color:var(--accent); }
     .sch-actions { display:flex; gap:8px; align-items:center; }
-    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; }
+    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; transition:0.3s; }
+    .toggle-switch.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
     .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:0.3s; }
     .toggle-switch.active { background:var(--success); }
     .toggle-switch.active::after { left:18px; }
@@ -86,6 +87,7 @@
     .device-id-input-group { display: flex; gap: 8px; align-items: center; }
     .device-id-input-group input { flex: 1; text-transform: uppercase; }
     .device-id-input-group button { width: auto; padding: 10px 12px; }
+    .system-card-btn { margin-top: 15px; }
   </style>
 </head>
 <body>
@@ -107,7 +109,6 @@
     <div class="grid-2">
       <div class="form-group"><label>Broker</label><input id="broker" placeholder="broker.hivemq.cloud"></div>
       <div class="form-group"><label>Port (WSS)</label><input id="port" value="8884"></div>
-      <div class="form-group"><label>Client ID</label><input id="clientId" readonly></div>
       <div class="form-group"><label>Username</label><input id="username"></div>
       <div class="form-group"><label>Password</label><input id="password" type="password"></div>
     </div>
@@ -132,7 +133,8 @@
     <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="info-panel">
-        <div class="grid-3" style="margin-bottom: 12px;">
+        <div class="grid-4" style="margin-bottom: 12px;">
+          <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay">--</strong></div>
           <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
           <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
           <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
@@ -146,7 +148,7 @@
   <div class="card app-card hidden">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div>
-    <div class="grid-4" style="margin-top:12px;" id="relayBtns"></div>
+    <div class="grid-4-relay" style="margin-top:12px;" id="relayBtns"></div>
   </div>
 
   <!-- NTP Card -->
@@ -187,7 +189,7 @@
   <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
     <div class="card-header"><h3>⏰ Relay Scheduler</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
-      <!-- Cloud Sync Section -->
+      <!-- Cloud Sync Section (simplified) -->
       <div style="margin-bottom:20px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
         <div class="gh-config-row">
           <div><span style="color:var(--accent);">☁️ Cloud Sync</span></div>
@@ -195,13 +197,15 @@
         </div>
         <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">--/--/--</span></div>
         <div id="ghInputForm" class="gh-input">
-          <div class="grid-2">
-            <div class="form-group"><label>GitHub Username</label><input id="ghOwner" value="dreborn2k"></div>
-            <div class="form-group"><label>Repo Name</label><input id="ghRepo" value="dmarchFF"></div>
+          <!-- Only token input needed; other values hardcoded -->
+          <div class="form-group">
+            <label>GitHub Token (repo scope)</label>
+            <input id="ghToken" type="password" placeholder="ghp_xxxx...">
           </div>
-          <div class="form-group"><label>Base Folder</label><input id="ghBasePath" value="RELAY/data"></div>
-          <div class="form-group"><label>GitHub Token</label><input id="ghToken" type="password" placeholder="scope: repo"></div>
-          <div class="gh-actions"><button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn">🔗 Enable</button><button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn">🔄 Pull</button></div>
+          <div class="gh-actions">
+            <button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn">🔗 Enable Sync</button>
+            <button class="btn-secondary btn-gh" onclick="loadFromGitHub()" id="ghLoadBtn">🔄 Pull</button>
+          </div>
         </div>
       </div>
       <!-- Schedule form -->
@@ -226,12 +230,12 @@
       <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
       <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
       <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" onclick="editTelegramConfig()">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()">🧪 Test</button></div></div></div></div>
-      <!-- Gotify -->
-      <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="gotifyToggle"></label></div>
+      <!-- Gotify (disabled) -->
+      <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div>
       <div id="gotifyConfig" class="notif-config hidden"><div class="form-group"><label>Server URL</label><input id="gotifyUrl"></div><div class="form-group"><label>App Token</label><input id="gotifyToken" type="password"></div><div class="notif-actions"><button class="btn-success btn-notif" onclick="saveGotifyConfig()">💾 Save</button><button class="btn-secondary btn-notif" onclick="testGotify()">🧪 Test</button></div><span id="gotifyMsg"></span></div>
       <div id="gotifyConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>URL: <span id="gotifyUrlDisplay"></span></span><div><button class="btn-sm btn-secondary" onclick="editGotifyConfig()">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testGotify()">🧪 Test</button></div></div></div></div>
-      <!-- WhatsApp -->
-      <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="waToggle"></label></div>
+      <!-- WhatsApp (disabled) -->
+      <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch disabled" id="waToggle"></label></div>
       <div id="waConfig" class="notif-config hidden"><div class="form-group"><label>Webhook URL</label><input id="waWebhook"></div><div class="form-group"><label>Phone Number</label><input id="waPhone" value="628551291055"></div><div class="notif-actions"><button class="btn-primary btn-notif" onclick="saveWhatsAppConfig()">💾 Save</button><button class="btn-secondary btn-notif" onclick="testWhatsApp()">🧪 Test</button></div></div>
       <div id="waConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Webhook: <span id="waWebhookDisplay"></span></span><div><button class="btn-sm btn-secondary" onclick="editWhatsAppConfig()">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testWhatsApp()">🧪 Test</button></div></div></div></div>
     </div>
@@ -251,7 +255,12 @@
   <!-- System Card -->
   <div class="card collapsible collapsed app-card hidden">
     <div class="card-header"><h3>🔄 System</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content"><div class="grid-2"><button class="btn-primary" id="otaBtn">⬇️ OTA</button><button class="btn-danger" id="restartBtn">🔄 Restart</button></div></div>
+    <div class="card-content">
+      <div class="grid-2 system-card-btn">
+        <button class="btn-primary" id="otaBtn">⬇️ OTA</button>
+        <button class="btn-danger" id="restartBtn">🔄 Restart</button>
+      </div>
+    </div>
   </div>
 
   <!-- Terminal Card -->
@@ -269,13 +278,18 @@
   let ghSyncEnabled = false, ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}'), ghSyncTimeout = null;
   let notifConfig = JSON.parse(localStorage.getItem('dm_notif_config') || '{}');
   let tgEnabled = notifConfig.tg?.enabled||false, tgConnected = notifConfig.tg?.connected||false;
-  let gotifyEnabled = notifConfig.gotify?.enabled||false, gotifyConnected = notifConfig.gotify?.connected||false;
-  let waEnabled = notifConfig.wa?.enabled||false, waConnected = notifConfig.wa?.connected||false;
+  let gotifyEnabled = false, gotifyConnected = false; // disabled
+  let waEnabled = false, waConnected = false; // disabled
   let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
   let maxRelayFromDevice = 16;
   let currentHardware = "";
   let currentRelayState = [];
   let DEVICE_ID = "";
+
+  // Hardcoded GitHub settings
+  const GH_OWNER = "dreborn2k";
+  const GH_REPO = "dmarchFF";
+  const GH_BASE_PATH = "RELAY/data";
 
   const $ = id => document.getElementById(id);
   const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
@@ -298,6 +312,7 @@
       DEVICE_ID = full;
       localStorage.setItem('dm_device_suffix', suffix);
       localStorage.setItem('dm_device_id', DEVICE_ID);
+      safeTxt('deviceIdDisplay', DEVICE_ID);
       updateGhPathDisplay();
       log(`✅ Device ID set to: ${DEVICE_ID}`);
       return true;
@@ -315,10 +330,10 @@
   }
 
   // ==================== GITHUB PATH ====================
-  function getDeviceDataPath() { if (!DEVICE_ID) return null; const base = $('ghBasePath') ? $('ghBasePath').value.trim() : 'RELAY/data'; return `${base}/${DEVICE_ID}`; }
+  function getDeviceDataPath() { if (!DEVICE_ID) return null; return `${GH_BASE_PATH}/${DEVICE_ID}`; }
   function getSchedulerPath() { const base = getDeviceDataPath(); return base ? `${base}/scheduler.json` : null; }
   function getDeviceConfigPath() { const base = getDeviceDataPath(); return base ? `${base}/device.json` : null; }
-  function updateGhPathDisplay() { if (DEVICE_ID) { const base = $('ghBasePath') ? $('ghBasePath').value.trim() : 'RELAY/data'; safeTxt('ghDetails', `${base}/${DEVICE_ID}/device.json & scheduler.json`); } else { safeTxt('ghDetails', '-- set Device ID first --'); } }
+  function updateGhPathDisplay() { if (DEVICE_ID) { safeTxt('ghDetails', `${GH_BASE_PATH}/${DEVICE_ID}/device.json & scheduler.json`); } else { safeTxt('ghDetails', '-- set Device ID first --'); } }
 
   // ==================== ACCORDION ====================
   function initAccordion() {
@@ -427,14 +442,14 @@
     if(!broker||!port) return alert('Broker & Port required!');
     localStorage.setItem('dm_mqtt', JSON.stringify({b:broker,p:port,u:user,pw:pass}));
     const url = `wss://${broker}:${port}/mqtt`;
-    mqttClient = mqtt.connect(url, {clientId:$('clientId').value, username:user, password:pass, clean:true, reconnectPeriod:0});
+    mqttClient = mqtt.connect(url, {clientId:'web_'+Math.random().toString(16).substr(2,8), username:user, password:pass, clean:true, reconnectPeriod:0});
     mqttClient.on('connect', () => { log('✅ MQTT Connected'); setConnectionState(true); currentRelayState = new Array(relayCount).fill(false); mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]); mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); if(ghSyncEnabled && DEVICE_ID) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } });
     mqttClient.on('message', (topic, msg) => { const t=topic.toString(), m=msg.toString().trim(); if(t.includes('/terminal')) log(m); else if(t.includes('/status')) updateSystemHealth(m); else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); } });
     mqttClient.on('error', err => { log('❌ MQTT Error'); setConnectionState(false); });
     mqttClient.on('close', () => { log('🔌 Disconnected'); setConnectionState(false); });
   }
 
-  // ==================== GITHUB SYNC ====================
+  // ==================== GITHUB SYNC (simplified) ====================
   function setSyncStatus(online) {
     ghSyncEnabled = online;
     const statusEl = $('ghSyncStatus'), inputForm = $('ghInputForm'), enableBtn = $('ghEnableBtn'), disableBtn = $('ghDisableBtn'), details = $('ghDetailsContainer');
@@ -449,12 +464,22 @@
       safeVal('ghToken',''); log('☁️ GitHub Sync: OFFLINE');
     }
   }
-  function enableGitHubSync() { if (!DEVICE_ID) { alert('Please set Device ID first!'); return; } vibrate(); const owner = $('ghOwner').value.trim() || 'dreborn2k'; const repo = $('ghRepo').value.trim() || 'dmarchFF'; const basePath = $('ghBasePath').value.trim() || 'RELAY/data'; const token = $('ghToken').value.trim(); if(!token || token.includes('•••')) return alert('⚠️ Token required!'); ghConfig = { owner, repo, token, basePath, branch: 'main' }; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); updateGhPathDisplay(); setSyncStatus(true); loadFromGitHub(); loadDeviceConfigFromGitHub(); }
+  function enableGitHubSync() { 
+    if (!DEVICE_ID) { alert('Please set Device ID first!'); return; } 
+    vibrate(); 
+    const token = $('ghToken').value.trim(); 
+    if(!token) return alert('⚠️ GitHub Token required!'); 
+    ghConfig = { owner: GH_OWNER, repo: GH_REPO, token: token, basePath: GH_BASE_PATH, branch: 'main' }; 
+    localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); 
+    updateGhPathDisplay(); 
+    setSyncStatus(true); 
+    loadFromGitHub(); loadDeviceConfigFromGitHub(); 
+  }
   function disableGitHubSync() { if(confirm('Disable Sync?')) { ghConfig={}; localStorage.removeItem('dm_gh_config'); setSyncStatus(false); } }
-  async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`✅ Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('❌ Pull schedules: '+e.message); } }
-  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { if(config.relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); initRelayButtons(); safeVal('relayCount', relayCount); log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
-  async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `⚙️ Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('💾 Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`⚠️ Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`❌ Save device config error: ${err.message}`); return false; } }
-  async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('💾 Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('❌ Push schedules: '+e.message); } }
+  async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`✅ Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('❌ Pull schedules: '+e.message); } }
+  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { if(config.relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); initRelayButtons(); safeVal('relayCount', relayCount); log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
+  async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `⚙️ Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('💾 Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`⚠️ Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`❌ Save device config error: ${err.message}`); return false; } }
+  async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('💾 Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('❌ Push schedules: '+e.message); } }
 
   // ==================== SCHEDULER ====================
   function initScheduler() { document.querySelectorAll('.day-btn').forEach(btn=>{ btn.onclick=function(){ this.classList.toggle('active'); vibrate(); }; }); renderSchedules(); startSchedulerEngine(); }
@@ -468,12 +493,10 @@
   function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('✅ Scheduler running'); }
   function checkSchedules() { if (!DEVICE_ID) return; const now = new Date(), curTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`, curDay = now.getDay(), dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`; schedules.forEach(sch=>{ if(!sch.enabled || sch.time!==curTime || !sch.days.includes(curDay)) return; const key = `${sch.id}_${dateKey}`; if(lastTriggered[sch.id]===key) return; lastTriggered[sch.id]=key; if(mqttClient && mqttClient.connected) { pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action); log(`⏰ [AUTO] Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'} @ ${curTime}`); sendNotif(`⏰ Auto: Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'}`,`Schedule ${curTime}`); } }); }
 
-  // ==================== NOTIFICATIONS (FIXED: use HTML parse_mode) ====================
+  // ==================== NOTIFICATIONS (Telegram only, HTML parse_mode) ====================
   function saveNotifConfig() { 
     notifConfig = { 
-      tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected }, 
-      gotify: { url: notifConfig.gotify?.url, token: notifConfig.gotify?.token, enabled: gotifyEnabled, connected: gotifyConnected }, 
-      wa: { webhook: notifConfig.wa?.webhook, phone: notifConfig.wa?.phone, enabled: waEnabled, connected: waConnected } 
+      tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected }
     }; 
     localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); 
     if(ghSyncEnabled) pushToGitHub(); 
@@ -482,18 +505,6 @@
     const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); 
     if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
     else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
-    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
-  }
-  function updateGotifyUI() { 
-    const b=$('gotifyStatusBadge'),c=$('gotifyConfig'),d=$('gotifyConnected'); 
-    if(!gotifyEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
-    else if(gotifyConnected && notifConfig.gotify?.url && notifConfig.gotify?.token){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
-    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
-  }
-  function updateWaUI() { 
-    const b=$('waStatusBadge'),c=$('waConfig'),d=$('waConnected'); 
-    if(!waEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } 
-    else if(waConnected && notifConfig.wa?.webhook){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } 
     else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } 
   }
   function initNotifUI() {
@@ -506,30 +517,13 @@
     }
     safeCls($('tgToggle'),'active',tgEnabled); 
     updateTgUI();
-    
-    const gf = notifConfig.gotify||{}; 
-    if(gf.url && gf.token){ 
-      safeVal('gotifyUrl',gf.url); 
-      safeVal('gotifyToken','••••••••'); 
-      safeTxt('gotifyUrlDisplay',shortenUrl(gf.url)); 
-      gotifyConnected = gf.connected || false; 
-    }
-    safeCls($('gotifyToggle'),'active',gotifyEnabled); 
-    updateGotifyUI();
-    
-    const wa = notifConfig.wa||{}; 
-    if(wa.webhook){ 
-      safeVal('waWebhook',wa.webhook); 
-      safeVal('waPhone',wa.phone||'628551291055'); 
-      safeTxt('waWebhookDisplay',shortenUrl(wa.webhook)); 
-      waConnected = wa.connected || false; 
-    }
-    safeCls($('waToggle'),'active',waEnabled); 
-    updateWaUI();
+    // Disable Gotify and WhatsApp toggles
+    const gotifyToggle = $('gotifyToggle');
+    const waToggle = $('waToggle');
+    if(gotifyToggle) gotifyToggle.classList.add('disabled');
+    if(waToggle) waToggle.classList.add('disabled');
     
     $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`📱 Telegram: ${tgEnabled?'ON':'OFF'}`); vibrate(); };
-    $('gotifyToggle').onclick = function(){ gotifyEnabled=!gotifyEnabled; this.classList.toggle('active',gotifyEnabled); updateGotifyUI(); saveNotifConfig(); log(`📡 Gotify: ${gotifyEnabled?'ON':'OFF'}`); vibrate(); };
-    $('waToggle').onclick = function(){ waEnabled=!waEnabled; this.classList.toggle('active',waEnabled); updateWaUI(); saveNotifConfig(); log(`💬 WhatsApp: ${waEnabled?'ON':'OFF'}`); vibrate(); };
   }
   function shortenUrl(u){ try{ const x=new URL(u); return x.hostname+(x.pathname.length>15?'...':x.pathname); }catch{ return u.length>30?u.substring(0,30)+'...':u; } }
   
@@ -614,14 +608,14 @@
     } 
   }
   
-  function saveGotifyConfig(){ vibrate(); const url=$('gotifyUrl').value.trim(), token=$('gotifyToken').value.trim(); if(!url||!token) return alert('URL & Token required!'); notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false}; saveNotifConfig(); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(url)); updateGotifyUI(); alert('✅ Saved'); }
-  function editGotifyConfig(){ safeVal('gotifyUrl',notifConfig.gotify?.url||''); safeVal('gotifyToken','••••••••'); $('gotifyConfig').classList.remove('hidden'); $('gotifyConnected').classList.add('hidden'); updateGotifyUI(); }
-  async function testGotify(){ if(!notifConfig.gotify?.url) return alert('Save config first!'); try{ const url=notifConfig.gotify.url.replace(/\/$/,""); const res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})}); if(res.ok){ gotifyConnected=true; notifConfig.gotify.connected=true; saveNotifConfig(); updateGotifyUI(); log('📡 Gotify OK'); alert('✅ Gotify test sent'); } else throw new Error(); }catch(e){ gotifyConnected=false; updateGotifyUI(); log('❌ Gotify Failed'); alert('❌ Gotify test failed'); } }
-  function saveWhatsAppConfig(){ vibrate(); const webhook=$('waWebhook').value.trim(), phone=$('waPhone').value.trim(); if(!webhook) return alert('Webhook required!'); notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false}; saveNotifConfig(); safeTxt('waWebhookDisplay',shortenUrl(webhook)); updateWaUI(); alert('✅ Saved'); }
-  function editWhatsAppConfig(){ $('waConfig').classList.remove('hidden'); $('waConnected').classList.add('hidden'); updateWaUI(); }
-  async function testWhatsApp(){ if(!notifConfig.wa?.webhook) return alert('Save config first!'); try{ await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})}); waConnected=true; notifConfig.wa.connected=true; saveNotifConfig(); updateWaUI(); log('💬 WA OK'); alert('✅ Webhook triggered'); }catch(e){ waConnected=false; updateWaUI(); alert('❌ Webhook Error'); } }
+  // Gotify and WhatsApp functions remain but toggles are disabled, so they won't be used.
+  function saveGotifyConfig(){}
+  function editGotifyConfig(){}
+  async function testGotify(){}
+  function saveWhatsAppConfig(){}
+  function editWhatsAppConfig(){}
+  async function testWhatsApp(){}
   
-  // ==================== TELEGRAM SEND NOTIF (FIXED HTML) ====================
   async function sendNotif(title, message) {
     const timestamp = new Date().toLocaleString('en-US');
     const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`;
@@ -641,26 +635,6 @@
         log(`❌ Telegram send error: ${e.message}`);
       }
     }
-    // Gotify
-    if (gotifyEnabled && gotifyConnected && notifConfig.gotify?.url && notifConfig.gotify?.token) {
-      try {
-        const url = notifConfig.gotify.url.replace(/\/$/, "");
-        await fetch(`${url}/message`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Gotify-Key': notifConfig.gotify.token },
-          body: JSON.stringify({ title, message: `${message}\nDevice: ${DEVICE_ID}\nTime: ${timestamp}`, priority: 8 })
-        });
-      } catch (e) {}
-    }
-    // WhatsApp
-    if (waEnabled && waConnected && notifConfig.wa?.webhook) {
-      try {
-        await fetch(notifConfig.wa.webhook, {
-          method: 'POST',
-          body: JSON.stringify({ phone: notifConfig.wa.phone, message: fullMsg.replace(/<[^>]*>/g, ''), device: DEVICE_ID })
-        });
-      } catch (e) {}
-    }
   }
 
   // ==================== QR ====================
@@ -675,7 +649,6 @@
   document.addEventListener('DOMContentLoaded', ()=>{
     initAccordion();
     loadDeviceIdFromStorage();
-    safeVal('clientId', 'web_'+Math.random().toString(16).substr(2,8));
     const savedMqtt = JSON.parse(localStorage.getItem('dm_mqtt')||'{}');
     if(savedMqtt.b) safeVal('broker', savedMqtt.b);
     if(savedMqtt.p) safeVal('port', savedMqtt.p);
@@ -696,11 +669,20 @@
     attachVibration($('restartBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/restart','1'); });
     attachVibration($('clearLogBtn'), () => { const t=$('terminal'); if(t) t.innerHTML=''; });
     attachVibration($('scanQrBtn'), () => openQR());
-    $('ghBasePath').addEventListener('change', updateGhPathDisplay);
     $('deviceIdSuffix').addEventListener('change', () => setDeviceIdFromSuffix());
     window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
   });
-  function initGitHubUI() { try { const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}'); if(saved.owner && saved.token) { safeVal('ghOwner', saved.owner); safeVal('ghRepo', saved.repo); safeVal('ghBasePath', saved.basePath || 'RELAY/data'); safeVal('ghToken', '••••••••••••••••'); ghConfig = saved; setSyncStatus(true); updateGhPathDisplay(); } else setSyncStatus(false); } catch(e) { console.warn(e); } }
+  function initGitHubUI() { 
+    try { 
+      const saved = JSON.parse(localStorage.getItem('dm_gh_config') || '{}'); 
+      if(saved.token) { 
+        safeVal('ghToken', '••••••••••••••••'); 
+        ghConfig = saved; 
+        setSyncStatus(true); 
+        updateGhPathDisplay(); 
+      } else setSyncStatus(false); 
+    } catch(e) { console.warn(e); } 
+  }
 </script>
 </body>
 </html>
