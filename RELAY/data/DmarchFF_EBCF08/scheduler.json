@@ -1,35 +1,5 @@
 {
   "device": "DmarchFF_EBCF08",
-  "schedules": [
-    {
-      "id": "mnknkchc1vr8",
-      "time": "12:00",
-      "relay": "5",
-      "action": "1",
-      "days": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        0
-      ],
-      "enabled": true,
-      "_modified": "2026-04-04T18:15:07.824Z"
-    },
-    {
-      "id": "mnknpczk6493",
-      "time": "12:00",
-      "relay": "2",
-      "action": "1",
-      "days": [
-        1,
-        0
-      ],
-      "enabled": true,
-      "_modified": "2026-04-04T18:19:01.760Z"
-    }
-  ],
-  "updatedAt": "2026-04-04T18:57:03.387Z"
+  "schedules": [],
+  "updatedAt": "2026-04-04T18:58:10.466Z"
 }
