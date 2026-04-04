@@ -3,185 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D'MarcFF Robotic - IoT Dashboard</title>
+    <title>D'MarcFF Robotic | IoT System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #0056b3;
-            --secondary-color: #007bff;
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-main: #333;
-            --text-muted: #666;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --terminal-bg: #1e1e1e;
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --dark-bg: #0f172a;
+            --glass: rgba(30, 41, 59, 0.7);
+            --neon-glow: 0 0 15px rgba(0, 210, 255, 0.4);
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
             margin: 0;
+            padding: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            color: #e2e8f0;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
         }
 
-        .card {
-            background: var(--card-bg);
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             width: 100%;
-            max-width: 420px;
+            max-width: 400px;
             padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border-top: 5px solid var(--primary-color);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         h2 {
+            font-family: 'Orbitron', sans-serif;
             text-align: center;
-            color: var(--primary-color);
-            margin-top: 0;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            text-transform: uppercase;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
+            margin-bottom: 25px;
+            background: linear-gradient(to right, var(--primary), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
         }
 
-        .input-group {
-            margin-bottom: 15px;
-        }
+        .input-group { margin-bottom: 18px; }
 
         label {
             display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 5px;
+            font-size: 0.75rem;
+            color: var(--primary);
+            margin-bottom: 6px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
+            font-weight: 700;
         }
 
         input, select {
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            transition: 0.3s;
             box-sizing: border-box;
-            background: #fafafa;
         }
 
-        input:focus, select:focus {
-            border-color: var(--secondary-color);
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: var(--neon-glow);
             outline: none;
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
         }
 
-        button {
+        .btn-main {
             width: 100%;
-            padding: 14px;
+            padding: 15px;
             margin-top: 10px;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-update {
-            background-color: var(--primary-color);
+            border-radius: 12px;
             color: white;
-            box-shadow: 0 4px 12px rgba(0,86,179,0.2);
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            box-shadow: var(--neon-glow);
         }
 
-        .btn-update:hover {
-            background-color: #004494;
-            transform: translateY(-1px);
-        }
-
-        .btn-clear {
-            background-color: transparent;
-            color: var(--danger-color);
-            border: 1px solid var(--danger-color);
-            margin-top: 15px;
-            font-size: 11px;
-            padding: 8px;
-        }
-
-        .btn-clear:hover {
-            background-color: rgba(220, 53, 69, 0.05);
+        .btn-main:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
         }
 
         #log {
-            background: var(--terminal-bg);
-            color: #4ade80;
-            padding: 15px;
-            border-radius: 10px;
-            height: 140px;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 11px;
             margin-top: 25px;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 15px;
+            height: 120px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.7rem;
+            color: #a5f3fc;
+            border-left: 2px solid var(--primary);
         }
 
         .footer {
+            margin-top: 25px;
             text-align: center;
-            margin-top: 20px;
-            font-size: 11px;
-            color: #aaa;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
         }
 
-        .footer b {
-            color: var(--primary-color);
+        .footer span { color: var(--primary); font-weight: bold; }
+
+        .btn-ghost {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            text-decoration: underline;
         }
 
-        /* Custom Scrollbar for Log */
-        #log::-webkit-scrollbar { width: 5px; }
-        #log::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+        /* Scrollbar Style */
+        #log::-webkit-scrollbar { width: 4px; }
+        #log::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>D'MarcFF Provisioning</h2>
+<div class="container">
+    <h2>D'MARCFF ROBOTIC</h2>
     
     <div class="input-group">
-        <label>ID Perangkat (6 Digit MAC)</label>
-        <input type="text" id="deviceID" placeholder="Contoh: EBCF08" value="EBCF08" oninput="checkDevice()">
+        <label>System ID (MAC)</label>
+        <input type="text" id="deviceID" placeholder="EBCF08" value="EBCF08" oninput="checkDevice()">
     </div>
 
     <div class="input-group">
-        <label>Pesan String</label>
-        <input type="text" id="valStr" placeholder="Status operasional...">
+        <label>Command String</label>
+        <input type="text" id="valStr" placeholder="Ready...">
     </div>
     
-    <div class="input-group">
-        <label>Nilai Angka</label>
-        <input type="number" id="valNum" value="0">
-    </div>
-    
-    <div class="input-group">
-        <label>Status Relay</label>
-        <select id="valBool">
-            <option value="true">AKTIF (ON)</option>
-            <option value="false">MATI (OFF)</option>
-        </select>
+    <div class="input-group" style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+            <label>Value</label>
+            <input type="number" id="valNum" value="0">
+        </div>
+        <div style="flex: 1;">
+            <label>Relay Mode</label>
+            <select id="valBool">
+                <option value="true">ACTIVE</option>
+                <option value="false">OFF</option>
+            </select>
+        </div>
     </div>
 
-    <button class="btn-update" onclick="handleUpdate()">SIMPAN KE GITHUB & MQTT</button>
+    <button class="btn-main" onclick="handleUpdate()">Deploy Configuration</button>
     
-    <div id="log">Sistem Siap...</div>
+    <div id="log">SYSTEM INITIALIZED...</div>
     
-    <button class="btn-clear" onclick="clearToken()">HAPUS TOKEN AKSES</button>
+    <button class="btn-ghost" onclick="clearToken()">Reset API Token</button>
 
     <div class="footer">
-        Copyright © 2026 <b>D'marcFF Robotic</b>
+        © 2026 <span>D'MARCFF ROBOTIC</span>
     </div>
 </div>
 
@@ -198,7 +195,7 @@
 
     function initMQTT() {
         mqttClient = mqtt.connect(CONFIG.mqttUrl, { username: CONFIG.mqttUser, password: CONFIG.mqttPass });
-        mqttClient.on('connect', () => printLog("Koneksi MQTT Berhasil."));
+        mqttClient.on('connect', () => printLog("CONNECTION: MQTT ESTABLISHED"));
     }
 
     function printLog(msg) {
@@ -210,22 +207,6 @@
     function getFullID() {
         let val = document.getElementById('deviceID').value.trim().toUpperCase();
         return val.startsWith("RELAY_") ? val : "RELAY_" + val;
-    }
-
-    function getGitHubToken() {
-        let token = localStorage.getItem('gh_token');
-        if (!token) {
-            token = prompt("GitHub Token diperlukan untuk sinkronisasi:");
-            if (token) localStorage.setItem('gh_token', token);
-        }
-        return token;
-    }
-
-    function clearToken() {
-        if(confirm("Hapus token dari browser?")) {
-            localStorage.removeItem('gh_token');
-            location.reload();
-        }
     }
 
     async function checkDevice() {
@@ -242,14 +223,25 @@
                 document.getElementById('valStr').value = content.string_data;
                 document.getElementById('valNum').value = content.number_data;
                 document.getElementById('valBool').value = content.bool_data.toString();
-                printLog(`Data ${id} sinkron.`);
+                printLog(`SYNC: ${id} DETECTED`);
             }
         } catch (e) {}
     }
 
+    function clearToken() {
+        if(confirm("Hapus token?")) {
+            localStorage.removeItem('gh_token');
+            location.reload();
+        }
+    }
+
     async function handleUpdate() {
-        const token = getGitHubToken();
-        if (!token) return;
+        let token = localStorage.getItem('gh_token');
+        if(!token) {
+            token = prompt("Enter GitHub Token:");
+            if(token) localStorage.setItem('gh_token', token);
+            else return;
+        }
 
         const deviceID = getFullID();
         const payload = {
@@ -261,11 +253,11 @@
         };
 
         mqttClient.publish(`${deviceID}/config`, JSON.stringify(payload), { retain: true });
-        printLog(`MQTT Sent: ${deviceID}`);
+        printLog(`MQTT: DISPATCHED TO ${deviceID}`);
 
         const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${deviceID}/data.json`;
         try {
-            printLog("Syncing GitHub...");
+            printLog("GITHUB: STARTING SYNC...");
             const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
             let sha = null;
             if (getRes.ok) {
@@ -277,18 +269,15 @@
                 method: "PUT",
                 headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Update ${deviceID} via Dash`,
+                    message: `Automated Sync: ${deviceID}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
                     sha: sha
                 })
             });
 
-            if (putRes.ok) printLog("Sinkronisasi Selesai. ✅");
-            else {
-                const err = await putRes.json();
-                printLog("Error: " + err.message);
-            }
-        } catch (e) { printLog("Koneksi Putus."); }
+            if (putRes.ok) printLog("SUCCESS: GITHUB SSOT UPDATED ✅");
+            else printLog("ERROR: SYNC FAILED");
+        } catch (e) { printLog("CRITICAL: API ERROR"); }
     }
 
     initMQTT();
