@@ -187,8 +187,7 @@
           <div><span style="color:var(--accent);">☁️ Cloud Backup</span></div>
           <div><span id="ghSyncStatusSmall" class="sync-status sync-off">● Offline</span></div>
         </div>
-        <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">--/--/--</span></div>
-        <!-- No input fields here; all GitHub settings come from QR -->
+        <!-- <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">--/--/--</span></div> -->
       </div>
       <div class="grid-2">
         <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
@@ -237,8 +236,8 @@
     </div>
   </div>
 
-  <!-- About & Contact Card (collapsible, accordion) -->
-  <div class="card collapsible collapsed about-section">
+  <!-- About & Support Card (collapsible, accordion) - added app-card class -->
+  <div class="card collapsible collapsed app-card hidden about-section">
     <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <p><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
@@ -345,7 +344,7 @@
     else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) commonPins = [5,4,14,12,13,15];
     commonPins.forEach(p => { const opt = document.createElement('option'); opt.value = p; datalist.appendChild(opt); });
   }
-  function suggestDefaultPins() { /* similar to before */ let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); log(`💡 Suggested GPIO (${pinCount} relays): ${suggested.join(',')}`); }
+  function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); log(`💡 Suggested GPIO (${pinCount} relays): ${suggested.join(',')}`); }
 
   function setConnectionState(connected) {
     safeCls($('connCard'), 'hidden', connected);
@@ -359,6 +358,7 @@
     if (!DEVICE_ID || !mqttBroker) return;
     const url = `wss://${mqttBroker}:${mqttPort}/mqtt`;
     const clientId = 'web_' + Math.random().toString(16).substr(2,8);
+    if (mqttClient && mqttClient.connected) mqttClient.end();
     mqttClient = mqtt.connect(url, {clientId, username:mqttUser, password:mqttPass, clean:true, reconnectPeriod:0});
     mqttClient.on('connect', () => {
       log('✅ MQTT Connected');
@@ -460,24 +460,34 @@
   async function fetchChatId() { const token = $('tgToken').value.trim(); if(!token) return alert('Enter Bot Token first!'); try { const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); const data = await res.json(); if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { safeVal('tgChatId', data.result[0].message.chat.id); alert('✅ Chat ID found!'); } else alert('⚠️ Send a message to the bot first, then try again.'); } catch(e) { alert('Failed to fetch Chat ID'); } }
   async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { log(`❌ Telegram send error: ${e.message}`); } } }
 
-  // ==================== QR PROCESSING ====================
+  // ==================== QR PROCESSING (with JSON fix) ====================
   function processQR(data) {
     try {
-      const qr = JSON.parse(data);
-      if (!qr.broker || !qr.port || !qr.user || !qr.pass || !qr.device) throw new Error('Missing MQTT fields');
-      if (!qr.ghOwner || !qr.ghRepo || !qr.ghToken) throw new Error('Missing GitHub fields');
-      mqttBroker = qr.broker;
-      mqttPort = qr.port;
-      mqttUser = qr.user;
-      mqttPass = qr.pass;
-      DEVICE_ID = qr.device.startsWith('DmarchFF_') ? qr.device : 'DmarchFF_' + qr.device;
+      // Attempt to parse JSON
+      let jsonData;
+      try {
+        jsonData = JSON.parse(data);
+      } catch(e) {
+        // Try to fix missing quotes around device value
+        let fixed = data.replace(/"device":\s*([^",\n\}]+)/, '"device":"$1"');
+        jsonData = JSON.parse(fixed);
+      }
+      if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) throw new Error('Missing MQTT fields');
+      if (!jsonData.ghOwner || !jsonData.ghRepo || !jsonData.ghToken) throw new Error('Missing GitHub fields');
+      mqttBroker = jsonData.broker;
+      mqttPort = jsonData.port;
+      mqttUser = jsonData.user;
+      mqttPass = jsonData.pass;
+      let deviceRaw = jsonData.device;
+      if (!deviceRaw.startsWith('DmarchFF_')) deviceRaw = 'DmarchFF_' + deviceRaw;
+      DEVICE_ID = deviceRaw;
       safeTxt('deviceIdDisplay', DEVICE_ID);
-      $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
+      if($('deviceIdSuffix')) $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
       ghConfig = {
-        owner: qr.ghOwner,
-        repo: qr.ghRepo,
-        basePath: qr.ghBasePath || 'RELAY/data',
-        token: qr.ghToken,
+        owner: jsonData.ghOwner,
+        repo: jsonData.ghRepo,
+        basePath: jsonData.ghBasePath || 'RELAY/data',
+        token: jsonData.ghToken,
         branch: 'main'
       };
       ghSyncEnabled = true;
@@ -485,11 +495,10 @@
       saveAllConfig();
       setSyncStatus(true);
       updateGhPathDisplay();
-      // Hide MQTT card and show other cards
+      // Hide MQTT card and show all others
       $('connCard').classList.add('hidden');
       document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
       connectMQTT();
-      // Load schedules and device config from GitHub
       setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
       log('✅ Configuration loaded from QR. MQTT connecting...');
       alert('Configuration successful! MQTT connecting...');
@@ -502,10 +511,57 @@
 
   // ==================== QR MODAL ====================
   let qrImagePreview=null;
-  function openQR(){ $('qrModal').style.display='flex'; $('reader').innerHTML=''; if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
-  async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
-  $('startCameraBtn').onclick=function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('❌ Camera: '+err); }); };
-  $('qrFileInput').onchange=async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; const reader=new FileReader(); reader.onload=function(evt){ const img=document.createElement('img'); img.src=evt.target.result; img.style.maxWidth='100%'; img.style.borderRadius='8px'; $('reader').appendChild(img); qrImagePreview=img; }; reader.readAsDataURL(file); try{ qrScanner=new Html5Qrcode("reader"); const decodedText=await qrScanner.scanFile(file,true); onQRSuccess(decodedText); }catch(err){ alert('❌ QR scan failed'); } };
+  function openQR(){ 
+    $('qrModal').style.display='flex'; 
+    $('reader').innerHTML = ''; 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  async function closeQR(){ 
+    $('qrModal').style.display='none'; 
+    if(qrScanner){ 
+      try{ await qrScanner.stop(); }catch(e){} 
+      qrScanner.clear(); 
+      qrScanner=null; 
+    } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  // Ensure we only attach event once
+  const startCameraBtn = $('startCameraBtn');
+  if(startCameraBtn) {
+    startCameraBtn.onclick = function(){ 
+      if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } 
+      if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+      $('reader').innerHTML=''; 
+      qrScanner=new Html5Qrcode("reader"); 
+      qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('❌ Camera: '+err); }); 
+    };
+  }
+  const qrFileInput = $('qrFileInput');
+  if(qrFileInput) {
+    qrFileInput.onchange = async function(e){ 
+      const file=e.target.files[0]; 
+      if(!file) return; 
+      if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } 
+      if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+      $('reader').innerHTML=''; 
+      const reader=new FileReader(); 
+      reader.onload=function(evt){ 
+        const img=document.createElement('img'); 
+        img.src=evt.target.result; 
+        img.style.maxWidth='100%'; 
+        img.style.borderRadius='8px'; 
+        $('reader').appendChild(img); 
+        qrImagePreview=img; 
+      }; 
+      reader.readAsDataURL(file); 
+      try{ 
+        const tempScanner = new Html5Qrcode("reader"); 
+        const decodedText=await tempScanner.scanFile(file,true); 
+        onQRSuccess(decodedText); 
+        tempScanner.clear();
+      } catch(err){ alert('❌ QR scan failed'); } 
+    };
+  }
   function onQRSuccess(decodedText){ processQR(decodedText); }
 
   // ==================== INIT ====================
@@ -540,13 +596,15 @@
       initRelayButtons(); initScheduler(); initNotifUI();
       setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
     } else {
-      // Show MQTT card only
+      // Show MQTT card only, hide all others including About
       $('connCard').classList.remove('hidden');
       document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
-      initRelayButtons(); initScheduler(); initNotifUI(); // but they are hidden
+      // Still initialize UI components but they are hidden
+      initRelayButtons(); initScheduler(); initNotifUI();
     }
     // Attach event for QR button
-    $('showQrBtn').onclick = () => openQR();
+    const showQrBtn = $('showQrBtn');
+    if(showQrBtn) showQrBtn.onclick = () => openQR();
     // Other buttons
     const attachVibration = (el, handler) => { if(!el) return; el.onclick = (e) => { vibrate(); if(handler) handler(e); }; };
     attachVibration($('disconnectBtn'), () => { if(mqttClient) mqttClient.end(true); });
