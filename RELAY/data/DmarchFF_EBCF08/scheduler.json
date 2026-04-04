@@ -11,7 +11,18 @@
       ],
       "enabled": true,
       "_modified": "2026-04-04T18:58:13.369Z"
+    },
+    {
+      "id": "mnkp3udtd5jd",
+      "time": "12:00",
+      "relay": "2",
+      "action": "1",
+      "days": [
+        2
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T18:58:17.105Z"
     }
   ],
-  "updatedAt": "2026-04-04T18:58:14.722Z"
+  "updatedAt": "2026-04-04T18:58:18.478Z"
 }
