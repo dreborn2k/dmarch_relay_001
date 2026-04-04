@@ -287,26 +287,31 @@
     localStorage.setItem('dm_full_config', JSON.stringify(config));
   }
 
-  function loadFullConfig() {
-    const saved = localStorage.getItem('dm_full_config');
-    if (saved) {
-      try {
-        const cfg = JSON.parse(saved);
-        mqttBroker = cfg.broker; mqttPort = cfg.port; mqttUser = cfg.user; mqttPass = cfg.pass;
-        DEVICE_ID = cfg.device;
-        if (cfg.ghOwner && cfg.ghToken) {
-          ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' };
-          ghSyncEnabled = true;
-          localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
-        }
-        safeTxt('deviceIdDisplay', DEVICE_ID);
-        $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
-        updateGhPathDisplay();
-        return true;
-      } catch(e) { console.warn(e); }
-    }
-    return false;
+ function loadFullConfig() {
+  const saved = localStorage.getItem('dm_full_config');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      mqttBroker = cfg.broker; mqttPort = cfg.port; mqttUser = cfg.user; mqttPass = cfg.pass;
+      DEVICE_ID = cfg.device;
+      if (cfg.ghOwner && cfg.ghToken) {
+        ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' };
+        ghSyncEnabled = true;
+        localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      }
+      // Tambahkan pengecekan null untuk elemen yang mungkin tidak ada
+      const deviceIdDisplay = $('deviceIdDisplay');
+      if (deviceIdDisplay) deviceIdDisplay.textContent = DEVICE_ID;
+      
+      const deviceIdSuffix = $('deviceIdSuffix');
+      if (deviceIdSuffix) deviceIdSuffix.value = DEVICE_ID.replace('DmarchFF_', '');
+      
+      updateGhPathDisplay();
+      return true;
+    } catch(e) { console.warn(e); }
   }
+  return false;
+}
 
   // ==================== GITHUB PATH ====================
   function getDeviceDataPath() { if (!DEVICE_ID) return null; const base = ghConfig.basePath || 'RELAY/data'; return `${base}/${DEVICE_ID}`; }
