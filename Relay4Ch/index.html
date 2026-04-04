@@ -151,19 +151,17 @@
     </div>
   </div>
 
-  <!-- GPIO & Relay Count Card (collapsible, accordion) -->
+  <!-- Relay Configuration Card (collapsible, accordion) - Single unified button -->
   <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🔌 GPIO & Relay Count</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="form-group">
         <label>Number of Relays (1 - <span id="maxRelayLimit">16</span>)</label>
         <input id="relayCount" type="number" min="1" max="16" value="5">
-        <small style="color:#64748b;">Cannot exceed hardware max relay</small>
+        <small style="color:#64748b;">Changing this will restart the device</small>
       </div>
-      <button class="btn-primary" id="applyRelayCountBtn" style="margin-bottom:15px;">✅ Apply Relay Count</button>
-      
       <div class="form-group">
-        <label>🔌 GPIO (comma separated)</label>
+        <label>🔌 GPIO Pins (comma separated)</label>
         <input id="gpioInput" placeholder="e.g., 12,14,27,26,25" list="gpioSuggestions">
         <datalist id="gpioSuggestions"></datalist>
         <div class="gpio-suggest">
@@ -171,7 +169,7 @@
           <span id="gpioHint" style="margin-left: 8px;"></span>
         </div>
       </div>
-      <button class="btn-primary" id="updateGPIOBtn">💾 Update GPIO</button>
+      <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
     </div>
   </div>
 
@@ -185,11 +183,11 @@
           <div><span style="color:var(--accent);">☁️ Cloud Sync</span></div>
           <div style="display:flex; gap:8px;"><span id="ghSyncStatus" class="sync-status sync-off">● Offline</span><button class="btn-danger btn-gh hidden" onclick="disableGitHubSync()" id="ghDisableBtn">🔌 Disable</button></div>
         </div>
-        <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">dreborn2k/dmarchFF/Relay4Ch/config/scheduler.json</span></div>
+        <div id="ghDetailsContainer" class="gh-details">Path: <span id="ghDetails">dreborn2k/dmarcFF/Relay4Ch/config/scheduler.json</span></div>
         <div id="ghInputForm" class="gh-input">
           <div class="grid-2">
             <div class="form-group"><label>GitHub Username</label><input id="ghOwner" value="dreborn2k"></div>
-            <div class="form-group"><label>Repo Name</label><input id="ghRepo" value="dmarchFF"></div>
+            <div class="form-group"><label>Repo Name</label><input id="ghRepo" value="dmarcFF"></div>
           </div>
           <div class="form-group"><label>File Path (scheduler)</label><input id="ghPath" value="Relay4Ch/config/scheduler.json"></div>
           <div class="form-group"><label>File Path (device)</label><input id="ghConfigPath" value="Relay4Ch/config/device.json"></div>
@@ -267,7 +265,7 @@
   let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
   let maxRelayFromDevice = 16;
   let currentHardware = "";
-  let currentRelayState = []; // ✅ track relay states from device
+  let currentRelayState = [];
 
   // Helper DOM
   const $ = id => document.getElementById(id);
@@ -333,7 +331,6 @@
     if(!btn) return;
     const cmd = btn.dataset.state === 'on' ? 0 : 1;
     mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
-    // ✅ No notification here; will be sent after device confirms state change
   }
 
   function updateRelayUI(num, state) {
@@ -341,7 +338,6 @@
     if(!btn) return;
     const isOn = (state==='1'||state===1||state===true);
     const idx = num-1;
-    // Send notification only if state actually changed (device responded)
     if (currentRelayState[idx] !== isOn) {
       currentRelayState[idx] = isOn;
       sendNotif(`🔌 Relay ${num}`, `Relay ${num} turned ${isOn ? 'ON' : 'OFF'}`);
@@ -366,16 +362,49 @@
     else sel.value = '1';
   }
 
-  function applyRelayCount(newCount) {
-    if(newCount < 1) newCount = 1;
-    if(newCount > maxRelayFromDevice) newCount = maxRelayFromDevice;
-    if(newCount === relayCount) return;
+  // ==================== SINGLE RELAY CONFIGURATION FUNCTION ====================
+  async function applyRelayConfig() {
+    const newCount = parseInt($('relayCount').value);
+    const gpioRaw = $('gpioInput').value.trim();
+    const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
+    
+    // Validate
+    if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) {
+      alert(`Relay count must be between 1 and ${maxRelayFromDevice}`);
+      return;
+    }
+    if (gpioList.length !== newCount && newCount !== relayCount) {
+      if (!confirm(`Number of GPIO pins (${gpioList.length}) does not match relay count (${newCount}). Continue anyway?`)) {
+        return;
+      }
+    }
+    
+    // Send MQTT commands if connected
+    if (mqttClient && mqttClient.connected) {
+      if (newCount !== relayCount) {
+        pub(DEVICE_ID + '/config/relayCount', String(newCount));
+      }
+      if (gpioRaw !== (window.lastGpio || '')) {
+        pub(DEVICE_ID + '/gpio/update', gpioRaw);
+      }
+    } else {
+      alert('MQTT not connected. Changes will be saved locally only.');
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('dm_relay_count', newCount);
+    localStorage.setItem('dm_gpio', gpioRaw);
     relayCount = newCount;
-    localStorage.setItem('dm_relay_count', relayCount);
-    initRelayButtons();
-    if(mqttClient && mqttClient.connected) pub(DEVICE_ID+'/config/relayCount', String(relayCount));
-    log(`🔢 Number of relays changed to ${relayCount}`);
-    if(ghSyncEnabled && ghConfig?.token) saveDeviceConfigToGitHub();
+    initRelayButtons(); // update UI immediately
+    window.lastGpio = gpioRaw;
+    
+    // Save to GitHub if sync enabled
+    if (ghSyncEnabled && ghConfig?.token) {
+      await saveDeviceConfigToGitHub();
+    }
+    
+    log(`✅ Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}`);
+    alert('Configuration sent. Device will restart if changes were made.');
   }
 
   // ==================== MQTT ====================
@@ -416,6 +445,8 @@
         window.currentPins = d.relay_pins;
         const hintSpan = $('gpioHint');
         if(hintSpan) hintSpan.innerHTML = `✓ Detected: ${d.relay_pins}`;
+        window.lastGpio = d.relay_pins;
+        safeVal('gpioInput', d.relay_pins);
       }
       updateGPIOSuggestions();
     } catch(e) {}
@@ -518,7 +549,7 @@
     mqttClient.on('close', () => { log('🔌 Disconnected'); setConnectionState(false); });
   }
 
-  // ==================== GITHUB SYNC ====================
+  // ==================== GITHUB SYNC (with retry and SHA handling) ====================
   function setSyncStatus(online) {
     ghSyncEnabled = online;
     const statusEl = $('ghSyncStatus'), inputForm = $('ghInputForm'), enableBtn = $('ghEnableBtn'), disableBtn = $('ghDisableBtn'), details = $('ghDetailsContainer');
@@ -536,7 +567,7 @@
   function enableGitHubSync() {
     vibrate();
     const owner = $('ghOwner').value.trim() || 'dreborn2k';
-    const repo = $('ghRepo').value.trim() || 'dmarchFF';
+    const repo = $('ghRepo').value.trim() || 'dmarcFF';
     const path = $('ghPath').value.trim() || 'Relay4Ch/config/scheduler.json';
     const configPath = $('ghConfigPath').value.trim() || 'Relay4Ch/config/device.json';
     const token = $('ghToken').value.trim();
@@ -570,18 +601,24 @@
       const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
       if(res.ok) {
         const data = await res.json(), config = JSON.parse(atob(data.content));
-        if(config.device === DEVICE_ID && config.relayCount) {
-          relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
-          localStorage.setItem('dm_relay_count', relayCount);
-          initRelayButtons(); safeVal('relayCount', relayCount);
-          log(`✅ Load device config: relayCount=${relayCount}`);
+        if(config.device === DEVICE_ID) {
+          if(config.relayCount) {
+            relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
+            localStorage.setItem('dm_relay_count', relayCount);
+            initRelayButtons(); safeVal('relayCount', relayCount);
+            log(`✅ Load device config: relayCount=${relayCount}`);
+          }
+          if(config.gpio) {
+            const gpioStr = config.gpio.join(',');
+            safeVal('gpioInput', gpioStr);
+            window.lastGpio = gpioStr;
+          }
         }
-        if(config.gpio) safeVal('gpioInput', config.gpio.join(','));
       }
     } catch(e) { log('ℹ️ device.json not yet exists'); }
   }
   async function saveDeviceConfigToGitHub(retry = 0) {
-    if (!ghSyncEnabled || !ghConfig.token) return;
+    if (!ghSyncEnabled || !ghConfig.token) return false;
     const gpioRaw = $('gpioInput').value.trim();
     const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
     const deviceConfig = { 
@@ -592,8 +629,7 @@
     };
     try {
       const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.configPath}`;
-      
-      // 1. Ambil SHA terbaru (selalu lakukan GET sebelum PUT)
+      // 1. Get latest SHA
       let sha = null;
       const getRes = await fetch(url, { 
         headers: { 'Authorization': `token ${ghConfig.token}` } 
@@ -604,8 +640,7 @@
       } else if (getRes.status !== 404) {
         throw new Error(`Failed to get file info: ${getRes.status}`);
       }
-      
-      // 2. Siapkan konten
+      // 2. Prepare content
       const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2))));
       const body = { 
         message: `⚙️ Update device config via web panel`, 
@@ -613,8 +648,7 @@
         branch: 'main' 
       };
       if (sha) body.sha = sha;
-      
-      // 3. Lakukan PUT
+      // 3. PUT
       const putRes = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -623,26 +657,22 @@
         },
         body: JSON.stringify(body)
       });
-      
       if (putRes.ok) {
         log('💾 Device config saved to GitHub');
-        return;
+        return true;
       }
-      
-      // 4. Jika conflict (409) dan masih dalam batas retry, coba ulang
+      // 4. Retry on conflict (409)
       if (putRes.status === 409 && retry < 2) {
         log(`⚠️ Conflict detected, retrying (${retry+1}/2)...`);
         await new Promise(r => setTimeout(r, 500));
         return saveDeviceConfigToGitHub(retry + 1);
       }
-      
-      // 5. Jika gagal selain 409, lempar error
       const errText = await putRes.text();
       throw new Error(`HTTP ${putRes.status}: ${errText}`);
-      
     } catch (err) {
       log(`❌ Save device config error: ${err.message}`);
       console.error(err);
+      return false;
     }
   }
   async function pushToGitHub(retry=0) {
@@ -946,17 +976,16 @@
     };
     attachVibration($('btnConnect'), toggleConnect);
     attachVibration($('disconnectBtn'), toggleConnect);
-    attachVibration($('allOnBtn'), () => { pub(DEVICE_ID+'/all/on','1'); }); // no notification here
+    attachVibration($('allOnBtn'), () => { pub(DEVICE_ID+'/all/on','1'); });
     attachVibration($('allOffBtn'), () => { pub(DEVICE_ID+'/all/off','1'); });
     attachVibration($('saveNTPBtn'), () => { pub(DEVICE_ID+'/ntp/set', $('ntpSelect').value); pub(DEVICE_ID+'/timezone/set', $('tzInput').value); });
-    attachVibration($('updateGPIOBtn'), () => { pub(DEVICE_ID+'/gpio/update', $('gpioInput').value); if(ghSyncEnabled) saveDeviceConfigToGitHub(); });
+    attachVibration($('applyRelayConfigBtn'), () => { applyRelayConfig(); });
+    attachVibration($('suggestDefaultPinsBtn'), () => suggestDefaultPins());
     attachVibration($('updateNetBtn'), () => { const ssid=$('netSsid').value.trim(); if(!ssid) return alert('SSID required!'); pub(DEVICE_ID+'/network/update', JSON.stringify({ssid,pass:$('netPass').value.trim()})); alert('✅ Command sent.'); });
     attachVibration($('resetNetBtn'), () => { if(confirm('Reset WiFi to AP mode?')) pub(DEVICE_ID+'/network/reset','1'); });
     attachVibration($('otaBtn'), () => pub(DEVICE_ID+'/system/ota','1'));
     attachVibration($('restartBtn'), () => pub(DEVICE_ID+'/system/restart','1'));
     attachVibration($('clearLogBtn'), () => { const t=$('terminal'); if(t) t.innerHTML=''; });
-    attachVibration($('applyRelayCountBtn'), () => { const newCount = parseInt($('relayCount').value); applyRelayCount(newCount); if(ghSyncEnabled) saveDeviceConfigToGitHub(); });
-    attachVibration($('suggestDefaultPinsBtn'), () => suggestDefaultPins());
     
     window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
   });
