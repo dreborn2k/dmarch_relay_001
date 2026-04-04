@@ -31,7 +31,40 @@
       ],
       "enabled": true,
       "_modified": "2026-04-04T16:50:22.686Z"
+    },
+    {
+      "id": "mnkp3ri1iunh",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T18:58:13.369Z"
+    },
+    {
+      "id": "mnkp3udtd5jd",
+      "time": "12:00",
+      "relay": "2",
+      "action": "1",
+      "days": [
+        2
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T18:58:17.105Z"
+    },
+    {
+      "id": "mnkp3xltdctx",
+      "time": "12:00",
+      "relay": "3",
+      "action": "1",
+      "days": [
+        3
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T18:58:21.281Z"
     }
   ],
-  "updatedAt": "2026-04-04T16:50:24.082Z"
+  "updatedAt": "2026-04-04T19:15:58.595Z"
 }
