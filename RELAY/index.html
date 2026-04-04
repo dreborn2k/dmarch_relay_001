@@ -105,49 +105,64 @@
     }
 
     async function updateProvisioning() {
-        const id = getDeviceID();
-        if (!id) return alert("Masukkan 6 digit MAC!");
+    const id = getDeviceID();
+    if (!id) return alert("Masukkan 6 digit MAC!");
 
-        const vStr = document.getElementById('valStr').value;
-        const vNum = parseInt(document.getElementById('valNum').value);
-        const vBool = document.getElementById('valBool').value === "true";
+    const vStr = document.getElementById('valStr').value;
+    const vNum = parseInt(document.getElementById('valNum').value);
+    const vBool = document.getElementById('valBool').value === "true";
 
-        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
-        const payload = {
-            device_id: id,
-            string_data: vStr,
-            number_data: vNum,
-            bool_data: vBool,
-            last_update: new Date().toLocaleString()
-        };
+    const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
+    const payload = {
+        device_id: id,
+        string_data: vStr,
+        number_data: vNum,
+        bool_data: vBool,
+        last_update: new Date().toLocaleString()
+    };
 
-        // 1. MQTT Publish (Real-time)
-        client.publish(`${id}/config`, JSON.stringify(payload), { retain: true });
-        printLog("MQTT Config dikirim.");
+    // 1. Kirim via MQTT (Ini sudah berhasil di log Anda)
+    client.publish(`${id}/config`, JSON.stringify(payload), { retain: true });
+    printLog("MQTT Config dikirim.");
 
-        // 2. GitHub PUT (Auto Create Folder & File)
-        try {
-            const getRes = await fetch(url, { headers: { 'Authorization': `token ${CONFIG.token}` } });
-            let sha = null;
-            if (getRes.ok) {
-                const fileData = await getRes.json();
-                sha = fileData.sha;
-            }
+    // 2. Kirim ke GitHub (Database SSoT)
+    try {
+        // Cek dulu apakah file sudah ada untuk mendapatkan SHA
+        const getRes = await fetch(url, { 
+            headers: { 'Authorization': `token ${CONFIG.token}` } 
+        });
+        
+        let sha = null;
+        if (getRes.ok) {
+            const fileData = await getRes.json();
+            sha = fileData.sha;
+        }
 
-            const putRes = await fetch(url, {
-                method: "PUT",
-                headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: `Provisioning ${id}`,
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
-                    sha: sha
-                })
-            });
+        // Proses PUSH (Create atau Update)
+        const putRes = await fetch(url, {
+            method: "PUT",
+            headers: { 
+                "Authorization": `token ${CONFIG.token}`,
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({
+                message: `Update data for ${id}`,
+                // Menggunakan btoa yang mendukung karakter UTF-8
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
+                sha: sha 
+            })
+        });
 
-            if (putRes.ok) printLog(`Berhasil! Folder ${id} aktif di GitHub. ✅`);
-            else printLog("Gagal sinkronisasi ke GitHub.");
-        } catch (e) { printLog("Error: " + e.message); }
+        if (putRes.ok) {
+            printLog(`Berhasil! File /${id}/data.json tercipta di GitHub. ✅`);
+        } else {
+            const errData = await putRes.json();
+            printLog(`Gagal GitHub: ${errData.message}`);
+        }
+    } catch (e) {
+        printLog("Error Koneksi API: " + e.message);
     }
+}
 </script>
 </body>
 </html>
