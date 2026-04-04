@@ -267,6 +267,7 @@
   let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
   let maxRelayFromDevice = 16;
   let currentHardware = "";
+  let currentRelayState = []; // ✅ track relay states from device
 
   // Helper DOM
   const $ = id => document.getElementById(id);
@@ -275,11 +276,8 @@
   const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   
-  // Vibration feedback (if supported)
   function vibrate() {
-    if (window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(20);
-    }
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
   }
 
   // ==================== ACCORDION BEHAVIOR ====================
@@ -308,11 +306,12 @@
     });
   }
 
-  // ==================== RELAY UI DYNAMIC (grid-4) ====================
+  // ==================== RELAY UI ====================
   function initRelayButtons() {
     const box = $('relayBtns');
     if(!box) return;
     box.innerHTML = '';
+    currentRelayState = new Array(relayCount).fill(false);
     for(let i=1; i<=relayCount; i++) {
       const btn = document.createElement('button');
       btn.id = `btn-relay-${i}`;
@@ -321,12 +320,37 @@
       btn.textContent = `Relay ${i}`;
       btn.style.fontSize = '0.8rem';
       btn.style.padding = '8px 0';
-      btn.onclick = () => { sendRelayCommand(i); sendNotif(`🔌 Relay ${i}`,`Relay ${i} toggled`); vibrate(); };
+      btn.onclick = () => { sendRelayCommand(i); vibrate(); };
       btn.type = 'button';
       box.appendChild(btn);
     }
     updateSchedulerRelaySelect();
   }
+
+  function sendRelayCommand(num) {
+    if(!mqttClient||!mqttClient.connected) return alert('⚠️ MQTT disconnected!');
+    const btn = $(`btn-relay-${num}`);
+    if(!btn) return;
+    const cmd = btn.dataset.state === 'on' ? 0 : 1;
+    mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
+    // ✅ No notification here; will be sent after device confirms state change
+  }
+
+  function updateRelayUI(num, state) {
+    const btn = $(`btn-relay-${num}`);
+    if(!btn) return;
+    const isOn = (state==='1'||state===1||state===true);
+    const idx = num-1;
+    // Send notification only if state actually changed (device responded)
+    if (currentRelayState[idx] !== isOn) {
+      currentRelayState[idx] = isOn;
+      sendNotif(`🔌 Relay ${num}`, `Relay ${num} turned ${isOn ? 'ON' : 'OFF'}`);
+    }
+    btn.dataset.state = isOn ? 'on' : 'off';
+    btn.textContent = `Relay ${num}${isOn?' ✓':' ⚪'}`;
+    btn.className = isOn ? 'btn-success' : 'btn-secondary';
+  }
+
   function updateSchedulerRelaySelect() {
     const sel = $('schRelay');
     if(!sel) return;
@@ -341,6 +365,7 @@
     if(cur && cur <= relayCount) sel.value = cur;
     else sel.value = '1';
   }
+
   function applyRelayCount(newCount) {
     if(newCount < 1) newCount = 1;
     if(newCount > maxRelayFromDevice) newCount = maxRelayFromDevice;
@@ -358,39 +383,7 @@
     if(mqttClient && mqttClient.connected) mqttClient.publish(topic, payload, {qos:0}, e=>e?log('❌ Pub Error'):log(`📤 ${topic} -> ${payload}`));
     else log('⚠️ Disconnected');
   }
-  function sendRelayCommand(num) {
-    if(!mqttClient||!mqttClient.connected) return alert('⚠️ MQTT disconnected!');
-    const btn = $(`btn-relay-${num}`);
-    if(!btn) return;
-    const cmd = btn.dataset.state === 'on' ? 0 : 1;
-    mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd));
-  }
-  function updateRelayUI(num, state) {
-    const btn = $(`btn-relay-${num}`);
-    if(!btn) return;
-    const isOn = (state==='1'||state===1||state===true);
-    btn.dataset.state = isOn ? 'on' : 'off';
-    btn.textContent = `Relay ${num}${isOn?' ✓':' ⚪'}`;
-    btn.className = isOn ? 'btn-success' : 'btn-secondary';
-  }
-  
-  function renderPinBadges(pinStr) {
-    const container = $('relayPinsContainer');
-    if(!container) return;
-    container.innerHTML = '';
-    if(!pinStr || pinStr === '--') {
-      container.innerHTML = '<span style="color:#94a3b8;">--</span>';
-      return;
-    }
-    const pins = pinStr.split(',');
-    pins.forEach(p => {
-      const badge = document.createElement('span');
-      badge.className = 'pin-badge';
-      badge.textContent = `GPIO ${p.trim()}`;
-      container.appendChild(badge);
-    });
-  }
-  
+
   function updateSystemHealth(msg) {
     try {
       const d = JSON.parse(msg);
@@ -427,7 +420,24 @@
       updateGPIOSuggestions();
     } catch(e) {}
   }
-  
+
+  function renderPinBadges(pinStr) {
+    const container = $('relayPinsContainer');
+    if(!container) return;
+    container.innerHTML = '';
+    if(!pinStr || pinStr === '--') {
+      container.innerHTML = '<span style="color:#94a3b8;">--</span>';
+      return;
+    }
+    const pins = pinStr.split(',');
+    pins.forEach(p => {
+      const badge = document.createElement('span');
+      badge.className = 'pin-badge';
+      badge.textContent = `GPIO ${p.trim()}`;
+      container.appendChild(badge);
+    });
+  }
+
   function updateGPIOSuggestions() {
     const datalist = $('gpioSuggestions');
     if(!datalist) return;
@@ -448,7 +458,7 @@
       datalist.appendChild(opt);
     });
   }
-  
+
   function suggestDefaultPins() {
     let defaultPinsAll = [];
     if(currentHardware.includes('ESP32S2')) {
@@ -474,7 +484,11 @@
     safeCls($('disconnectBtn'), 'hidden', !connected);
     document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected));
     safeTxt('connStatus', connected?'Status: Connected':'Status: Disconnected');
+    if(connected) {
+      currentRelayState = new Array(relayCount).fill(false);
+    }
   }
+
   function toggleConnect() {
     vibrate();
     if(mqttClient && mqttClient.connected) { mqttClient.end(true); return; }
@@ -486,6 +500,7 @@
     mqttClient.on('connect', () => {
       log('✅ MQTT Connected');
       setConnectionState(true);
+      currentRelayState = new Array(relayCount).fill(false);
       mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);
       mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');
       if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); }
@@ -716,22 +731,15 @@
   }
   function shortenUrl(u){ try{ const x=new URL(u); return x.hostname+(x.pathname.length>15?'...':x.pathname); }catch{ return u.length>30?u.substring(0,30)+'...':u; } }
   
-  // TELEGRAM FIXES
   function editTelegramConfig() {
     const tgConfigDiv = $('tgConfig');
     const tgConnectedDiv = $('tgConnected');
     if (tgConfigDiv) tgConfigDiv.classList.remove('hidden');
     if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden');
-    if (notifConfig.tg?.token) {
-      safeVal('tgToken', notifConfig.tg.token);
-    } else {
-      safeVal('tgToken', '');
-    }
-    if (notifConfig.tg?.chatId) {
-      safeVal('tgChatId', notifConfig.tg.chatId);
-    } else {
-      safeVal('tgChatId', '');
-    }
+    if (notifConfig.tg?.token) safeVal('tgToken', notifConfig.tg.token);
+    else safeVal('tgToken', '');
+    if (notifConfig.tg?.chatId) safeVal('tgChatId', notifConfig.tg.chatId);
+    else safeVal('tgChatId', '');
     const badge = $('tgStatusBadge');
     if (badge) {
       badge.textContent = '⚙️ Editing';
@@ -806,16 +814,13 @@
     } 
   }
   
-  // GOTIFY
   function saveGotifyConfig(){ vibrate(); const url=$('gotifyUrl').value.trim(), token=$('gotifyToken').value.trim(); if(!url||!token) return alert('URL & Token required!'); notifConfig.gotify={url,token,enabled:gotifyEnabled,connected:false}; saveNotifConfig(); safeVal('gotifyToken','••••••••'); safeTxt('gotifyUrlDisplay',shortenUrl(url)); updateGotifyUI(); alert('✅ Saved'); }
   function editGotifyConfig(){ safeVal('gotifyUrl',notifConfig.gotify?.url||''); safeVal('gotifyToken','••••••••'); $('gotifyConfig').classList.remove('hidden'); $('gotifyConnected').classList.add('hidden'); updateGotifyUI(); }
   async function testGotify(){ if(!notifConfig.gotify?.url) return alert('Save config first!'); try{ const url=notifConfig.gotify.url.replace(/\/$/,""); const res=await fetch(`${url}/message`,{method:'POST',headers:{'Content-Type':'application/json','X-Gotify-Key':notifConfig.gotify.token},body:JSON.stringify({title:'🧪 Test',message:`dMarch Test OK\nDevice: ${DEVICE_ID}`,priority:5})}); if(res.ok){ gotifyConnected=true; notifConfig.gotify.connected=true; saveNotifConfig(); updateGotifyUI(); log('📡 Gotify OK'); alert('✅ Gotify test sent'); } else throw new Error(); }catch(e){ gotifyConnected=false; updateGotifyUI(); log('❌ Gotify Failed'); alert('❌ Gotify test failed'); } }
-  // WHATSAPP
   function saveWhatsAppConfig(){ vibrate(); const webhook=$('waWebhook').value.trim(), phone=$('waPhone').value.trim(); if(!webhook) return alert('Webhook required!'); notifConfig.wa={webhook,phone:phone||'628551291055',enabled:waEnabled,connected:false}; saveNotifConfig(); safeTxt('waWebhookDisplay',shortenUrl(webhook)); updateWaUI(); alert('✅ Saved'); }
   function editWhatsAppConfig(){ $('waConfig').classList.remove('hidden'); $('waConnected').classList.add('hidden'); updateWaUI(); }
   async function testWhatsApp(){ if(!notifConfig.wa?.webhook) return alert('Save config first!'); try{ await fetch(notifConfig.wa.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:notifConfig.wa.phone,message:`🧪 Test WA\nDevice: ${DEVICE_ID}`,test:true})}); waConnected=true; notifConfig.wa.connected=true; saveNotifConfig(); updateWaUI(); log('💬 WA OK'); alert('✅ Webhook triggered'); }catch(e){ waConnected=false; updateWaUI(); alert('❌ Webhook Error'); } }
   
-  // SEND NOTIFICATION (FIXED TELEGRAM)
   async function sendNotif(title, message) {
     const timestamp = new Date().toLocaleString('en-US');
     const fullMsg = `*${title}*\n${message}\n\n_Device: ${DEVICE_ID}_\n_Time: ${timestamp}_`;
@@ -893,8 +898,8 @@
     };
     attachVibration($('btnConnect'), toggleConnect);
     attachVibration($('disconnectBtn'), toggleConnect);
-    attachVibration($('allOnBtn'), () => { pub(DEVICE_ID+'/all/on','1'); sendNotif('🔌 ALL ON','All relays ON'); });
-    attachVibration($('allOffBtn'), () => { pub(DEVICE_ID+'/all/off','1'); sendNotif('🔌 ALL OFF','All relays OFF'); });
+    attachVibration($('allOnBtn'), () => { pub(DEVICE_ID+'/all/on','1'); }); // no notification here
+    attachVibration($('allOffBtn'), () => { pub(DEVICE_ID+'/all/off','1'); });
     attachVibration($('saveNTPBtn'), () => { pub(DEVICE_ID+'/ntp/set', $('ntpSelect').value); pub(DEVICE_ID+'/timezone/set', $('tzInput').value); });
     attachVibration($('updateGPIOBtn'), () => { pub(DEVICE_ID+'/gpio/update', $('gpioInput').value); if(ghSyncEnabled) saveDeviceConfigToGitHub(); });
     attachVibration($('updateNetBtn'), () => { const ssid=$('netSsid').value.trim(); if(!ssid) return alert('SSID required!'); pub(DEVICE_ID+'/network/update', JSON.stringify({ssid,pass:$('netPass').value.trim()})); alert('✅ Command sent.'); });
