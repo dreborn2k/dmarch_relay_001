@@ -1,165 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>d'marchFF Projects</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D'MARCFF ROBOTIC | Project Hub</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #00d2ff;
+            --accent: #3a7bd5;
+            --text: #f8fafc;
+        }
 
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
 
-    .container {
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-    }
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
 
-    h1 {
-      text-align: center;
-      font-size: 3rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #38bdf8, #a78bfa);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.02em;
-    }
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
 
-    .tagline {
-      text-align: center;
-      color: #94a3b8;
-      margin-bottom: 3rem;
-      font-size: 1.1rem;
-    }
+        .header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
 
-    .projects-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 2rem;
-      margin-top: 1rem;
-    }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1000px;
+        }
 
-    .project-card {
-      background: rgba(30, 41, 59, 0.8);
-      backdrop-filter: blur(4px);
-      border-radius: 2rem;
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      padding: 2rem 1.5rem;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      color: inherit;
-      display: block;
-      text-align: center;
-      box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
-    }
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
 
-    .project-card:hover {
-      transform: translateY(-8px);
-      border-color: #38bdf8;
-      box-shadow: 0 25px 40px -12px rgba(56, 189, 248, 0.3);
-      background: rgba(30, 41, 59, 0.95);
-    }
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
 
-    .icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      display: inline-block;
-    }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
 
-    .project-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(120deg, #e2e8f0, #94a3b8);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
+        .card h2 {
+            color: var(--text);
+            margin: 15px 0;
+            font-size: 1.5rem;
+        }
 
-    .project-description {
-      color: #cbd5e1;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
+        .card p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #0f172a;
-      padding: 0.5rem 1rem;
-      border-radius: 40px;
-      font-size: 0.8rem;
-      color: #38bdf8;
-      border: 1px solid #334155;
-      transition: 0.2s;
-    }
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
 
-    .project-card:hover .badge {
-      background: #38bdf8;
-      color: #0f172a;
-      border-color: #38bdf8;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 4rem;
-      color: #64748b;
-      font-size: 0.8rem;
-    }
-
-    @media (max-width: 700px) {
-      h1 { font-size: 2.2rem; }
-      .projects-grid { grid-template-columns: 1fr; }
-      .project-card { padding: 1.5rem; }
-    }
-  </style>
+        .footer {
+            margin-top: auto;
+            padding-top: 50px;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚡ d'marchFF</h1>
-    <p class="tagline">Industrial IoT Control Panels</p>
 
-    <div class="projects-grid">
-      <!-- Relay4Ch Card -->
-      <a href="Relay4Ch/" class="project-card">
-        <div class="icon">🔌</div>
-        <div class="project-title">Relay Pro</div>
-        <div class="project-description">
-          Kontrol 5-16 relay, jadwal otomatis, notifikasi Telegram/Gotify/WA, sinkronisasi GitHub Cloud.
-        </div>
-        <span class="badge">🚀 Open Panel →</span>
-      </a>
+    <div class="header">
+        <h1>D'MARCFF ROBOTIC</h1>
+        <p>IoT & Embedded Systems Control Hub</p>
+    </div>
 
-      <!-- Queue Card -->
-      <a href="Queue/" class="project-card">
-        <div class="icon">⏳</div>
-        <div class="project-title">Queue Manager</div>
-        <div class="project-description">
-          Manajemen antrian, tampilan antarmuka pelanggan, kontrol panggilan suara, dan notifikasi real-time.
-        </div>
-        <span class="badge">📋 Open Panel →</span>
-      </a>
+    <div class="grid">
+        <a href="./Queue/index.html" class="card">
+            <div>
+                <h2>Digital Queue</h2>
+                <p>Sistem antrean cerdas berbasis P10 LED Panel dengan kontrol MQTT dan sinkronisasi GitHub SSoT.</p>
+            </div>
+            <div class="btn">Open Dashboard</div>
+        </a>
+
+        <a href="./RELAY/index.html" class="card">
+            <div>
+                <h2>RELAY Control</h2>
+                <p>Dashboard kontrol relay standar untuk pengujian cepat dan monitoring status perangkat.</p>
+            </div>
+            <div class="btn">Open Dashboard</div>
+        </a>
+
+        <a href="./Relay4Ch/index.html" class="card">
+            <div>
+                <h2>Relay 4Ch Pro</h2>
+                <p>Sistem komersial dengan fitur Auto-Provisioning dan database dinamis per-MAC Address hardware.</p>
+            </div>
+            <div class="btn">Open Dashboard</div>
+        </a>
     </div>
 
     <div class="footer">
-      © 2025 d'marchFF | Powered by GitHub Pages
+        Copyright &copy; 2026 D'marcFF Robotic | All Rights Reserved
     </div>
-  </div>
+
 </body>
 </html>
