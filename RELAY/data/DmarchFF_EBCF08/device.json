@@ -1,0 +1,12 @@
+{
+  "device": "DmarchFF_EBCF08",
+  "relayCount": 5,
+  "gpio": [
+    "12",
+    "11",
+    "9",
+    "7",
+    "5"
+  ],
+  "updatedAt": "2026-04-04T18:57:38.259Z"
+}
