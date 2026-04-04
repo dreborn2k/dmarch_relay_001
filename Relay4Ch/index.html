@@ -256,7 +256,7 @@
 
 <script>
   // ==================== GLOBALS ====================
-  let mqttClient = null, DEVICE_ID = "dmarch_relay_001", qrScanner = null;
+  let mqttClient = null, DEVICE_ID = "dmarchFF", qrScanner = null;
   let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
   let schedulerInterval = null, lastTriggered = {};
   let ghSyncEnabled = false, ghConfig = JSON.parse(localStorage.getItem('dm_gh_config') || '{}'), ghSyncTimeout = null;
@@ -536,7 +536,7 @@
   function enableGitHubSync() {
     vibrate();
     const owner = $('ghOwner').value.trim() || 'dreborn2k';
-    const repo = $('ghRepo').value.trim() || 'dmarch_relay_001';
+    const repo = $('ghRepo').value.trim() || 'dmarchFF';
     const path = $('ghPath').value.trim() || 'Relay4Ch/config/scheduler.json';
     const configPath = $('ghConfigPath').value.trim() || 'Relay4Ch/config/device.json';
     const token = $('ghToken').value.trim();
