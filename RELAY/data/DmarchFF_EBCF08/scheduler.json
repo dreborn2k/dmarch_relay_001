@@ -22,7 +22,18 @@
       ],
       "enabled": true,
       "_modified": "2026-04-04T18:58:17.105Z"
+    },
+    {
+      "id": "mnkp3xltdctx",
+      "time": "12:00",
+      "relay": "3",
+      "action": "1",
+      "days": [
+        3
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T18:58:21.281Z"
     }
   ],
-  "updatedAt": "2026-04-04T18:58:18.478Z"
+  "updatedAt": "2026-04-04T18:58:22.654Z"
 }
