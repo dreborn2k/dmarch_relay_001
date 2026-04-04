@@ -6,16 +6,15 @@
     <title>D'MarcFF Robotic - IoT Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; padding: 20px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eef2f7; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h2 { text-align: center; color: #007bff; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        label { font-weight: bold; font-size: 14px; display: block; margin-top: 10px; }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; font-size: 14px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin-top: 15px; }
+        h2 { text-align: center; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        label { font-weight: bold; font-size: 13px; display: block; margin-top: 10px; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background: #0056b3; }
-        .btn-clear { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; font-size: 11px; margin-top: 5px; }
-        #log { background: #1e1e1e; color: #4ade80; padding: 15px; border-radius: 8px; height: 160px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; margin-top: 20px; line-height: 1.5; }
-        .footer-text { font-size: 11px; color: #888; text-align: center; margin-top: 15px; }
+        .btn-clear { background: #fff; color: #dc3545; border: 1px solid #dc3545; margin-top: 5px; font-size: 11px; }
+        #log { background: #1e1e1e; color: #4ade80; padding: 15px; border-radius: 8px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -27,29 +26,27 @@
     <input type="text" id="deviceID" placeholder="EBCF08" value="EBCF08" oninput="checkDevice()">
 
     <label>Pesan String:</label>
-    <input type="text" id="valStr" placeholder="Status pesan...">
+    <input type="text" id="valStr" id="valStr" placeholder="Status...">
     
     <label>Nilai Angka:</label>
     <input type="number" id="valNum" value="0">
     
     <label>Status Relay:</label>
     <select id="valBool">
-        <option value="true">ON (Aktif)</option>
-        <option value="false">OFF (Mati)</option>
+        <option value="true">ON</option>
+        <option value="false">OFF</option>
     </select>
 
     <button onclick="handleUpdate()">UPDATE & SYNC GITHUB</button>
-    <button class="btn-clear" onclick="clearToken()">Ganti/Hapus Token</button>
+    <button class="btn-clear" onclick="clearToken()">Ganti Token GitHub</button>
     
     <div id="log">Dashboard Ready.</div>
-    <p class="footer-text">Copyright © 2026 D'marcFF Robotic</p>
 </div>
 
 <script>
-    // --- KONFIGURASI BARU ---
     const CONFIG = {
         repo: 'dreborn2k/dmarch_relay_001',
-        basePath: 'RELAY', // Sesuai permintaan: folder RELAY
+        basePath: 'RELAY', 
         mqttUrl: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
         mqttUser: 'dmarchFF',
         mqttPass: 'dmarchFF2205'
@@ -69,15 +66,15 @@
     }
 
     function getFullID() {
-        let id = document.getElementById('deviceID').value.trim().toUpperCase();
-        if (!id) return "";
-        return id.startsWith("RELAY_") ? id : "RELAY_" + id;
+        let val = document.getElementById('deviceID').value.trim().toUpperCase();
+        if (!val) return "";
+        return val.startsWith("RELAY_") ? val : "RELAY_" + val;
     }
 
     function getGitHubToken() {
         let token = localStorage.getItem('gh_token');
-        if (!token || token === "null") {
-            token = prompt("Masukkan GitHub Token (Classic) dengan izin 'repo':");
+        if (!token) {
+            token = prompt("Masukkan GitHub Token:");
             if (token) localStorage.setItem('gh_token', token);
         }
         return token;
@@ -85,10 +82,10 @@
 
     function clearToken() {
         localStorage.removeItem('gh_token');
-        alert("Token dihapus. Silakan refresh.");
         location.reload();
     }
 
+    // Fungsi Cek dengan Try-Catch yang lebih baik
     async function checkDevice() {
         const id = getFullID();
         const token = localStorage.getItem('gh_token');
@@ -97,16 +94,24 @@
         const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
         
         try {
-            const res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            const res = await fetch(url, { 
+                headers: { 'Authorization': `token ${token}`, 'Cache-Control': 'no-cache' } 
+            });
+            
             if (res.ok) {
                 const data = await res.json();
                 const content = JSON.parse(atob(data.content));
                 document.getElementById('valStr').value = content.string_data;
                 document.getElementById('valNum').value = content.number_data;
                 document.getElementById('valBool').value = content.bool_data.toString();
-                printLog(`Data ${id} ditemukan di GitHub.`);
+                printLog(`Data ${id} sinkron.`);
+            } else if (res.status === 404) {
+                // Jangan tampilkan error di log agar tidak mengganggu saat mengetik
+                console.log("Device belum ada di GitHub.");
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("Cek Gagal:", e);
+        }
     }
 
     async function handleUpdate() {
@@ -124,33 +129,33 @@
 
         // 1. MQTT
         mqttClient.publish(`${deviceID}/config`, JSON.stringify(payload), { retain: true });
-        printLog(`MQTT Sent: ${deviceID}/config`);
+        printLog(`MQTT Sent: ${deviceID}`);
 
-        // 2. GitHub API
+        // 2. GitHub
         const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${deviceID}/data.json`;
         
         try {
-            printLog("Syncing ke GitHub...");
+            printLog("Syncing...");
+            // Ambil SHA terbaru untuk menghindari konflik
             const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
-            
             let sha = null;
-            if (getRes.status === 200) {
-                const existingFile = await getRes.json();
-                sha = existingFile.sha;
+            if (getRes.ok) {
+                const fileInfo = await getRes.json();
+                sha = fileInfo.sha;
             }
 
             const putRes = await fetch(url, {
                 method: "PUT",
                 headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Update ${deviceID} via Dashboard`,
+                    message: `Update ${deviceID}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
                     sha: sha
                 })
             });
 
             if (putRes.ok) {
-                printLog("BERHASIL! Cek folder RELAY di GitHub. ✅");
+                printLog("SUKSES! Data tersimpan di RELAY/" + deviceID);
             } else {
                 const err = await putRes.json();
                 printLog("Gagal: " + err.message);
@@ -162,6 +167,5 @@
 
     initMQTT();
 </script>
-
 </body>
 </html>
