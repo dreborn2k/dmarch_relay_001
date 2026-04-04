@@ -11,10 +11,9 @@
         h2 { text-align: center; color: #007bff; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         label { font-weight: bold; font-size: 14px; display: block; margin-top: 10px; }
         input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; font-size: 14px; }
-        input:focus { border-color: #007bff; outline: none; }
         button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin-top: 15px; }
         button:hover { background: #0056b3; }
-        .btn-clear { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; font-size: 12px; margin-top: 5px; }
+        .btn-clear { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; font-size: 11px; margin-top: 5px; }
         #log { background: #1e1e1e; color: #4ade80; padding: 15px; border-radius: 8px; height: 160px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; margin-top: 20px; line-height: 1.5; }
         .footer-text { font-size: 11px; color: #888; text-align: center; margin-top: 15px; }
     </style>
@@ -22,34 +21,35 @@
 <body>
 
 <div class="card">
-    <h2>IoT Provisioning</h2>
+    <h2>D'MarcFF Provisioning</h2>
     
     <label>ID Perangkat (6 Digit MAC):</label>
-    <input type="text" id="deviceID" placeholder="Contoh: EBCF08" value="EBCF08" oninput="checkDevice()">
+    <input type="text" id="deviceID" placeholder="EBCF08" value="EBCF08" oninput="checkDevice()">
 
-    <label>Pesan String (string_data):</label>
-    <input type="text" id="valStr" placeholder="Masukkan pesan status...">
+    <label>Pesan String:</label>
+    <input type="text" id="valStr" placeholder="Status pesan...">
     
-    <label>Nilai Angka (number_data):</label>
+    <label>Nilai Angka:</label>
     <input type="number" id="valNum" value="0">
     
-    <label>Status Relay (bool_data):</label>
+    <label>Status Relay:</label>
     <select id="valBool">
         <option value="true">ON (Aktif)</option>
         <option value="false">OFF (Mati)</option>
     </select>
 
     <button onclick="handleUpdate()">UPDATE & SYNC GITHUB</button>
-    <button class="btn-clear" onclick="clearToken()">Hapus Token dari Browser</button>
+    <button class="btn-clear" onclick="clearToken()">Ganti/Hapus Token</button>
     
     <div id="log">Dashboard Ready.</div>
-    <p class="footer-text">Copyright © 2026 D'marcFF Robotic<br>Data disimpan secara lokal di browser Anda.</p>
+    <p class="footer-text">Copyright © 2026 D'marcFF Robotic</p>
 </div>
 
 <script>
+    // --- KONFIGURASI BARU ---
     const CONFIG = {
         repo: 'dreborn2k/dmarch_relay_001',
-        basePath: 'Relay4Ch',
+        basePath: 'RELAY', // Sesuai permintaan: folder RELAY
         mqttUrl: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
         mqttUser: 'dmarchFF',
         mqttPass: 'dmarchFF2205'
@@ -57,11 +57,9 @@
 
     let mqttClient;
 
-    // Inisialisasi MQTT
     function initMQTT() {
         mqttClient = mqtt.connect(CONFIG.mqttUrl, { username: CONFIG.mqttUser, password: CONFIG.mqttPass });
         mqttClient.on('connect', () => printLog("MQTT Connected."));
-        mqttClient.on('error', (err) => printLog("MQTT Error: " + err));
     }
 
     function printLog(msg) {
@@ -79,7 +77,7 @@
     function getGitHubToken() {
         let token = localStorage.getItem('gh_token');
         if (!token || token === "null") {
-            token = prompt("Masukkan GitHub Personal Access Token (Classic):");
+            token = prompt("Masukkan GitHub Token (Classic) dengan izin 'repo':");
             if (token) localStorage.setItem('gh_token', token);
         }
         return token;
@@ -87,17 +85,14 @@
 
     function clearToken() {
         localStorage.removeItem('gh_token');
-        alert("Token dihapus.");
+        alert("Token dihapus. Silakan refresh.");
         location.reload();
     }
 
-    // FUNGSI CEK STATUS (Mendeteksi apakah folder/file sudah ada)
     async function checkDevice() {
         const id = getFullID();
-        if (id.length < 12) return; // Tunggu sampai ID lengkap (RELAY_ + 6 digit)
-        
         const token = localStorage.getItem('gh_token');
-        if (!token) return;
+        if (!token || id.length < 10) return;
 
         const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
         
@@ -106,13 +101,12 @@
             if (res.ok) {
                 const data = await res.json();
                 const content = JSON.parse(atob(data.content));
-                printLog(`Device ${id} terdeteksi di Repo.`);
-                // Isi form otomatis dengan data terakhir
                 document.getElementById('valStr').value = content.string_data;
                 document.getElementById('valNum').value = content.number_data;
                 document.getElementById('valBool').value = content.bool_data.toString();
+                printLog(`Data ${id} ditemukan di GitHub.`);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     }
 
     async function handleUpdate() {
@@ -120,8 +114,6 @@
         if (!token) return;
 
         const deviceID = getFullID();
-        if (!deviceID || deviceID.length < 8) return alert("ID Device tidak valid!");
-
         const payload = {
             device_id: deviceID,
             string_data: document.getElementById('valStr').value,
@@ -130,15 +122,15 @@
             last_update: new Date().toLocaleString()
         };
 
-        // 1. MQTT Publish
+        // 1. MQTT
         mqttClient.publish(`${deviceID}/config`, JSON.stringify(payload), { retain: true });
-        printLog(`Sent MQTT: ${deviceID}`);
+        printLog(`MQTT Sent: ${deviceID}/config`);
 
-        // 2. GitHub Sync
+        // 2. GitHub API
         const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${deviceID}/data.json`;
         
         try {
-            printLog("Menyinkronkan ke GitHub...");
+            printLog("Syncing ke GitHub...");
             const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
             
             let sha = null;
@@ -151,20 +143,20 @@
                 method: "PUT",
                 headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Update ${deviceID}`,
+                    message: `Update ${deviceID} via Dashboard`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
                     sha: sha
                 })
             });
 
             if (putRes.ok) {
-                printLog("BERHASIL! Cek folder GitHub Anda sekarang. ✅");
+                printLog("BERHASIL! Cek folder RELAY di GitHub. ✅");
             } else {
                 const err = await putRes.json();
-                printLog("Error: " + err.message);
+                printLog("Gagal: " + err.message);
             }
         } catch (e) {
-            printLog("Gagal: " + e.message);
+            printLog("Error: " + e.message);
         }
     }
 
