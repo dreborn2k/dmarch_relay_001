@@ -33,7 +33,38 @@
       ],
       "enabled": true,
       "_modified": "2026-04-04T18:58:21.281Z"
+    },
+    {
+      "id": "mnkhz7n05zam",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T15:38:43.692Z"
+    },
+    {
+      "id": "mnkkjcrikhj5",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1,
+        3,
+        5,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-04T16:50:22.686Z"
     }
   ],
-  "updatedAt": "2026-04-04T19:07:32.101Z"
+  "updatedAt": "2026-04-04T19:13:16.027Z"
 }
