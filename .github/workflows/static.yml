@@ -32,6 +32,7 @@ jobs:
           mkdir -p deploy_root
           cp -r Relay4Ch deploy_root/
           cp -r Queue deploy_root/
+          cp -r RELAY deploy_root/
           # Buat landing page otomatis jika tidak ada index.html di root
           if [ ! -f "index.html" ]; then
             echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>dMarch Projects</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;text-align:center;padding:50px;}a{color:#38bdf8;display:block;margin:10px;}</style></head><body><h1>dMarch Projects</h1><a href="/Relay4Ch/">🔌 Relay4Ch Panel</a><a href="/Queue/">⏳ Queue Panel</a></body></html>' > deploy_root/index.html
