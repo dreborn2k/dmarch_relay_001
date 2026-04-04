@@ -580,22 +580,70 @@
       }
     } catch(e) { log('ℹ️ device.json not yet exists'); }
   }
-  async function saveDeviceConfigToGitHub() {
-    if(!ghSyncEnabled||!ghConfig.token) return;
+  async function saveDeviceConfigToGitHub(retry = 0) {
+    if (!ghSyncEnabled || !ghConfig.token) return;
     const gpioRaw = $('gpioInput').value.trim();
     const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
-    const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() };
+    const deviceConfig = { 
+      device: DEVICE_ID, 
+      relayCount: relayCount, 
+      gpio: gpioList, 
+      updatedAt: new Date().toISOString() 
+    };
     try {
       const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.configPath}`;
+      
+      // 1. Ambil SHA terbaru (selalu lakukan GET sebelum PUT)
       let sha = null;
-      const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
-      if(getRes.ok) sha = (await getRes.json()).sha;
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig,null,2))));
-      const body = { message: `⚙️ Update device config`, content, branch: 'main' };
-      if(sha) body.sha = sha;
-      const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      if(res.ok) log('💾 Device config saved to GitHub');
-    } catch(e) { log('❌ Save device config error'); }
+      const getRes = await fetch(url, { 
+        headers: { 'Authorization': `token ${ghConfig.token}` } 
+      });
+      if (getRes.ok) {
+        const data = await getRes.json();
+        sha = data.sha;
+      } else if (getRes.status !== 404) {
+        throw new Error(`Failed to get file info: ${getRes.status}`);
+      }
+      
+      // 2. Siapkan konten
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2))));
+      const body = { 
+        message: `⚙️ Update device config via web panel`, 
+        content, 
+        branch: 'main' 
+      };
+      if (sha) body.sha = sha;
+      
+      // 3. Lakukan PUT
+      const putRes = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${ghConfig.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (putRes.ok) {
+        log('💾 Device config saved to GitHub');
+        return;
+      }
+      
+      // 4. Jika conflict (409) dan masih dalam batas retry, coba ulang
+      if (putRes.status === 409 && retry < 2) {
+        log(`⚠️ Conflict detected, retrying (${retry+1}/2)...`);
+        await new Promise(r => setTimeout(r, 500));
+        return saveDeviceConfigToGitHub(retry + 1);
+      }
+      
+      // 5. Jika gagal selain 409, lempar error
+      const errText = await putRes.text();
+      throw new Error(`HTTP ${putRes.status}: ${errText}`);
+      
+    } catch (err) {
+      log(`❌ Save device config error: ${err.message}`);
+      console.error(err);
+    }
   }
   async function pushToGitHub(retry=0) {
     if(!ghSyncEnabled||!ghConfig.token||retry>=3) return;
