@@ -3,50 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch Pro Auto-Provisioning</title>
+    <title>dMarch RELAY - Auto Provisioning</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
         body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { background: var(--card); border-radius: 20px; padding: 30px; width: 90%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
-        h2 { color: var(--primary); margin: 0 0 20px 0; font-size: 20px; text-align: center; }
+        .container { background: var(--card); border-radius: 20px; padding: 30px; width: 90%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        h2 { color: var(--primary); margin-bottom: 20px; }
         .group { margin-bottom: 15px; text-align: left; }
         label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; }
         input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; outline: none; }
         .row { display: flex; gap: 10px; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        button:hover { filter: brightness(1.1); }
-        #log { margin-top: 20px; background: #000; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #10b981; height: 100px; overflow-y: auto; border: 1px solid #334155; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #444; margin-right: 5px; }
-        .active { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        #log { margin-top: 20px; background: #000; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #10b981; height: 100px; overflow-y: auto; border: 1px solid #334155; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>dMarch Auto-Config</h2>
+    <h2>dMarch RELAY Panel</h2>
     
     <div class="group">
-        <label>Device Name (Sesuai Serial Monitor)</label>
+        <label>Input 6 Digit Terakhir MAC (Dari Serial Monitor)</label>
         <div class="row">
-            <input type="text" id="devName" placeholder="Contoh: RELAY_A1B2C3" onchange="loadDeviceData()">
+            <span style="padding: 12px; background: #334155; border-radius: 10px 0 0 10px; font-weight: bold;">RELAY_</span>
+            <input type="text" id="macInput" placeholder="A1B2C3" maxlength="6" style="border-radius: 0 10px 10px 0;" onchange="checkDevice()">
         </div>
     </div>
 
     <hr style="border: 0.5px solid #334155; margin: 20px 0;">
 
     <div class="group">
-        <label>String Data (Pesan/Nama)</label>
-        <input type="text" id="valStr" placeholder="Masukkan teks...">
+        <label>String Data (Pesan)</label>
+        <input type="text" id="valStr" placeholder="Teks untuk hardware...">
     </div>
 
     <div class="row">
         <div class="group" style="flex:1">
-            <label>Number (Nilai/Sensor)</label>
-            <input type="number" id="valNum" placeholder="0">
+            <label>Number Data</label>
+            <input type="number" id="valNum" value="0">
         </div>
         <div class="group" style="flex:1">
-            <label>Boolean (Status)</label>
+            <label>Relay Status</label>
             <select id="valBool">
                 <option value="true">ON / TRUE</option>
                 <option value="false">OFF / FALSE</option>
@@ -54,25 +52,24 @@
         </div>
     </div>
 
-    <button onclick="updateAll()">🚀 UPDATE & PROVISIONING</button>
+    <button onclick="updateProvisioning()">🚀 UPDATE & CREATE FOLDER</button>
 
-    <div id="log">Dashboard Ready. Masukkan Nama Device.</div>
+    <div id="log">Dashboard Ready. Masukkan ID Perangkat.</div>
 </div>
 
 <script>
-    const GITHUB_CONFIG = {
+    const CONFIG = {
         token: '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',
         repo: 'dreborn2k/dmarch_relay_001',
-        basePath: 'Relay4Ch' 
+        basePath: 'Relay4Ch', // Data disimpan di folder Relay4Ch sesuai firmware
+        mqtt: {
+            server: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
+            user: 'dmarchFF',
+            pass: 'dmarchFF2205'
+        }
     };
 
-    const MQTT_CONFIG = {
-        server: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
-        user: 'dmarchFF',
-        pass: 'dmarchFF2205'
-    };
-
-    let mqttClient = mqtt.connect(MQTT_CONFIG.server, { username: MQTT_CONFIG.user, password: MQTT_CONFIG.pass });
+    let client = mqtt.connect(CONFIG.mqtt.server, { username: CONFIG.mqtt.user, password: CONFIG.mqtt.pass });
 
     function printLog(m) {
         const l = document.getElementById('log');
@@ -80,58 +77,57 @@
         l.scrollTop = l.scrollHeight;
     }
 
-    // --- FUNGSI UTAMA: LOAD ATAU BUAT OTOMATIS ---
-    async function loadDeviceData() {
-        const name = document.getElementById('devName').value;
-        if(!name) return;
+    function getDeviceID() {
+        const input = document.getElementById('macInput').value.trim().toUpperCase();
+        return input ? "RELAY_" + input : null;
+    }
 
-        const url = `https://api.github.com/repos/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.basePath}/${name}/data`;
+    async function checkDevice() {
+        const id = getDeviceID();
+        if (!id) return;
         
-        printLog(`Checking device: ${name}...`);
-        
+        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
+        printLog(`Memeriksa perangkat: ${id}...`);
+
         try {
-            const res = await fetch(url, { 
-                headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } 
-            });
-
-            if (res.status === 404) {
-                printLog("Device baru terdeteksi. Folder akan dibuat saat update.");
-            } else {
+            const res = await fetch(url, { headers: { 'Authorization': `token ${CONFIG.token}` } });
+            if (res.ok) {
                 const file = await res.json();
                 const content = JSON.parse(atob(file.content));
                 document.getElementById('valStr').value = content.string_data;
                 document.getElementById('valNum').value = content.number_data;
                 document.getElementById('valBool').value = content.bool_data.toString();
-                printLog("Data device lama berhasil dimuat.");
+                printLog("Data ditemukan dan dimuat.");
+            } else {
+                printLog("ID baru. Siap melakukan Auto-Provisioning.");
             }
-        } catch (e) { printLog("Error koneksi API."); }
+        } catch (e) { printLog("Error API: " + e.message); }
     }
 
-    async function updateAll() {
-        const name = document.getElementById('devName').value;
+    async function updateProvisioning() {
+        const id = getDeviceID();
+        if (!id) return alert("Masukkan 6 digit MAC!");
+
         const vStr = document.getElementById('valStr').value;
-        const vNum = document.getElementById('valNum').value;
+        const vNum = parseInt(document.getElementById('valNum').value);
         const vBool = document.getElementById('valBool').value === "true";
 
-        if(!name) return alert("Masukkan Nama Device!");
-
-        const url = `https://api.github.com/repos/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.basePath}/${name}/data`;
+        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
         const payload = {
-            device_id: name,
+            device_id: id,
             string_data: vStr,
-            number_data: parseInt(vNum),
+            number_data: vNum,
             bool_data: vBool,
             last_update: new Date().toLocaleString()
         };
 
-        // 1. MQTT Update (Real-time)
-        mqttClient.publish(`${name}/config`, JSON.stringify(payload), { retain: true });
-        printLog("MQTT Config Published.");
+        // 1. MQTT Publish (Real-time)
+        client.publish(`${id}/config`, JSON.stringify(payload), { retain: true });
+        printLog("MQTT Config dikirim.");
 
-        // 2. GitHub Auto-Provisioning (Create or Update)
+        // 2. GitHub PUT (Auto Create Folder & File)
         try {
-            // Ambil SHA jika ada
-            const getRes = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } });
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${CONFIG.token}` } });
             let sha = null;
             if (getRes.ok) {
                 const fileData = await getRes.json();
@@ -140,18 +136,17 @@
 
             const putRes = await fetch(url, {
                 method: "PUT",
-                headers: { "Authorization": `token ${GITHUB_CONFIG.token}`, "Content-Type": "application/json" },
+                headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Auto-Provisioning: ${name}`,
-                    content: btoa(JSON.stringify(payload, null, 2)),
-                    sha: sha // Jika null, GitHub otomatis CREATE. Jika ada, GitHub melakukan UPDATE.
+                    message: `Provisioning ${id}`,
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
+                    sha: sha
                 })
             });
 
-            if(putRes.ok) printLog(`Server Updated: ${name}/data ✅`);
-            else printLog("Gagal sinkronisasi ke Server.");
-            
-        } catch (e) { printLog("API Error."); }
+            if (putRes.ok) printLog(`Berhasil! Folder ${id} aktif di GitHub. ✅`);
+            else printLog("Gagal sinkronisasi ke GitHub.");
+        } catch (e) { printLog("Error: " + e.message); }
     }
 </script>
 </body>
