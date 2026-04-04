@@ -1,0 +1,14 @@
+{
+  "device": "DmarchFF_BEDDAC",
+  "relayCount": 6,
+  "gpio": [
+    "12",
+    "11",
+    "9",
+    "7",
+    "5",
+    "3",
+    "1"
+  ],
+  "updatedAt": "2026-04-04T18:18:22.403Z"
+}
