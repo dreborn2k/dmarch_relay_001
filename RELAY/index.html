@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>dMarch Relay Pro - Web Control</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    /* CSS tetap sama seperti file asli Anda untuk menjaga visual */
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; --highlight:#334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; width: 100%; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; width: 100%; overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0 20px; cursor: pointer; }
+    .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .card-content { padding: 0 20px 20px 20px; }
+    .card.collapsed .card-content { display: none; }
+    .card.collapsed .card-header { padding-bottom: 20px; }
+    .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
+    .card:not(.collapsible) { padding: 20px; }
+    .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-qr { background: #6366f1; color: #fff; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; }
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; }
+    .qr-actions { display:flex; gap:10px; margin-top:15px; }
+    #qrFileInput { display:none; }
+    .qr-msg { margin-top:10px; font-size:0.9rem; text-align:center; }
+    .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .day-btn { padding:6px 0; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); cursor:pointer; font-size:0.75rem; }
+    .day-btn.active { background:var(--accent); color:#000; }
+    .schedule-item { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; }
+    .sch-info { flex:1; }
+    .sch-time { font-weight:bold; color:var(--accent); }
+    .sch-actions { display:flex; gap:8px; align-items:center; }
+    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; }
+    .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:0.3s; }
+    .toggle-switch.active { background:var(--success); }
+    .toggle-switch.active::after { left:18px; }
+    .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
+    .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; }
+    .sync-on { background:#064e3b; color:#10b981; }
+    .sync-off { background:#334155; color:#94a3b8; }
+    .gh-input { margin-top:8px; }
+    .gh-config-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:8px; background:var(--bg); border-radius:8px; }
+    .gh-details { font-size:0.75rem; color:#64748b; margin-top:4px; margin-bottom:8px; }
+    .gh-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .btn-gh { padding:6px 12px; font-size:0.8rem; width: auto; min-width: 90px; }
+    .notif-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
+    .notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .notif-status { font-size:0.75rem; padding:3px 8px; border-radius:12px; }
+    .status-active { background:#064e3b; color:#10b981; }
+    .status-inactive { background:#334155; color:#94a3b8; }
+    .notif-config { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+    .notif-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .btn-notif { padding:6px 12px; font-size:0.8rem; width: auto; }
+    .config-mask { color:#64748b; font-family:monospace; }
+    .info-panel { background: #0f172a; border-radius: 12px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
+    .badge-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .pin-badge { background: #1e293b; color: var(--accent); padding: 4px 8px; border-radius: 20px; font-size: 0.75rem; font-family: monospace; border: 1px solid var(--border); }
+    .gpio-suggest { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
+    .gpio-suggest button { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; width: auto; padding: 0; font-size: 0.7rem; }
+    .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
+    .disconnect-spacer { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🔌 dMarch Relay Pro</h1>
+  <p class="subtitle">Web Control Panel - Production Mode</p>
+
+  <div class="card" id="connCard">
+    <h3>🔗 MQTT Connection</h3>
+    <div class="grid-2">
+      <div class="form-group">
+          <label>Hardware MAC (6 Digit)</label>
+          <input id="deviceIdInput" placeholder="Contoh: EBCF08" maxlength="6" oninput="updateFullDeviceId()">
+          <small id="fullIdHint" style="color:var(--accent); font-size:0.7rem;">ID: dmarchFF_XXXXXX</small>
+      </div>
+      <div class="form-group"><label>Broker</label><input id="broker" placeholder="broker.hivemq.cloud"></div>
+      <div class="form-group"><label>Port (WSS)</label><input id="port" value="8884"></div>
+      <div class="form-group"><label>Client ID</label><input id="clientId" readonly></div>
+      <div class="form-group"><label>Username</label><input id="username"></div>
+      <div class="form-group"><label>Password</label><input id="password" type="password"></div>
+    </div>
+    <button class="btn-qr" onclick="openQR()">📷 Scan QR / 📁 Upload Image</button>
+    <button class="btn-primary" id="btnConnect" style="margin-top:10px;">🔗 Connect Device</button>
+    <p id="connStatus">Status: Disconnected</p>
+  </div>
+  <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer">🔌 Disconnect MQTT</button>
+
+  <div class="card app-card hidden">
+    <h3>📊 System Health</h3>
+    <div class="stat-grid">
+      <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
+      <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
+      <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
+      <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
+    </div>
+  </div>
+
+  <div class="card app-card hidden">
+    <h3>⚡ Relay Control</h3>
+    <div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div>
+    <div class="grid-4" style="margin-top:12px;" id="relayBtns"></div>
+  </div>
+
+  <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
+    <div class="card-header"><h3>⏰ Relay Scheduler</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div style="margin-bottom:20px; padding:10px; background:var(--bg); border-radius:8px; border:1px dashed var(--border);">
+        <div class="gh-config-row">
+          <div><span style="color:var(--accent);">☁️ Cloud Sync (Mass Production)</span></div>
+          <div style="display:flex; gap:8px;"><span id="ghSyncStatus" class="sync-status sync-off">● Offline</span><button class="btn-danger btn-gh hidden" onclick="disableGitHubSync()" id="ghDisableBtn">🔌 Disable</button></div>
+        </div>
+        <div id="ghDetailsContainer" class="gh-details">Target: <span id="ghDetails">RELAY/[DEVICE_ID]/scheduler.json</span></div>
+        <div id="ghInputForm" class="gh-input">
+          <div class="form-group"><label>GitHub Token (Repo Scope)</label><input id="ghToken" type="password" placeholder="ghp_xxxx"></div>
+          <div class="gh-actions"><button class="btn-primary btn-gh" onclick="enableGitHubSync()" id="ghEnableBtn">🔗 Enable Sync</button></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
+        <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
+        <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
+      </div>
+      <button class="btn-primary" onclick="addSchedule()">➕ Add Schedule</button>
+      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+  </div>
+
+  <div class="card app-card hidden"><h3>📝 Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" id="clearLogBtn">🗑️ Clear</button></div>
+</div>
+
+<script>
+  // ==================== GLOBALS MODIFIED ====================
+  let mqttClient = null;
+  let DEVICE_ID = "dmarchFF"; // Ini akan diupdate dinamis
+  let qrScanner = null;
+  let schedules = [];
+  let ghSyncEnabled = false;
+  let ghConfig = { 
+      owner: "dreborn2k", 
+      repo: "DmarchFF", // Menggunakan repo baru Anda
+      branch: "main"
+  };
+  
+  const $ = id => document.getElementById(id);
+
+  // FUNGSI BARU: Update Identitas Perangkat secara Real-time
+  function updateFullDeviceId() {
+      let input = $("deviceIdInput").value.trim().toUpperCase();
+      DEVICE_ID = input ? "dmarchFF_" + input : "dmarchFF";
+      $("fullIdHint").innerText = "ID: " + DEVICE_ID;
+      localStorage.setItem("dm_last_mac", input);
+  }
+
+  // MODIFIKASI: Path GitHub sekarang dinamis per folder Device ID
+  function getGhPaths() {
+      return {
+          scheduler: `RELAY/${DEVICE_ID}/scheduler.json`,
+          device: `RELAY/${DEVICE_ID}/device.json`
+      };
+  }
+
+  function toggleConnect() {
+    if(mqttClient && mqttClient.connected) { mqttClient.end(true); return; }
+    
+    // Pastikan ID sudah valid (prefix + 6 digit)
+    if(DEVICE_ID.length < 15) { // dmarchFF_ (9) + 6 digit = 15
+        alert("Masukkan 6 digit MAC Address dahulu!");
+        return;
+    }
+
+    const broker = $('broker').value.trim(), port = $('port').value.trim(), user = $('username').value.trim(), pass = $('password').value.trim();
+    if(!broker||!port) return alert('Broker & Port required!');
+    
+    const url = `wss://${broker}:${port}/mqtt`;
+    mqttClient = mqtt.connect(url, {clientId:$('clientId').value, username:user, password:pass, clean:true});
+    
+    mqttClient.on('connect', () => {
+      console.log('✅ MQTT Connected to: ' + DEVICE_ID);
+      setConnectionState(true);
+      // Subscribe ke topik spesifik perangkat ini
+      mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]);
+      mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1');
+      if(ghSyncEnabled) { loadFromGitHub(); }
+    });
+
+    mqttClient.on('message', (topic, msg) => {
+      const t=topic.toString(), m=msg.toString().trim();
+      if(t.includes('/terminal')) log(m);
+      else if(t.includes('/status')) updateSystemHealth(m);
+      else if(t.includes('/relay/') && t.endsWith('/state')) {
+        updateRelayUI(parseInt(t.split('/')[2]), m);
+      }
+    });
+  }
+
+  // MODIFIKASI: Sinkronisasi GitHub menggunakan folder RELAY/ID/
+  async function loadFromGitHub() {
+    if(!ghSyncEnabled || !ghConfig.token) return;
+    const paths = getGhPaths();
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${paths.scheduler}`;
+      const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(res.ok) {
+        const data = await res.json(), content = JSON.parse(atob(data.content));
+        schedules = content.schedules || [];
+        renderSchedules();
+        log(`☁️ Pulled config for ${DEVICE_ID}`);
+      }
+    } catch(e) { log('ℹ️ No cloud config found for this device.'); }
+  }
+
+  async function pushToGitHub(retry=0) {
+    if(!ghSyncEnabled || !ghConfig.token || retry>=3) return;
+    const paths = getGhPaths();
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${paths.scheduler}`;
+      let sha = null;
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(getRes.ok) sha = (await getRes.json()).sha;
+      
+      const payload = { device: DEVICE_ID, schedules: schedules, updatedAt: new Date().toISOString() };
+      const content = btoa(JSON.stringify(payload, null, 2));
+      const body = { message: `Sync ${DEVICE_ID}`, content, sha: sha };
+      
+      const res = await fetch(url, { 
+          method:'PUT', 
+          headers:{'Authorization':`token ${ghConfig.token}`, 'Content-Type':'application/json'}, 
+          body: JSON.stringify(body) 
+      });
+      if(res.ok) log('☁️ Database Updated ✅');
+    } catch(e) { console.error(e); }
+  }
+
+  // ... (Sisa fungsi UI, QRCode, Scheduler, dan Notification tetap sama dari file Anda) ...
+  // Pastikan memanggil updateFullDeviceId() saat DOM Load
+  document.addEventListener('DOMContentLoaded', () => {
+      const lastMac = localStorage.getItem("dm_last_mac");
+      if(lastMac) {
+          $("deviceIdInput").value = lastMac;
+          updateFullDeviceId();
+      }
+      // Re-init visual logic...
+      initAccordion();
+      initRelayButtons();
+      $('btnConnect').onclick = toggleConnect;
+  });
+</script>
+</body>
+</html>
