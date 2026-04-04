@@ -88,6 +88,9 @@
     .device-id-input-group input { flex: 1; text-transform: uppercase; }
     .device-id-input-group button { width: auto; padding: 10px 12px; }
     .system-card-btn { margin-top: 15px; }
+    .card.collapsible .card-header h3 {margin-bottom: 12px;}
+    .card.collapsible .card-content {padding-top: 4px; /* Sedikit ruang atas agar tidak terlalu rapat */
+}
   </style>
 </head>
 <body>
@@ -133,11 +136,15 @@
     <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="info-panel">
-        <div class="grid-4" style="margin-bottom: 12px;">
-          <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay">--</strong></div>
-          <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
-          <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
-          <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
+        <div style="margin-bottom: 12px;">
+          <div class="grid-2" style="margin-bottom: 8px;">
+            <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay">--</strong></div>
+            <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
+          </div>
+          <div class="grid-2">
+            <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
+            <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
+          </div>
         </div>
         <div><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
       </div>
