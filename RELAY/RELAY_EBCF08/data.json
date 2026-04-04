@@ -1,7 +1,7 @@
 {
   "device_id": "RELAY_EBCF08",
-  "string_data": "AAAAAAAAAAA",
-  "number_data": 2.2222222222222222e+21,
-  "bool_data": false,
-  "last_update": "4/4/2026, 4:07:55 PM"
+  "string_data": "ABCDEFGHIJKLMNOPQRSTUV",
+  "number_data": 11111111111111110000,
+  "bool_data": true,
+  "last_update": "4/4/2026, 4:19:18 PM"
 }
