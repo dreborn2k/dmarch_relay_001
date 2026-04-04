@@ -1,168 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dMarch RELAY - Auto Provisioning</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <title>D'MarcFF Robotic - IoT Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <style>
-        :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { background: var(--card); border-radius: 20px; padding: 30px; width: 90%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); text-align: center; }
-        h2 { color: var(--primary); margin-bottom: 20px; }
-        .group { margin-bottom: 15px; text-align: left; }
-        label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; outline: none; }
-        .row { display: flex; gap: 10px; }
-        button { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        #log { margin-top: 20px; background: #000; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #10b981; height: 100px; overflow-y: auto; border: 1px solid #334155; text-align: left; }
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #log { background: #222; color: #0f0; padding: 15px; border-radius: 5px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; margin-top: 20px; }
+        .token-info { font-size: 11px; color: #666; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>dMarch RELAY Panel</h2>
+<div class="card">
+    <h2 style="text-align:center">IoT Provisioning Dashboard</h2>
     
-    <div class="group">
-        <label>Input 6 Digit Terakhir MAC (Dari Serial Monitor)</label>
-        <div class="row">
-            <span style="padding: 12px; background: #334155; border-radius: 10px 0 0 10px; font-weight: bold;">RELAY_</span>
-            <input type="text" id="macInput" placeholder="A1B2C3" maxlength="6" style="border-radius: 0 10px 10px 0;" onchange="checkDevice()">
-        </div>
-    </div>
+    <label>ID Perangkat (6 Digit MAC):</label>
+    <input type="text" id="deviceID" placeholder="Contoh: EBCF08" onchange="checkDevice()">
 
-    <hr style="border: 0.5px solid #334155; margin: 20px 0;">
+    <hr>
+    
+    <label>Pesan String:</label>
+    <input type="text" id="valStr" placeholder="Masukkan pesan...">
+    
+    <label>Nilai Angka:</label>
+    <input type="number" id="valNum" value="0">
+    
+    <label>Status Relay:</label>
+    <select id="valBool">
+        <option value="true">ON (Aktif)</option>
+        <option value="false">OFF (Mati)</option>
+    </select>
 
-    <div class="group">
-        <label>String Data (Pesan)</label>
-        <input type="text" id="valStr" placeholder="Teks untuk hardware...">
-    </div>
-
-    <div class="row">
-        <div class="group" style="flex:1">
-            <label>Number Data</label>
-            <input type="number" id="valNum" value="0">
-        </div>
-        <div class="group" style="flex:1">
-            <label>Relay Status</label>
-            <select id="valBool">
-                <option value="true">ON / TRUE</option>
-                <option value="false">OFF / FALSE</option>
-            </select>
-        </div>
-    </div>
-
-    <button onclick="updateProvisioning()">🚀 UPDATE & CREATE FOLDER</button>
-
-    <div id="log">Dashboard Ready. Masukkan ID Perangkat.</div>
+    <button onclick="handleUpdate()">UPDATE & SYNC GITHUB</button>
+    <button onclick="clearToken()" style="background: #dc3545; font-size: 11px;">Hapus Token dari Browser</button>
+    
+    <div id="log">Dashboard Ready.</div>
+    <p class="token-info">Token disimpan aman di LocalStorage browser Anda.</p>
 </div>
 
 <script>
+    // --- KONFIGURASI REPOSITORY ---
     const CONFIG = {
-        token: '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',
         repo: 'dreborn2k/dmarch_relay_001',
-        basePath: 'Relay4Ch', // Data disimpan di folder Relay4Ch sesuai firmware
-        mqtt: {
-            server: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
-            user: 'dmarchFF',
-            pass: 'dmarchFF2205'
-        }
+        basePath: 'Relay4Ch',
+        // Kredensial MQTT HiveMQ Cloud
+        mqttUrl: 'wss://ddac82518d464650bbfe8e03922a3ca8.s1.eu.hivemq.cloud:8884/mqtt',
+        mqttUser: 'dmarchFF',
+        mqttPass: 'dmarchFF2205'
     };
 
-    let client = mqtt.connect(CONFIG.mqtt.server, { username: CONFIG.mqtt.user, password: CONFIG.mqtt.pass });
+    let mqttClient;
 
-    function printLog(m) {
-        const l = document.getElementById('log');
-        l.innerHTML += `> ${m}<br>`;
-        l.scrollTop = l.scrollHeight;
+    // --- INISIALISASI MQTT ---
+    function initMQTT() {
+        mqttClient = mqtt.connect(CONFIG.mqttUrl, {
+            username: CONFIG.mqttUser,
+            password: CONFIG.mqttPass
+        });
+
+        mqttClient.on('connect', () => printLog("MQTT Connected to HiveMQ Cloud."));
+        mqttClient.on('error', (err) => printLog("MQTT Error: " + err));
     }
 
-    function getDeviceID() {
-        const input = document.getElementById('macInput').value.trim().toUpperCase();
-        return input ? "RELAY_" + input : null;
+    function printLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML += `<br>> ${msg}`;
+        log.scrollTop = log.scrollHeight;
     }
 
-    async function checkDevice() {
-        const id = getDeviceID();
-        if (!id) return;
-        
-        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
-        printLog(`Memeriksa perangkat: ${id}...`);
+    function getFullID() {
+        const id = document.getElementById('deviceID').value.toUpperCase();
+        return id.startsWith("RELAY_") ? id : "RELAY_" + id;
+    }
 
-        try {
-            const res = await fetch(url, { headers: { 'Authorization': `token ${CONFIG.token}` } });
-            if (res.ok) {
-                const file = await res.json();
-                const content = JSON.parse(atob(file.content));
-                document.getElementById('valStr').value = content.string_data;
-                document.getElementById('valNum').value = content.number_data;
-                document.getElementById('valBool').value = content.bool_data.toString();
-                printLog("Data ditemukan dan dimuat.");
-            } else {
-                printLog("ID baru. Siap melakukan Auto-Provisioning.");
+    // --- FUNGSI TOKEN (MEMINTA SAAT DIBUTUHKAN) ---
+    function getGitHubToken() {
+        let token = localStorage.getItem('gh_token');
+        if (!token || token === "null") {
+            token = prompt("GitHub Token diperlukan untuk sinkronisasi.\nSilakan masukkan Personal Access Token (Classic) Anda:");
+            if (token) {
+                localStorage.setItem('gh_token', token);
             }
-        } catch (e) { printLog("Error API: " + e.message); }
+        }
+        return token;
     }
 
-    async function updateProvisioning() {
-    const id = getDeviceID();
-    if (!id) return alert("Masukkan 6 digit MAC!");
+    function clearToken() {
+        localStorage.removeItem('gh_token');
+        alert("Token telah dihapus dari browser.");
+        location.reload();
+    }
 
-    const vStr = document.getElementById('valStr').value;
-    const vNum = parseInt(document.getElementById('valNum').value);
-    const vBool = document.getElementById('valBool').value === "true";
+    async function handleUpdate() {
+        const token = getGitHubToken();
+        if (!token) return alert("Proses dibatalkan. Token GitHub wajib diisi.");
 
-    const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${id}/data.json`;
-    const payload = {
-        device_id: id,
-        string_data: vStr,
-        number_data: vNum,
-        bool_data: vBool,
-        last_update: new Date().toLocaleString()
-    };
+        const deviceID = getFullID();
+        const vStr = document.getElementById('valStr').value;
+        const vNum = parseInt(document.getElementById('valNum').value);
+        const vBool = document.getElementById('valBool').value === "true";
 
-    // 1. Kirim via MQTT (Ini sudah berhasil di log Anda)
-    client.publish(`${id}/config`, JSON.stringify(payload), { retain: true });
-    printLog("MQTT Config dikirim.");
+        const payload = {
+            device_id: deviceID,
+            string_data: vStr,
+            number_data: vNum,
+            bool_data: vBool,
+            last_update: new Date().toLocaleString()
+        };
 
-    // 2. Kirim ke GitHub (Database SSoT)
-    try {
-        // Cek dulu apakah file sudah ada untuk mendapatkan SHA
-        const getRes = await fetch(url, { 
-            headers: { 'Authorization': `token ${CONFIG.token}` } 
-        });
+        // 1. Kirim via MQTT Real-time
+        mqttClient.publish(`${deviceID}/config`, JSON.stringify(payload), { retain: true });
+        printLog(`MQTT Sent to ${deviceID}/config`);
+
+        // 2. Sinkronisasi ke GitHub API
+        const url = `https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.basePath}/${deviceID}/data.json`;
         
-        let sha = null;
-        if (getRes.ok) {
-            const fileData = await getRes.json();
-            sha = fileData.sha;
-        }
+        try {
+            printLog("Menghubungi GitHub API...");
+            
+            // Cek SHA file (jika sudah ada)
+            const getRes = await fetch(url, {
+                headers: { 'Authorization': `token ${token}` }
+            });
 
-        // Proses PUSH (Create atau Update)
-        const putRes = await fetch(url, {
-            method: "PUT",
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`,
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({
-                message: `Update data for ${id}`,
-                // Menggunakan btoa yang mendukung karakter UTF-8
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
-                sha: sha 
-            })
-        });
+            let sha = null;
+            if (getRes.status === 200) {
+                const existingFile = await getRes.json();
+                sha = existingFile.sha;
+            }
 
-        if (putRes.ok) {
-            printLog(`Berhasil! File /${id}/data.json tercipta di GitHub. ✅`);
-        } else {
-            const errData = await putRes.json();
-            printLog(`Gagal GitHub: ${errData.message}`);
+            // Push ke GitHub
+            const putRes = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Auto-Provisioning: Update ${deviceID}`,
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
+                    sha: sha
+                })
+            });
+
+            if (putRes.ok) {
+                printLog("BERHASIL! Data tersimpan di GitHub SSoT. ✅");
+            } else if (putRes.status === 401) {
+                printLog("ERROR: Token tidak valid (401).");
+                localStorage.removeItem('gh_token'); // Hapus token rusak
+            } else {
+                const errData = await putRes.json();
+                printLog("Gagal: " + errData.message);
+            }
+
+        } catch (e) {
+            printLog("Koneksi Error: " + e.message);
         }
-    } catch (e) {
-        printLog("Error Koneksi API: " + e.message);
     }
-}
+
+    // Jalankan MQTT saat startup
+    initMQTT();
 </script>
+
 </body>
 </html>
