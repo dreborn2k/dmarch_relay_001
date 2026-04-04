@@ -29,20 +29,22 @@ jobs:
 
       - name: Build all projects
         run: |
+          # 1. Buat folder sementara untuk deployment
           mkdir -p deploy_root
-          cp -r Relay4Ch deploy_root/
-          cp -r Queue deploy_root/
-          cp -r RELAY deploy_root/
-          # Buat landing page otomatis jika tidak ada index.html di root
-          if [ ! -f "index.html" ]; then
-            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>dMarch Projects</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;text-align:center;padding:50px;}a{color:#38bdf8;display:block;margin:10px;}</style></head><body><h1>dMarch Projects</h1><a href="/Relay4Ch/">🔌 Relay4Ch Panel</a><a href="/Queue/">⏳ Queue Panel</a></body></html>' > deploy_root/index.html
-          else
-            cp index.html deploy_root/
+          
+          # 2. Salin SEMUA isi repositori ke folder deploy_root
+          # Menggunakan rsync agar folder .git dan deploy_root sendiri tidak ikut tersalin
+          rsync -av --exclude='.git' --exclude='.github' --exclude='deploy_root' . deploy_root/
+          
+          # 3. Verifikasi index.html utama
+          if [ ! -f "deploy_root/index.html" ]; then
+            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>dMarch Projects Hub</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;text-align:center;padding:50px;}a{color:#38bdf8;display:block;margin:10px;text-decoration:none;font-weight:bold;}a:hover{text-decoration:underline;}</style></head><body><h1>DMARCFF ROBOTIC HUB</h1><p>Project tidak memiliki index.html di root.</p><hr><a href="./Relay4Ch/">🔌 Relay4Ch Panel</a><a href="./Queue/">⏳ Queue Panel</a><a href="./RELAY/">🔘 RELAY Panel</a></body></html>' > deploy_root/index.html
           fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # Pastikan path ini merujuk ke folder yang sudah kita isi tadi
           path: './deploy_root'
 
       - name: Deploy to GitHub Pages
