@@ -270,9 +270,11 @@
   let DEVICE_ID = "";
   let mqttBroker = "", mqttPort = "", mqttUser = "", mqttPass = "";
   
-  // Throttle GPIO sync from device (10 seconds)
+  // Throttle GPIO sync from device (10 seconds) and ignore relay count updates after manual change
   let lastGpioSyncTime = 0;
   const GPIO_SYNC_THROTTLE_MS = 10000;
+  let ignoreDeviceUpdatesUntil = 0; // timestamp until which we ignore relay_count and relay_pins from device
+  const IGNORE_DURATION_MS = 15000; // ignore device updates for 15 seconds after manual apply
 
   // DOM helpers
   const $ = id => document.getElementById(id);
@@ -302,13 +304,11 @@
       alert(`❌ Number of GPIO pins (${pins.length}) does not match Number of Relays (${relayCnt}). Please correct.`);
       return false;
     }
-    // Check for duplicates
     const uniquePins = new Set(pins);
     if (uniquePins.size !== pins.length) {
       alert(`❌ Duplicate GPIO pins detected: ${pins.join(',')}. Each pin must be unique.`);
       return false;
     }
-    // Check each pin is a number
     for (let p of pins) {
       if (isNaN(parseInt(p))) {
         alert(`❌ Invalid GPIO pin: "${p}". Must be a number.`);
@@ -382,7 +382,13 @@
       safeTxt('fwVal', d.fw_version||'--');
       if(d.hw_type) { currentHardware = d.hw_type; safeTxt('hwType', d.hw_type); }
       if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
-      if(d.relay_count) {
+      
+      // Check if we should ignore device updates after manual change
+      const now = Date.now();
+      const ignore = (now < ignoreDeviceUpdatesUntil);
+      if (ignore && d.relay_count !== undefined) {
+        log(`⏸️ Ignoring device relay_count=${d.relay_count} due to recent manual change (${Math.round((ignoreDeviceUpdatesUntil - now)/1000)}s remaining)`);
+      } else if (d.relay_count !== undefined) {
         safeTxt('activeRelay', d.relay_count);
         if(d.relay_count != relayCount) {
           relayCount = d.relay_count;
@@ -391,18 +397,22 @@
           log(`🔄 Relay count updated to ${relayCount} from device status`);
         }
       }
+      
       if(d.relay_pins) {
         renderPinBadges(d.relay_pins);
-        // Throttle GPIO input update: only update if last sync was more than 10 seconds ago
-        const now = Date.now();
-        if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) {
-          safeVal('gpioInput', d.relay_pins);
-          window.lastGpio = d.relay_pins;
-          updateCurrentGpioText();
-          lastGpioSyncTime = now;
-          log(`🔄 GPIO pins updated from device (throttled to ${GPIO_SYNC_THROTTLE_MS/1000}s)`);
+        if (!ignore) {
+          // Throttle GPIO input update: only update if last sync was more than 10 seconds ago
+          if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) {
+            safeVal('gpioInput', d.relay_pins);
+            window.lastGpio = d.relay_pins;
+            updateCurrentGpioText();
+            lastGpioSyncTime = now;
+            log(`🔄 GPIO pins updated from device (throttled to ${GPIO_SYNC_THROTTLE_MS/1000}s)`);
+          } else {
+            log(`⏸️ GPIO sync throttled, last update ${(now - lastGpioSyncTime)/1000}s ago`);
+          }
         } else {
-          log(`⏸️ GPIO sync throttled, last update ${(now - lastGpioSyncTime)/1000}s ago`);
+          log(`⏸️ Ignoring device GPIO update due to recent manual change`);
         }
       }
       updateGPIOSuggestions();
@@ -503,11 +513,16 @@
     updateRelayUIByCount();
     window.lastGpio = gpioRaw;
     updateCurrentGpioText();
-    // Force reset throttle timer so manual update takes effect immediately
+    
+    // Set ignore flag for device updates (to prevent device from reverting our changes immediately)
+    ignoreDeviceUpdatesUntil = Date.now() + IGNORE_DURATION_MS;
+    // Also reset GPIO throttle timer
     lastGpioSyncTime = Date.now();
-    if (ghSyncEnabled && ghConfig.token && DEVICE_ID) await saveDeviceConfigToGitHub();
-    log(`✅ Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}`);
+    
+    log(`✅ Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}. Ignoring device updates for ${IGNORE_DURATION_MS/1000}s.`);
     alert('Configuration sent. Device will restart if changes were made.');
+    
+    if (ghSyncEnabled && ghConfig.token && DEVICE_ID) await saveDeviceConfigToGitHub();
   }
 
   // ==================== GITHUB SYNC ====================
@@ -620,9 +635,7 @@
       connectMQTT();
       updateRelayUIByCount();
       initScheduler(); initNotifUI();
-      // Initialize GPIO text display
       updateCurrentGpioText();
-      // Listen to gpioInput changes to update text in real-time
       const gpioInputElem = $('gpioInput');
       if (gpioInputElem) {
         gpioInputElem.addEventListener('input', updateCurrentGpioText);
