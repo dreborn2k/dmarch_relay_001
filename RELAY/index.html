@@ -41,12 +41,13 @@
     .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
     .hidden { display: none !important; }
     #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; }
-    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; }
-    .modal-box { background:var(--card); border-radius:12px; padding:20px; max-width:480px; width:90%; }
-    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; }
-    .qr-actions { display:flex; gap:10px; margin-top:15px; }
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:16px; max-width:380px; width:90%; text-align:center; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; margin:0 auto; }
+    .qr-actions { display:flex; gap:8px; margin-top:12px; justify-content:center; }
+    .qr-actions button, .qr-actions label { flex:1; text-align:center; }
     #qrFileInput { display:none; }
-    .qr-msg { margin-top:10px; font-size:0.9rem; text-align:center; }
+    .qr-msg { margin-top:10px; font-size:0.8rem; text-align:center; word-break:break-word; }
     .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
     .day-btn { padding:6px 0; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); cursor:pointer; font-size:0.75rem; }
     .day-btn.active { background:var(--accent); color:#000; }
@@ -263,7 +264,8 @@
   <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
 
-<div id="qrModal"><div class="modal-box"><h3 style="text-align:center;">📷 Scan QR / Upload Barcode</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">Input Valid QR from Seller</p></div></div>
+<!-- QR Modal - smaller, click outside closes -->
+<div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:10px;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">QR must contain JSON with broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken</p></div></div>
 
 <script>
   // ==================== GLOBALS ====================
@@ -293,7 +295,7 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== WHITELIST CHECK (fixed caching) ====================
+  // ==================== WHITELIST CHECK (no cache on empty/error) ====================
   async function isDeviceWhitelisted(deviceId) {
     const cacheKey = 'dm_whitelist_cache';
     const cacheExpiry = 3600000;
@@ -320,9 +322,11 @@
         if (!text.trim()) throw new Error('Whitelist file is empty');
         whitelist = JSON.parse(text);
         if (!Array.isArray(whitelist)) throw new Error('Whitelist is not an array');
-        // Only cache if whitelist is valid and non-empty
         if (whitelist.length > 0) {
           localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+        } else {
+          // Do not cache empty whitelist
+          localStorage.removeItem(cacheKey);
         }
       } catch (e) {
         console.error('Failed to fetch whitelist:', e);
@@ -567,11 +571,9 @@
         if (userChoice) {
           window.open('https://wa.me/628551291055', '_blank');
         }
-        // Jangan tutup modal, biarkan user coba lagi
         return;
       }
       
-      // Jika sukses, lanjutkan
       DEVICE_ID = deviceId;
       mqttBroker = jsonData.broker;
       mqttPort = jsonData.port;
@@ -598,22 +600,65 @@
       startWhitelistWatcher();
       log('✅ Configuration loaded from QR. MQTT connecting...');
       alert('Configuration successful! MQTT connecting...');
-      closeQR(); // Tutup modal hanya jika sukses
+      closeQR();
     } catch(e) {
       alert('Invalid QR data: ' + e.message);
       console.error(e);
-      // Jangan tutup modal, biarkan user coba lagi
     }
   }
 
-  // ==================== QR MODAL ====================
-  let qrImagePreview=null;
-  function openQR(){ $('qrModal').style.display='flex'; $('reader').innerHTML = ''; if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
-  async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
+  // ==================== QR MODAL (click outside closes) ====================
+  let qrImagePreview = null;
+  function openQR(){ 
+    $('qrModal').style.display='flex'; 
+    $('reader').innerHTML = ''; 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  async function closeQR(){ 
+    $('qrModal').style.display='none'; 
+    if(qrScanner){ 
+      try{ await qrScanner.stop(); }catch(e){} 
+      qrScanner.clear(); 
+      qrScanner=null; 
+    } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  // Close modal when clicking outside the modal-box
+  $('qrModal').onclick = function(e) {
+    if (e.target === this) closeQR();
+  };
   const startCameraBtn = $('startCameraBtn');
-  if(startCameraBtn) { startCameraBtn.onclick = function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); }; }
+  if(startCameraBtn) { startCameraBtn.onclick = function(){ 
+    if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+    $('reader').innerHTML=''; 
+    qrScanner=new Html5Qrcode("reader"); 
+    qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); 
+  }; }
   const qrFileInput = $('qrFileInput');
-  if(qrFileInput) { qrFileInput.onchange = async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; const reader=new FileReader(); reader.onload=function(evt){ const img=document.createElement('img'); img.src=evt.target.result; img.style.maxWidth='100%'; img.style.borderRadius='8px'; $('reader').appendChild(img); qrImagePreview=img; }; reader.readAsDataURL(file); try{ const tempScanner = new Html5Qrcode("reader"); const decodedText=await tempScanner.scanFile(file,true); onQRSuccess(decodedText); tempScanner.clear(); } catch(err){ alert('QR scan failed'); } }; }
+  if(qrFileInput) { qrFileInput.onchange = async function(e){ 
+    const file=e.target.files[0]; 
+    if(!file) return; 
+    if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+    $('reader').innerHTML=''; 
+    const reader=new FileReader(); 
+    reader.onload=function(evt){ 
+      const img=document.createElement('img'); 
+      img.src=evt.target.result; 
+      img.style.maxWidth='100%'; 
+      img.style.borderRadius='8px'; 
+      $('reader').appendChild(img); 
+      qrImagePreview=img; 
+    }; 
+    reader.readAsDataURL(file); 
+    try{ 
+      const tempScanner = new Html5Qrcode("reader"); 
+      const decodedText=await tempScanner.scanFile(file,true); 
+      onQRSuccess(decodedText); 
+      tempScanner.clear();
+    } catch(err){ alert('QR scan failed'); } 
+  }; }
   function onQRSuccess(decodedText){ processQR(decodedText); }
 
   // ==================== INIT ====================
