@@ -87,6 +87,13 @@
     .about-section { background: var(--card); border-radius: 12px; margin-bottom: 20px; }
     .contact-wa { display: inline-flex; align-items: center; gap: 8px; background: #075e54; padding: 8px 16px; border-radius: 40px; text-decoration: none; color: #fff; font-weight: 600; margin-top: 10px; }
     .contact-wa:hover { background: #128C7E; }
+    /* Location & Time card */
+    .location-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .location-time-item { background: #0f172a; border-radius: 8px; padding: 8px; }
+    .location-time-label { font-size: 0.7rem; color: #94a3b8; }
+    .location-time-value { font-size: 0.9rem; font-weight: 500; word-break: break-word; }
+    .refresh-geo { text-align: right; margin-top: 8px; }
+    .refresh-geo button { width: auto; padding: 4px 8px; font-size: 0.7rem; background: var(--border); }
   </style>
 </head>
 <body>
@@ -230,6 +237,38 @@
     </div>
   </div>
 
+  <!-- NEW: Location & Time Card (collapsible) -->
+  <div class="card collapsible collapsed app-card hidden" id="locationTimeCard">
+    <div class="card-header"><h3>🌍 Location & Time</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="location-time-grid">
+        <div class="location-time-item">
+          <div class="location-time-label">🕐 Local Time</div>
+          <div class="location-time-value" id="localTimeDisplay">--:--:--</div>
+        </div>
+        <div class="location-time-item">
+          <div class="location-time-label">🌐 Timezone</div>
+          <div class="location-time-value" id="timezoneDisplay">--</div>
+        </div>
+        <div class="location-time-item">
+          <div class="location-time-label">📍 Latitude</div>
+          <div class="location-time-value" id="latDisplay">--</div>
+        </div>
+        <div class="location-time-item">
+          <div class="location-time-label">📍 Longitude</div>
+          <div class="location-time-value" id="lonDisplay">--</div>
+        </div>
+        <div class="location-time-item" style="grid-column: span 2;">
+          <div class="location-time-label">🏠 Address</div>
+          <div class="location-time-value" id="addressDisplay">--</div>
+        </div>
+      </div>
+      <div class="refresh-geo">
+        <button id="refreshGeoBtn" class="btn-secondary">🔄 Refresh Location</button>
+      </div>
+    </div>
+  </div>
+
   <!-- About & Support Card -->
   <div class="card collapsible collapsed app-card hidden about-section">
     <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
@@ -284,7 +323,100 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== UPDATE CURRENT GPIO DISPLAY (plain text) ====================
+  // ==================== LOCATION & TIME ====================
+  let timeInterval = null;
+  let geoCache = null;
+  const GEO_CACHE_EXPIRY = 3600000; // 1 hour
+
+  function updateLocalTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    const tzStr = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const localTimeElem = $('localTimeDisplay');
+    const timezoneElem = $('timezoneDisplay');
+    if (localTimeElem) localTimeElem.textContent = timeStr;
+    if (timezoneElem) timezoneElem.textContent = tzStr;
+  }
+
+  async function getGeolocation(forceRefresh = false) {
+    if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) {
+      displayGeoData(geoCache);
+      return;
+    }
+    if (!navigator.geolocation) {
+      safeTxt('latDisplay', 'Geolocation not supported');
+      safeTxt('lonDisplay', '');
+      safeTxt('addressDisplay', 'Browser does not support geolocation');
+      return;
+    }
+    safeTxt('addressDisplay', 'Requesting location...');
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      safeTxt('latDisplay', lat.toFixed(6));
+      safeTxt('lonDisplay', lon.toFixed(6));
+      // Reverse geocoding using Nominatim
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+        const data = await response.json();
+        let address = '';
+        if (data && data.address) {
+          const road = data.address.road || data.address.pedestrian || '';
+          const city = data.address.city || data.address.town || data.address.village || '';
+          const country = data.address.country || '';
+          address = [road, city, country].filter(s => s).join(', ');
+        }
+        if (!address) address = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        safeTxt('addressDisplay', address);
+        // Cache
+        geoCache = { lat, lon, address, timestamp: Date.now() };
+        localStorage.setItem('dm_geo_cache', JSON.stringify(geoCache));
+      } catch (e) {
+        safeTxt('addressDisplay', 'Unable to fetch address');
+        console.error(e);
+      }
+    }, (error) => {
+      let errMsg = 'Location error: ';
+      switch(error.code) {
+        case error.PERMISSION_DENIED: errMsg += 'Permission denied'; break;
+        case error.POSITION_UNAVAILABLE: errMsg += 'Position unavailable'; break;
+        case error.TIMEOUT: errMsg += 'Timeout'; break;
+        default: errMsg += 'Unknown error';
+      }
+      safeTxt('addressDisplay', errMsg);
+      safeTxt('latDisplay', '--');
+      safeTxt('lonDisplay', '--');
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  }
+
+  function displayGeoData(cache) {
+    safeTxt('latDisplay', cache.lat?.toFixed(6) || '--');
+    safeTxt('lonDisplay', cache.lon?.toFixed(6) || '--');
+    safeTxt('addressDisplay', cache.address || '--');
+  }
+
+  function initLocationAndTime() {
+    // Load cached geo from localStorage
+    const cached = localStorage.getItem('dm_geo_cache');
+    if (cached) {
+      try {
+        geoCache = JSON.parse(cached);
+        if (geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) {
+          displayGeoData(geoCache);
+        } else {
+          getGeolocation();
+        }
+      } catch(e) { getGeolocation(); }
+    } else {
+      getGeolocation();
+    }
+    // Start clock update every second
+    if (timeInterval) clearInterval(timeInterval);
+    timeInterval = setInterval(updateLocalTime, 1000);
+    updateLocalTime(); // immediate
+  }
+
+  // ==================== UPDATE CURRENT GPIO DISPLAY ====================
   function updateCurrentGpioText() {
     const container = $('currentGpioText');
     if (!container) return;
@@ -383,7 +515,6 @@
       if(d.hw_type) { currentHardware = d.hw_type; safeTxt('hwType', d.hw_type); }
       if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
       
-      // Check if we should ignore device updates after manual change
       const now = Date.now();
       const ignore = (now < ignoreDeviceUpdatesUntil);
       if (ignore && d.relay_count !== undefined) {
@@ -401,7 +532,6 @@
       if(d.relay_pins) {
         renderPinBadges(d.relay_pins);
         if (!ignore) {
-          // Throttle GPIO input update: only update if last sync was more than 10 seconds ago
           if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) {
             safeVal('gpioInput', d.relay_pins);
             window.lastGpio = d.relay_pins;
@@ -494,7 +624,6 @@
     const newCount = parseInt($('relayCountInput').value);
     const gpioRaw = $('gpioInput').value.trim();
     
-    // Validation
     if (!validateGpioAndRelayCount(gpioRaw, newCount)) return;
     
     if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { 
@@ -514,9 +643,7 @@
     window.lastGpio = gpioRaw;
     updateCurrentGpioText();
     
-    // Set ignore flag for device updates (to prevent device from reverting our changes immediately)
     ignoreDeviceUpdatesUntil = Date.now() + IGNORE_DURATION_MS;
-    // Also reset GPIO throttle timer
     lastGpioSyncTime = Date.now();
     
     log(`✅ Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}. Ignoring device updates for ${IGNORE_DURATION_MS/1000}s.`);
@@ -626,6 +753,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initAccordion();
+    // Initialize location and time (runs independently of MQTT)
+    initLocationAndTime();
+    const refreshBtn = $('refreshGeoBtn');
+    if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
+    
     const hasConfig = loadFullConfig();
     if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
       $('connCard').classList.add('hidden');
