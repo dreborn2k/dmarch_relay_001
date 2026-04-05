@@ -431,17 +431,49 @@
   async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { if(config.relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); initRelayButtons(); safeVal('relayCount', relayCount); log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
   async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `⚙️ Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('💾 Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`⚠️ Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`❌ Save device config error: ${err.message}`); return false; } }
   async function pushToGitHub(retry=0) {
-    log(`📤 pushToGitHub called, retry=${retry}`);
+    log(`📤 pushToGitHub called, retry=${retry}, schedules count=${schedules.length}`);
+    console.log(`[DEBUG] pushToGitHub - ghSyncEnabled=${ghSyncEnabled}, token=${!!ghConfig.token}, DEVICE_ID=${DEVICE_ID}, retry=${retry}`);
     if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) {
       log(`❌ Push aborted: sync=${ghSyncEnabled}, token=${!!ghConfig.token}, device=${DEVICE_ID}, retry=${retry}`);
       return;
     }
     const path = getSchedulerPath();
     if (!path) { log('❌ No scheduler path'); return; }
+    log(`📂 Target path: ${path}`);
     try {
       const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`;
-      // ... kode selanjutnya
-      log(`✅ Push successful: ${schedules.length} schedules`);
+      let sha = null;
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(getRes.ok) {
+        const data = await getRes.json();
+        sha = data.sha;
+        log(`📄 Existing file SHA: ${sha.substring(0,7)}...`);
+      } else if(getRes.status !== 404) {
+        log(`❌ Failed to get file info: ${getRes.status}`);
+        throw new Error(`HTTP ${getRes.status}`);
+      }
+      const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; });
+      const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() };
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2))));
+      const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' };
+      if(sha) body.sha = sha;
+      const putRes = await fetch(url, {
+        method:'PUT',
+        headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      if(putRes.ok) {
+        log(`✅ Push successful: ${schedules.length} schedules saved to GitHub`);
+        return;
+      }
+      if(putRes.status===409 && retry<2) {
+        log(`⚠️ Conflict, retrying (${retry+1}/2)...`);
+        await new Promise(r => setTimeout(r, 500));
+        return pushToGitHub(retry+1);
+      }
+      const errText = await putRes.text();
+      log(`❌ Push failed: HTTP ${putRes.status} - ${errText}`);
+      console.error('Push error:', errText);
     } catch(e) {
       log(`❌ Push schedules error: ${e.message}`);
       console.error(e);
@@ -455,16 +487,17 @@
   function deleteSchedule(id) { if(confirm('Delete schedule?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); } }
   function mergeScheduleArrays(localArr, serverArr) { const map = new Map(); (serverArr||[]).forEach(s=>{ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(clean.id,clean); }); (localArr||[]).forEach(s=>{ const existing=map.get(s.id); const isNewer = s._modified && (!existing?._modified || s._modified > existing._modified); if(!existing||isNewer){ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(s.id,clean); } }); return Array.from(map.values()).sort((a,b)=>a.time.localeCompare(b.time)); }
   function saveSchedules() {
-  localStorage.setItem('dm_schedules', JSON.stringify(schedules));
-  log(`📝 Schedules saved locally, count: ${schedules.length}`);
-  if (ghSyncEnabled && navigator.onLine && ghConfig.token && DEVICE_ID) {
-    log('🔄 Attempting to push schedules to GitHub...');
-    clearTimeout(ghSyncTimeout);
-    ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000 + Math.random() * 150);
-  } else {
-    log(`⚠️ Cannot push to GitHub: sync=${ghSyncEnabled}, online=${navigator.onLine}, token=${ghConfig.token ? 'yes' : 'no'}, device=${DEVICE_ID}`);
+    localStorage.setItem('dm_schedules', JSON.stringify(schedules));
+    log(`📝 Schedules saved locally, count: ${schedules.length}`);
+    console.log(`[DEBUG] ghSyncEnabled=${ghSyncEnabled}, token=${!!ghConfig.token}, DEVICE_ID=${DEVICE_ID}`);
+    if (ghSyncEnabled && navigator.onLine && ghConfig.token && DEVICE_ID) {
+      log('🔄 Attempting to push schedules to GitHub...');
+      clearTimeout(ghSyncTimeout);
+      ghSyncTimeout = setTimeout(() => pushToGitHub(), 1000 + Math.random() * 150);
+    } else {
+      log(`⚠️ Cannot push to GitHub: sync=${ghSyncEnabled}, online=${navigator.onLine}, token=${ghConfig.token ? 'yes' : 'no'}, device=${DEVICE_ID}`);
+    }
   }
-}
   function saveSchedulesLocal() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
   function renderSchedules() { const list = $('scheduleList'); if(!list) return; list.innerHTML = ''; if(schedules.length===0) { list.innerHTML='<p style="color:#64748b;text-align:center;">No schedules yet.</p>'; return; } const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; schedules.forEach(sch=>{ const daysStr = sch.days.map(d=>dayNames[d]).join(', '); const div = document.createElement('div'); div.className='schedule-item'; div.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`; list.appendChild(div); }); }
   function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('✅ Scheduler running'); }
