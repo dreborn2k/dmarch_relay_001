@@ -6,7 +6,6 @@ const urlsToCache = [
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'
 ];
 
-// Install service worker
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -14,7 +13,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Fetch from cache first, fallback to network
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
@@ -22,7 +20,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Activate and clean old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
