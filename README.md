@@ -85,20 +85,20 @@ Your web panel will be accessible at:
 
 ### 3. Create a QR Code for Easy Setup
 Generate a QR code containing the following JSON structure (replace with your actual credentials):
-```json
-{
+json
+`{
 "broker": "your-broker.s1.eu.hivemq.cloud",
 "port": 8884,
 "user": "your_mqtt_username",
 "pass": "your_mqtt_password",
-"device": "DmarchFF_EBCF08",    ← replace with your device's 6‑digit MAC (uppercase)
+"device": "", 
 "ghOwner": "your_github_username",
-"ghRepo": "dmarchFF",
-"ghBasePath": "RELAY/data",
-"ghToken": "github_pat_xxxxxxxx"
-}
+"ghRepo": "",
+"ghBasePath": "",
+"ghToken": ""
+}`
 
-## 4. Connect and Configure
+### 4. Connect and Configure
 
 1. Open the web panel URL (from step 2.3) on your phone/computer.
 2. Click **Scan QR / Upload Image** and scan the QR code you created.
