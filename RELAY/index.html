@@ -557,30 +557,62 @@
   async function processQR(data) {
     try {
       let jsonData;
-      try { jsonData = JSON.parse(data); } catch(e) { let fixed = data.replace(/"device":\s*([^",\n\}]+)/, '"device":"$1"'); jsonData = JSON.parse(fixed); }
-      if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) throw new Error('Missing MQTT fields');
-      if (!jsonData.ghOwner || !jsonData.ghRepo || !jsonData.ghToken) throw new Error('Missing GitHub fields');
+      try {
+        jsonData = JSON.parse(data);
+      } catch(e) {
+        // Try to fix missing quotes around device value
+        let fixed = data.replace(/"device":\s*([^",\n\}]+)/, '"device":"$1"');
+        jsonData = JSON.parse(fixed);
+      }
       
+      // Validate required MQTT fields
+      if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) {
+        throw new Error('Missing MQTT fields');
+      }
+      
+      // Validate required GitHub fields
+      if (!jsonData.ghOwner || !jsonData.ghRepo || !jsonData.ghToken) {
+        throw new Error('Missing GitHub fields');
+      }
+      
+      // Normalize device ID
       let deviceRaw = jsonData.device;
-      if (!deviceRaw.startsWith('DmarchFF_')) deviceRaw = 'DmarchFF_' + deviceRaw;
+      if (!deviceRaw.startsWith('DmarchFF_')) {
+        deviceRaw = 'DmarchFF_' + deviceRaw;
+      }
       const deviceId = deviceRaw;
       
+      // Check whitelist
       const allowed = await isDeviceWhitelisted(deviceId);
       if (!allowed) {
+        // Clear whitelist cache so next attempt will fetch fresh data
+        localStorage.removeItem('dm_whitelist_cache');
+        
+        // Show WhatsApp contact option
         const userChoice = confirm(`❌ Device ID ${deviceId} is not registered.\n\nDo you want to contact support on WhatsApp?`);
         if (userChoice) {
           window.open('https://wa.me/628551291055', '_blank');
         }
+        
+        // Close modal and return to setup card
+        closeQR();
         return;
       }
       
+      // --- If whitelist check passes, continue configuration ---
       DEVICE_ID = deviceId;
       mqttBroker = jsonData.broker;
       mqttPort = jsonData.port;
       mqttUser = jsonData.user;
       mqttPass = jsonData.pass;
+      
+      // Update UI display
       safeTxt('deviceIdDisplay', DEVICE_ID);
-      if($('deviceIdSuffix')) $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
+      if ($('deviceIdSuffix')) {
+        $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
+      }
+      
+      // Configure GitHub sync
       ghConfig = {
         owner: jsonData.ghOwner,
         repo: jsonData.ghRepo,
@@ -589,21 +621,35 @@
         branch: 'main'
       };
       ghSyncEnabled = true;
+      
+      // Save to localStorage
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
       saveAllConfig();
+      
+      // Update UI and connect
       setSyncStatus(true);
       updateGhPathDisplay();
       $('connCard').classList.add('hidden');
       document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
       connectMQTT();
-      setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
+      
+      // Load existing data from GitHub after connection
+      setTimeout(() => {
+        if (ghSyncEnabled) {
+          loadFromGitHub();
+          loadDeviceConfigFromGitHub();
+        }
+      }, 1000);
+      
       startWhitelistWatcher();
       log('✅ Configuration loaded from QR. MQTT connecting...');
       alert('Configuration successful! MQTT connecting...');
-      closeQR();
+      closeQR(); // Close modal on success
+      
     } catch(e) {
       alert('Invalid QR data: ' + e.message);
       console.error(e);
+      closeQR(); // Close modal on any error/invalid QR
     }
   }
 
