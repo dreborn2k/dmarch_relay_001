@@ -377,6 +377,7 @@
 
   // ==================== RELAY UI ====================
   function initRelayButtons() {
+    console.log(`initRelayButtons called with relayCount = ${relayCount}`);
     const box = $('relayBtns'); if(!box) return;
     box.innerHTML = ''; currentRelayState = new Array(relayCount).fill(false);
     for(let i=1; i<=relayCount; i++) {
@@ -428,7 +429,42 @@
   }
 
   async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`✅ Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('❌ Pull schedules: '+e.message); } }
-  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { if(config.relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); initRelayButtons(); safeVal('relayCount', relayCount); log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
+  async function loadDeviceConfigFromGitHub() {
+    if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return;
+    const path = getDeviceConfigPath();
+    if (!path) return;
+    try {
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`;
+      const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
+      if(res.ok) {
+        const data = await res.json();
+        const config = JSON.parse(atob(data.content));
+        if(config.device === DEVICE_ID) {
+          let changed = false;
+          if(config.relayCount && config.relayCount !== relayCount) {
+            relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
+            localStorage.setItem('dm_relay_count', relayCount);
+            safeVal('relayCount', relayCount);
+            changed = true;
+            log(`✅ Load device config: relayCount=${relayCount}`);
+          }
+          if(config.gpio && config.gpio.length) {
+            const gpioStr = config.gpio.join(',');
+            safeVal('gpioInput', gpioStr);
+            window.lastGpio = gpioStr;
+            changed = true;
+          }
+          if(changed) {
+            // Reinit UI with new relayCount
+            initRelayButtons();
+            updateSchedulerRelaySelect();
+          }
+        }
+      }
+    } catch(e) {
+      log('ℹ️ device.json not yet exists');
+    }
+  }
   async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `⚙️ Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('💾 Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`⚠️ Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`❌ Save device config error: ${err.message}`); return false; } }
   async function pushToGitHub(retry=0) {
     log(`📤 pushToGitHub called, retry=${retry}, schedules count=${schedules.length}`);
