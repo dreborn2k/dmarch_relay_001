@@ -284,7 +284,7 @@
   const GPIO_SYNC_THROTTLE_MS = 10000;
   let ignoreDeviceUpdatesUntil = 0;
   const IGNORE_DURATION_MS = 15000;
-  let whitelistWatcherInterval = null; // Tambahkan ini
+  let whitelistWatcherInterval = null;
 
   const $ = id => document.getElementById(id);
   const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
@@ -293,7 +293,7 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== WHITELIST CHECK ====================
+  // ==================== WHITELIST CHECK (fixed caching) ====================
   async function isDeviceWhitelisted(deviceId) {
     const cacheKey = 'dm_whitelist_cache';
     const cacheExpiry = 3600000;
@@ -304,8 +304,12 @@
         const data = JSON.parse(cached);
         if (Date.now() - data.timestamp < cacheExpiry) {
           whitelist = data.list;
+        } else {
+          localStorage.removeItem(cacheKey);
         }
-      } catch(e) {}
+      } catch(e) {
+        localStorage.removeItem(cacheKey);
+      }
     }
     if (!whitelist) {
       const url = 'https://raw.githubusercontent.com/dreborn2k/dmarchFF/main/RELAY/config/whitelist.json';
@@ -316,10 +320,14 @@
         if (!text.trim()) throw new Error('Whitelist file is empty');
         whitelist = JSON.parse(text);
         if (!Array.isArray(whitelist)) throw new Error('Whitelist is not an array');
-        localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+        // Only cache if whitelist is valid and non-empty
+        if (whitelist.length > 0) {
+          localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+        }
       } catch (e) {
         console.error('Failed to fetch whitelist:', e);
-        return false; // Jangan izinkan akses jika whitelist gagal diambil
+        localStorage.removeItem(cacheKey);
+        return false;
       }
     }
     if (!Array.isArray(whitelist) || whitelist.length === 0) return false;
