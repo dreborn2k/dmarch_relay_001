@@ -585,7 +585,7 @@
       // Check whitelist
       const allowed = await isDeviceWhitelisted(deviceId);
       if (!allowed) {
-        // Clear whitelist cache so next attempt will fetch fresh data
+        // Clear whitelist cache
         localStorage.removeItem('dm_whitelist_cache');
         
         // Show WhatsApp contact option
@@ -594,8 +594,14 @@
           window.open('https://wa.me/628551291055', '_blank');
         }
         
-        // Close modal and return to setup card
+        // Close modal
         closeQR();
+        
+        // Refresh page after 1 second to ensure fresh state for next attempt
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+        
         return;
       }
       
@@ -650,6 +656,11 @@
       alert('Invalid QR data: ' + e.message);
       console.error(e);
       closeQR(); // Close modal on any error/invalid QR
+      
+      // Refresh page after 1 second to ensure fresh state for next attempt
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
     }
   }
 
