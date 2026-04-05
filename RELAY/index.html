@@ -295,10 +295,10 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== WHITELIST CHECK (no cache on empty/error) ====================
+  // ==================== WHITELIST CHECK (cache 1 menit) ====================
   async function isDeviceWhitelisted(deviceId) {
     const cacheKey = 'dm_whitelist_cache';
-    const cacheExpiry = 3600000;
+    const cacheExpiry = 60000; // 1 menit (ubah dari 3600000)
     let whitelist = null;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -325,7 +325,6 @@
         if (whitelist.length > 0) {
           localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
         } else {
-          // Do not cache empty whitelist
           localStorage.removeItem(cacheKey);
         }
       } catch (e) {
@@ -336,6 +335,18 @@
     }
     if (!Array.isArray(whitelist) || whitelist.length === 0) return false;
     return whitelist.includes(deviceId);
+  }
+  
+  // Fungsi untuk refresh whitelist manual (bisa dipanggil dari tombol)
+  async function refreshWhitelist() {
+    localStorage.removeItem('dm_whitelist_cache');
+    const statusEl = $('whitelistStatus');
+    if (statusEl) statusEl.textContent = '🔄 Refreshing...';
+    await isDeviceWhitelisted(''); // force refetch
+    if (statusEl) statusEl.textContent = '✅ Whitelist refreshed';
+    setTimeout(() => {
+      if (statusEl) statusEl.textContent = '';
+    }, 2000);
   }
 
   function logoutAndReset(message) {
