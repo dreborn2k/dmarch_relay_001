@@ -723,19 +723,23 @@
       if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) throw new Error('Missing MQTT fields');
       if (!jsonData.ghOwner || !jsonData.ghRepo || !jsonData.ghToken) throw new Error('Missing GitHub fields');
       
-      // Normalize device ID
       let deviceRaw = jsonData.device;
       if (!deviceRaw.startsWith('DmarchFF_')) deviceRaw = 'DmarchFF_' + deviceRaw;
-      DEVICE_ID = deviceRaw;
+      const deviceId = deviceRaw;
       
-      // Whitelist check
-      const allowed = await isDeviceWhitelisted(DEVICE_ID);
+      const allowed = await isDeviceWhitelisted(deviceId);
       if (!allowed) {
-        alert(`❌ Device ID ${DEVICE_ID} is not registered. Please contact support.`);
+        // Tampilkan konfirmasi dengan link WhatsApp
+        const wantContact = confirm(`❌ Device ID ${deviceId} is not registered.\n\nDo you want to contact support on WhatsApp?`);
+        if (wantContact) {
+          window.open('https://wa.me/628551291055', '_blank');
+        }
+        // Jangan tutup modal, biarkan user mencoba lagi
         return;
       }
       
-      // Proceed with configuration
+      // Jika whitelist sukses, lanjutkan konfigurasi
+      DEVICE_ID = deviceId;
       mqttBroker = jsonData.broker;
       mqttPort = jsonData.port;
       mqttUser = jsonData.user;
@@ -758,10 +762,15 @@
       document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
       connectMQTT();
       setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
+      startWhitelistWatcher();
       log('✅ Configuration loaded from QR. MQTT connecting...');
       alert('Configuration successful! MQTT connecting...');
-      closeQR();
-    } catch(e) { alert('Invalid QR data: ' + e.message); console.error(e); }
+      closeQR(); // Tutup modal hanya jika sukses
+    } catch(e) {
+      alert('Invalid QR data: ' + e.message);
+      console.error(e);
+      // Jangan tutup modal, biarkan user coba lagi
+    }
   }
 
   // ==================== QR MODAL ====================
