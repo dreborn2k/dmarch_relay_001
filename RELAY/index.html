@@ -77,7 +77,7 @@
     .pin-badge { background: #1e293b; color: var(--accent); padding: 4px 8px; border-radius: 20px; font-size: 0.75rem; font-family: monospace; border: 1px solid var(--border); }
     .gpio-suggest { font-size: 0.7rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .gpio-suggest button { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; width: auto; padding: 0; font-size: 0.7rem; }
-    .current-pins { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .current-pins { font-size: 0.7rem; font-family: monospace; color: #94a3b8; }
     .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
     .disconnect-spacer { margin-bottom: 20px; }
     .device-id-input-group { display: flex; gap: 8px; align-items: center; }
@@ -172,7 +172,7 @@
         <datalist id="gpioSuggestions"></datalist>
         <div class="gpio-suggest">
           <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
-          <div id="currentGpioBadges" class="current-pins"></div>
+          <div id="currentGpioText" class="current-pins"></div>
         </div>
       </div>
       <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
@@ -269,6 +269,10 @@
   let currentRelayState = [];
   let DEVICE_ID = "";
   let mqttBroker = "", mqttPort = "", mqttUser = "", mqttPass = "";
+  
+  // Throttle GPIO sync from device (10 seconds)
+  let lastGpioSyncTime = 0;
+  const GPIO_SYNC_THROTTLE_MS = 10000;
 
   // DOM helpers
   const $ = id => document.getElementById(id);
@@ -278,23 +282,40 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== UPDATE GPIO BADGES ====================
-  function updateCurrentGpioBadges() {
-    const container = $('currentGpioBadges');
+  // ==================== UPDATE CURRENT GPIO DISPLAY (plain text) ====================
+  function updateCurrentGpioText() {
+    const container = $('currentGpioText');
     if (!container) return;
     const gpioRaw = $('gpioInput').value.trim();
     if (!gpioRaw) {
-      container.innerHTML = '<span style="color:#64748b; font-size:0.7rem;">No pins set</span>';
+      container.textContent = 'Current: --';
       return;
     }
     const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
-    container.innerHTML = '';
-    pins.forEach(p => {
-      const badge = document.createElement('span');
-      badge.className = 'pin-badge';
-      badge.textContent = `GPIO ${p}`;
-      container.appendChild(badge);
-    });
+    container.textContent = `Current: ${pins.join(',')}`;
+  }
+
+  // ==================== VALIDATE GPIO AND RELAY COUNT ====================
+  function validateGpioAndRelayCount(gpioRaw, relayCnt) {
+    const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
+    if (pins.length !== relayCnt) {
+      alert(`❌ Number of GPIO pins (${pins.length}) does not match Number of Relays (${relayCnt}). Please correct.`);
+      return false;
+    }
+    // Check for duplicates
+    const uniquePins = new Set(pins);
+    if (uniquePins.size !== pins.length) {
+      alert(`❌ Duplicate GPIO pins detected: ${pins.join(',')}. Each pin must be unique.`);
+      return false;
+    }
+    // Check each pin is a number
+    for (let p of pins) {
+      if (isNaN(parseInt(p))) {
+        alert(`❌ Invalid GPIO pin: "${p}". Must be a number.`);
+        return false;
+      }
+    }
+    return true;
   }
 
   // ==================== UPDATE UI (sync relay count) ====================
@@ -372,9 +393,17 @@
       }
       if(d.relay_pins) {
         renderPinBadges(d.relay_pins);
-        safeVal('gpioInput', d.relay_pins);
-        window.lastGpio = d.relay_pins;
-        updateCurrentGpioBadges();
+        // Throttle GPIO input update: only update if last sync was more than 10 seconds ago
+        const now = Date.now();
+        if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) {
+          safeVal('gpioInput', d.relay_pins);
+          window.lastGpio = d.relay_pins;
+          updateCurrentGpioText();
+          lastGpioSyncTime = now;
+          log(`🔄 GPIO pins updated from device (throttled to ${GPIO_SYNC_THROTTLE_MS/1000}s)`);
+        } else {
+          log(`⏸️ GPIO sync throttled, last update ${(now - lastGpioSyncTime)/1000}s ago`);
+        }
       }
       updateGPIOSuggestions();
     } catch(e) {}
@@ -388,7 +417,7 @@
     else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) commonPins = [5,4,14,12,13,15];
     commonPins.forEach(p => { const opt = document.createElement('option'); opt.value = p; datalist.appendChild(opt); });
   }
-  function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); updateCurrentGpioBadges(); log(`💡 Suggested GPIO (${pinCount} relays): ${suggested.join(',')}`); }
+  function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); updateCurrentGpioText(); log(`💡 Suggested GPIO (${pinCount} relays): ${suggested.join(',')}`); }
 
   function setConnectionState(connected) {
     safeCls($('connCard'), 'hidden', connected);
@@ -454,17 +483,28 @@
     if (!DEVICE_ID) { alert('Please set Device ID first!'); return; }
     const newCount = parseInt($('relayCountInput').value);
     const gpioRaw = $('gpioInput').value.trim();
-    const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
-    if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { alert(`Relay count must be between 1 and ${maxRelayFromDevice}`); return; }
-    if (gpioList.length !== newCount && newCount !== relayCount) { if (!confirm(`Number of GPIO pins (${gpioList.length}) does not match relay count (${newCount}). Continue anyway?`)) return; }
-    if (mqttClient && mqttClient.connected) { if (newCount !== relayCount) pub(DEVICE_ID + '/config/relayCount', String(newCount)); if (gpioRaw !== (window.lastGpio || '')) pub(DEVICE_ID + '/gpio/update', gpioRaw); }
-    else alert('MQTT not connected. Changes will be saved locally only.');
+    
+    // Validation
+    if (!validateGpioAndRelayCount(gpioRaw, newCount)) return;
+    
+    if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { 
+      alert(`Relay count must be between 1 and ${maxRelayFromDevice}`); 
+      return; 
+    }
+    if (mqttClient && mqttClient.connected) { 
+      if (newCount !== relayCount) pub(DEVICE_ID + '/config/relayCount', String(newCount)); 
+      if (gpioRaw !== (window.lastGpio || '')) pub(DEVICE_ID + '/gpio/update', gpioRaw); 
+    } else {
+      alert('MQTT not connected. Changes will be saved locally only.');
+    }
     localStorage.setItem('dm_relay_count', newCount);
     localStorage.setItem('dm_gpio', gpioRaw);
     relayCount = newCount;
     updateRelayUIByCount();
     window.lastGpio = gpioRaw;
-    updateCurrentGpioBadges();
+    updateCurrentGpioText();
+    // Force reset throttle timer so manual update takes effect immediately
+    lastGpioSyncTime = Date.now();
     if (ghSyncEnabled && ghConfig.token && DEVICE_ID) await saveDeviceConfigToGitHub();
     log(`✅ Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}`);
     alert('Configuration sent. Device will restart if changes were made.');
@@ -479,7 +519,7 @@
   }
 
   async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`✅ Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('❌ Pull schedules: '+e.message); } }
-  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { let changed = false; if(config.relayCount && config.relayCount !== relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); changed = true; log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio && config.gpio.length) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; updateCurrentGpioBadges(); changed = true; } if(changed) { updateRelayUIByCount(); } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
+  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { let changed = false; if(config.relayCount && config.relayCount !== relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); changed = true; log(`✅ Load device config: relayCount=${relayCount}`); } if(config.gpio && config.gpio.length) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; updateCurrentGpioText(); changed = true; } if(changed) { updateRelayUIByCount(); } } } } catch(e) { log('ℹ️ device.json not yet exists'); } }
   async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `⚙️ Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('💾 Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`⚠️ Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`❌ Save device config error: ${err.message}`); return false; } }
   async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `🔄 Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('💾 Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`⚠️ Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('❌ Push schedules: '+e.message); } }
 
@@ -580,12 +620,12 @@
       connectMQTT();
       updateRelayUIByCount();
       initScheduler(); initNotifUI();
-      // Initialize GPIO badges from current input value
-      updateCurrentGpioBadges();
-      // Listen to gpioInput changes to update badges in real-time
+      // Initialize GPIO text display
+      updateCurrentGpioText();
+      // Listen to gpioInput changes to update text in real-time
       const gpioInputElem = $('gpioInput');
       if (gpioInputElem) {
-        gpioInputElem.addEventListener('input', updateCurrentGpioBadges);
+        gpioInputElem.addEventListener('input', updateCurrentGpioText);
       }
       setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
     } else {
