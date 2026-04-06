@@ -226,7 +226,7 @@
         <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
         <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
       </div>
-      <button class="btn-primary" onclick="addSchedule()">➕ Add Schedule</button>
+      <button class="btn-primary" id="addScheduleBtn">➕ Add Schedule</button>
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
   </div>
@@ -236,8 +236,8 @@
     <div class="card-header"><h3>🔔 Notifications</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
-      <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
-      <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" onclick="editTelegramConfig()">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()">🧪 Test</button></div></div></div></div>
+      <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" id="saveTelegramBtn">💾 Save</button><button class="btn-secondary btn-notif" id="testTelegramBtn">🧪 Test</button><button class="btn-secondary btn-notif" id="fetchChatIdBtn">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
+      <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" id="editTelegramBtn">✏️ Edit</button><button class="btn-sm btn-secondary" id="testTelegramBtn2">🧪 Test</button></div></div></div></div>
       <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
       <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
     </div>
@@ -596,7 +596,6 @@
         DEVICE_ID = cfg.device;
         if (cfg.ghOwner && cfg.ghToken) { ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' }; ghSyncEnabled = true; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); }
         const deviceIdDisplay = $('#deviceIdDisplay'); if (deviceIdDisplay) deviceIdDisplay.textContent = DEVICE_ID;
-        const deviceIdSuffix = $('#deviceIdSuffix'); if (deviceIdSuffix) deviceIdSuffix.value = DEVICE_ID.replace('DmarchFF_', '');
         updateGhPathDisplay();
         const savedRelayCount = localStorage.getItem('dm_relay_count');
         if (savedRelayCount) { relayCount = parseInt(savedRelayCount); safeVal('relayCountInput', relayCount); }
@@ -743,7 +742,6 @@
   // ==================== NOTIFICATIONS ====================
   function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
   function updateTgUI() { const b=$('#tgStatusBadge'),c=$('#tgConfig'),d=$('#tgConnected'); if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
-  // ✅ Perbaikan: Tambahkan null check
   function initNotifUI() {
     const tg = notifConfig.tg||{}; 
     if(tg.token && tg.chatId){ 
@@ -752,8 +750,6 @@
       safeTxt('tgChatDisplay',tg.chatId); 
       tgConnected = tg.connected || false; 
     }
-    
-    // Tambahkan null check untuk tgToggle
     const tgToggle = $('#tgToggle');
     if (tgToggle) {
       safeCls(tgToggle, 'active', tgEnabled); 
@@ -766,7 +762,6 @@
         vibrate(); 
       };
     }
-    
     updateTgUI();
   }
   function editTelegramConfig() { const tgConfigDiv = $('#tgConfig'); const tgConnectedDiv = $('#tgConnected'); if (tgConfigDiv) tgConfigDiv.classList.remove('hidden'); if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden'); safeVal('tgToken', notifConfig.tg?.token && notifConfig.tg.token !== '••••••••' ? notifConfig.tg.token : ''); safeVal('tgChatId', notifConfig.tg?.chatId || ''); const badge = $('#tgStatusBadge'); if (badge) { badge.textContent = '⚙️ Editing'; badge.className = 'notif-status status-inactive'; } }
@@ -800,7 +795,6 @@
       mqttUser = jsonData.user;
       mqttPass = jsonData.pass;
       safeTxt('deviceIdDisplay', DEVICE_ID);
-      if ($('#deviceIdSuffix')) $('#deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
       ghConfig = { owner: jsonData.ghOwner, repo: jsonData.ghRepo, basePath: jsonData.ghBasePath || 'RELAY/data', token: jsonData.ghToken, branch: 'main' };
       ghSyncEnabled = true;
       localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
@@ -827,11 +821,6 @@
   let qrImagePreview = null;
   function openQR(){ $('#qrModal').style.display='flex'; $('#reader').innerHTML = ''; if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
   async function closeQR(){ $('#qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
-  $('#qrModal').onclick = function(e) { if (e.target === this) closeQR(); };
-  const startCameraBtn = $('#startCameraBtn');
-  if(startCameraBtn) { startCameraBtn.onclick = function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('#reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); }; }
-  const qrFileInput = $('#qrFileInput');
-  if(qrFileInput) { qrFileInput.onchange = async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('#reader').innerHTML=''; const reader=new FileReader(); reader.onload=function(evt){ const img=document.createElement('img'); img.src=evt.target.result; img.style.maxWidth='100%'; img.style.borderRadius='8px'; $('#reader').appendChild(img); qrImagePreview=img; }; reader.readAsDataURL(file); try{ const tempScanner = new Html5Qrcode("reader"); const decodedText=await tempScanner.scanFile(file,true); onQRSuccess(decodedText); tempScanner.clear(); } catch(err){ alert('QR scan failed'); } }; }
   function onQRSuccess(decodedText){ processQR(decodedText); }
 
   // ==================== INIT ====================
@@ -872,15 +861,11 @@
     const refreshWhitelistBtn = document.getElementById('refreshWhitelistBtn');
     if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
 
-    // Edit label buttons are now in Relay Configuration card (always exists)
+    // Edit label buttons
     const editLabelsBtn = document.getElementById('editLabelsBtn');
     const saveLabelsBtn = document.getElementById('saveLabelsBtn');
-    if (editLabelsBtn) {
-      editLabelsBtn.onclick = () => enterEditLabelsMode();
-    }
-    if (saveLabelsBtn) {
-      saveLabelsBtn.onclick = () => saveLabels();
-    }
+    if (editLabelsBtn) editLabelsBtn.onclick = () => enterEditLabelsMode();
+    if (saveLabelsBtn) saveLabelsBtn.onclick = () => saveLabels();
 
     const hasConfig = loadFullConfig();
     if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
@@ -911,6 +896,74 @@
     
     const showQrBtn = document.getElementById('showQrBtn');
     if (showQrBtn) showQrBtn.onclick = () => openQR();
+    
+    // QR modal event bindings (fixed)
+    const qrModal = document.getElementById('qrModal');
+    if (qrModal) {
+      qrModal.onclick = function(e) {
+        if (e.target === this) closeQR();
+      };
+    }
+    
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    if (startCameraBtn) {
+      startCameraBtn.onclick = function() {
+        if (qrScanner) {
+          qrScanner.stop().catch(()=>{});
+          qrScanner.clear();
+        }
+        if (qrImagePreview) {
+          qrImagePreview.remove();
+          qrImagePreview = null;
+        }
+        const readerDiv = document.getElementById('reader');
+        if (readerDiv) readerDiv.innerHTML = '';
+        qrScanner = new Html5Qrcode("reader");
+        qrScanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onQRSuccess,
+          () => {}
+        ).catch(err => { alert('Camera error: '+err); });
+      };
+    }
+    
+    const qrFileInput = document.getElementById('qrFileInput');
+    if (qrFileInput) {
+      qrFileInput.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (qrScanner) {
+          qrScanner.stop().catch(()=>{});
+          qrScanner.clear();
+          qrScanner = null;
+        }
+        if (qrImagePreview) {
+          qrImagePreview.remove();
+          qrImagePreview = null;
+        }
+        const readerDiv = document.getElementById('reader');
+        if (readerDiv) readerDiv.innerHTML = '';
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const img = document.createElement('img');
+          img.src = evt.target.result;
+          img.style.maxWidth = '100%';
+          img.style.borderRadius = '8px';
+          if (readerDiv) readerDiv.appendChild(img);
+          qrImagePreview = img;
+        };
+        reader.readAsDataURL(file);
+        try {
+          const tempScanner = new Html5Qrcode("reader");
+          const decodedText = await tempScanner.scanFile(file, true);
+          onQRSuccess(decodedText);
+          tempScanner.clear();
+        } catch(err) {
+          alert('QR scan failed');
+        }
+      };
+    }
     
     // Other buttons
     const disconnectBtn = document.getElementById('disconnectBtn');
@@ -957,6 +1010,21 @@
     
     const clearLogBtn = document.getElementById('clearLogBtn');
     if (clearLogBtn) clearLogBtn.onclick = () => { vibrate(); const terminal = document.getElementById('terminal'); if(terminal) terminal.innerHTML=''; };
+    
+    const addScheduleBtn = document.getElementById('addScheduleBtn');
+    if (addScheduleBtn) addScheduleBtn.onclick = () => addSchedule();
+    
+    // Telegram buttons
+    const saveTelegramBtn = document.getElementById('saveTelegramBtn');
+    if (saveTelegramBtn) saveTelegramBtn.onclick = () => saveTelegramConfig();
+    const testTelegramBtn = document.getElementById('testTelegramBtn');
+    if (testTelegramBtn) testTelegramBtn.onclick = () => testTelegram();
+    const testTelegramBtn2 = document.getElementById('testTelegramBtn2');
+    if (testTelegramBtn2) testTelegramBtn2.onclick = () => testTelegram();
+    const fetchChatIdBtn = document.getElementById('fetchChatIdBtn');
+    if (fetchChatIdBtn) fetchChatIdBtn.onclick = () => fetchChatId();
+    const editTelegramBtn = document.getElementById('editTelegramBtn');
+    if (editTelegramBtn) editTelegramBtn.onclick = () => editTelegramConfig();
     
     window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
   });
