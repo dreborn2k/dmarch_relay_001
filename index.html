@@ -107,7 +107,6 @@
     .install-prompt { margin-top: 10px; text-align: center; }
     .install-prompt button { width: auto; padding: 8px 20px; background: var(--accent); color: #000; font-size: 0.85rem; }
     .install-prompt p { font-size: 0.7rem; margin-top: 5px; color: #94a3b8; }
-    /* Edit label mode - relay buttons become inputs */
     .relay-edit-input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); text-align: center; font-size: 0.8rem; }
   </style>
 </head>
@@ -150,7 +149,7 @@
   </div>
 
   <!-- Device Information Card -->
-  <div class="card collapsible collapsed app-card hidden">
+  <div class="card collapsible collapsed app-card hidden" id="deviceInfoCard">
     <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="info-panel">
@@ -167,7 +166,7 @@
     </div>
   </div>
 
-  <!-- Relay Control Card (with edit label toggle) -->
+  <!-- Relay Control Card (with edit label toggle) - FIXED: added id -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2">
@@ -182,7 +181,7 @@
   </div>
 
   <!-- NTP Card -->
-  <div class="card collapsible collapsed app-card hidden">
+  <div class="card collapsible collapsed app-card hidden" id="ntpCard">
     <div class="card-header"><h3>🕐 NTP Settings</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="grid-2">
@@ -194,7 +193,7 @@
   </div>
 
   <!-- Relay Configuration Card -->
-  <div class="card collapsible collapsed app-card hidden">
+  <div class="card collapsible collapsed app-card hidden" id="relayConfigCard">
     <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="form-group">
@@ -256,7 +255,7 @@
   </div>
 
   <!-- System Card -->
-  <div class="card collapsible collapsed app-card hidden">
+  <div class="card collapsible collapsed app-card hidden" id="systemCard">
     <div class="card-header"><h3>🔄 System</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <div class="grid-2" style="margin-top:8px;"><button class="btn-primary" id="otaBtn">⬇️ OTA Update</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div>
@@ -279,7 +278,7 @@
   </div>
 
   <!-- About & Support Card -->
-  <div class="card collapsible collapsed app-card hidden about-section">
+  <div class="card collapsible collapsed app-card hidden about-section" id="aboutCard">
     <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
       <p><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
@@ -289,7 +288,11 @@
   </div>
 
   <!-- Terminal Card -->
-  <div class="card app-card hidden"><h3>📝 Event Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" id="clearLogBtn">🗑️ Clear Log</button></div>
+  <div class="card app-card hidden" id="terminalCard">
+    <h3>📝 Event Log</h3>
+    <div class="terminal" id="terminal"></div>
+    <button class="btn-secondary" id="clearLogBtn">🗑️ Clear Log</button>
+  </div>
 
   <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
@@ -336,7 +339,6 @@
     if (editBtn) editBtn.classList.add('hidden');
     if (saveBtn) saveBtn.classList.remove('hidden');
     
-    // Replace relay buttons with input fields
     const box = $('#relayBtns');
     if (!box) return;
     const btns = box.querySelectorAll('button');
@@ -358,13 +360,11 @@
     const saveBtn = $('#saveLabelsBtn');
     if (editBtn) editBtn.classList.remove('hidden');
     if (saveBtn) saveBtn.classList.add('hidden');
-    // Re-render relay buttons normally
     initRelayButtons();
   }
   
   async function saveLabels() {
     if (!editLabelsMode) return;
-    // Collect new labels from input fields
     const inputs = document.querySelectorAll('#relayBtns .relay-edit-input');
     const newLabels = [];
     inputs.forEach(input => {
@@ -377,19 +377,15 @@
       return;
     }
     relayLabels = newLabels;
-    // Update buttons UI
     exitEditLabelsMode();
-    // Save to GitHub if sync enabled
     if (ghSyncEnabled && ghConfig.token && DEVICE_ID) {
       await saveDeviceConfigToGitHub();
     }
-    // Also update local storage
     localStorage.setItem('dm_relay_labels', JSON.stringify(relayLabels));
     log('✅ Relay labels saved');
     alert('Labels saved successfully');
   }
   
-  // Helper to initialize labels array
   function initRelayLabels() {
     const stored = localStorage.getItem('dm_relay_labels');
     if (stored) {
@@ -578,7 +574,6 @@
     safeVal('relayCountInput', relayCount); 
     initRelayButtons(); 
     updateSchedulerRelaySelect(); 
-    // Adjust labels array
     if (relayLabels.length !== relayCount) {
       const newLabels = [];
       for (let i = 0; i < relayCount; i++) {
@@ -710,7 +705,6 @@
     localStorage.setItem('dm_relay_count', newCount);
     localStorage.setItem('dm_gpio', gpioRaw);
     relayCount = newCount;
-    // Adjust labels array
     const newLabels = [];
     for (let i = 0; i < newCount; i++) {
       newLabels.push(relayLabels[i] || `Relay ${i+1}`);
@@ -854,7 +848,6 @@
     const refreshWhitelistBtn = $('#refreshWhitelistBtn');
     if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
     
-    // Edit label buttons
     const editLabelsBtn = $('#editLabelsBtn');
     const saveLabelsBtn = $('#saveLabelsBtn');
     if (editLabelsBtn) editLabelsBtn.onclick = () => enterEditLabelsMode();
