@@ -845,53 +845,99 @@
     initAccordion();
     initLocationAndTime();
     initPwaInstall();
-    const refreshBtn = $('#refreshGeoBtn');
-    if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
-    const refreshWhitelistBtn = $('#refreshWhitelistBtn');
-    if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
     
-    const editLabelsBtn = $('#editLabelsBtn');
-    const saveLabelsBtn = $('#saveLabelsBtn');
+    // Safe element checks - only attach if element exists
+    const refreshBtn = document.getElementById('refreshGeoBtn');
+    if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
+    
+    const refreshWhitelistBtn = document.getElementById('refreshWhitelistBtn');
+    if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
+
+    const editLabelsBtn = document.getElementById('editLabelsBtn');
+    const saveLabelsBtn = document.getElementById('saveLabelsBtn');
     if (editLabelsBtn) {
       editLabelsBtn.onclick = () => enterEditLabelsMode();
     }
     if (saveLabelsBtn) {
       saveLabelsBtn.onclick = () => saveLabels();
     }
-    
+
     const hasConfig = loadFullConfig();
     if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
-      $('#connCard').classList.add('hidden');
+      const connCard = document.getElementById('connCard');
+      if (connCard) connCard.classList.add('hidden');
       document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
       setSyncStatus(true);
       updateGhPathDisplay();
       connectMQTT();
       updateRelayUIByCount();
-      initScheduler(); initNotifUI();
+      initScheduler(); 
+      initNotifUI();
       updateCurrentGpioText();
-      const gpioInputElem = $('#gpioInput');
+      
+      const gpioInputElem = document.getElementById('gpioInput');
       if (gpioInputElem) gpioInputElem.addEventListener('input', updateCurrentGpioText);
+      
       startPeriodicWhitelistCheck();
       setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
     } else {
-      $('#connCard').classList.remove('hidden');
+      const connCard = document.getElementById('connCard');
+      if (connCard) connCard.classList.remove('hidden');
       document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
-      initRelayButtons(); initScheduler(); initNotifUI();
+      initRelayButtons(); 
+      initScheduler(); 
+      initNotifUI();
     }
-    const showQrBtn = $('#showQrBtn');
-    if(showQrBtn) showQrBtn.onclick = () => openQR();
-    const attachVibration = (el, handler) => { if(!el) return; el.onclick = (e) => { vibrate(); if(handler) handler(e); }; };
-    attachVibration($('#disconnectBtn'), () => { if(mqttClient) mqttClient.end(true); });
-    attachVibration($('#allOnBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/all/on','1'); });
-    attachVibration($('#allOffBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/all/off','1'); });
-    attachVibration($('#saveNTPBtn'), () => { if(DEVICE_ID) { pub(DEVICE_ID+'/ntp/set', $('#ntpSelect').value); pub(DEVICE_ID+'/timezone/set', $('#tzInput').value); } });
-    attachVibration($('#applyRelayConfigBtn'), () => { applyRelayConfig(); });
-    attachVibration($('#suggestDefaultPinsBtn'), () => suggestDefaultPins());
-    attachVibration($('#updateNetBtn'), () => { const ssid=$('#netSsid').value.trim(); if(!ssid) return alert('SSID required!'); if(DEVICE_ID) pub(DEVICE_ID+'/network/update', JSON.stringify({ssid,pass:$('#netPass').value.trim()})); alert('Command sent.'); });
-    attachVibration($('#resetNetBtn'), () => { if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); });
-    attachVibration($('#otaBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/ota','1'); });
-    attachVibration($('#restartBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/restart','1'); });
-    attachVibration($('#clearLogBtn'), () => { const t=$('#terminal'); if(t) t.innerHTML=''; });
+    
+    const showQrBtn = document.getElementById('showQrBtn');
+    if (showQrBtn) showQrBtn.onclick = () => openQR();
+    
+    // Safe attach for all buttons
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    if (disconnectBtn) disconnectBtn.onclick = () => { vibrate(); if (mqttClient) mqttClient.end(true); };
+    
+    const allOnBtn = document.getElementById('allOnBtn');
+    if (allOnBtn) allOnBtn.onclick = () => { vibrate(); if (DEVICE_ID) pub(DEVICE_ID+'/all/on','1'); };
+    
+    const allOffBtn = document.getElementById('allOffBtn');
+    if (allOffBtn) allOffBtn.onclick = () => { vibrate(); if (DEVICE_ID) pub(DEVICE_ID+'/all/off','1'); };
+    
+    const saveNTPBtn = document.getElementById('saveNTPBtn');
+    if (saveNTPBtn) saveNTPBtn.onclick = () => { vibrate(); if (DEVICE_ID) { 
+      const ntpSelect = document.getElementById('ntpSelect');
+      const tzInput = document.getElementById('tzInput');
+      if (ntpSelect) pub(DEVICE_ID+'/ntp/set', ntpSelect.value); 
+      if (tzInput) pub(DEVICE_ID+'/timezone/set', tzInput.value); 
+    } };
+    
+    const applyRelayConfigBtn = document.getElementById('applyRelayConfigBtn');
+    if (applyRelayConfigBtn) applyRelayConfigBtn.onclick = () => { vibrate(); applyRelayConfig(); };
+    
+    const suggestDefaultPinsBtn = document.getElementById('suggestDefaultPinsBtn');
+    if (suggestDefaultPinsBtn) suggestDefaultPinsBtn.onclick = () => { vibrate(); suggestDefaultPins(); };
+    
+    const updateNetBtn = document.getElementById('updateNetBtn');
+    if (updateNetBtn) updateNetBtn.onclick = () => { vibrate(); 
+      const netSsid = document.getElementById('netSsid');
+      const netPass = document.getElementById('netPass');
+      const ssid = netSsid ? netSsid.value.trim() : '';
+      if(!ssid) return alert('SSID required!'); 
+      if(DEVICE_ID) pub(DEVICE_ID+'/network/update', JSON.stringify({ssid, pass: netPass ? netPass.value.trim() : ''})); 
+      alert('Command sent.'); 
+    };
+    
+    const resetNetBtn = document.getElementById('resetNetBtn');
+    if (resetNetBtn) resetNetBtn.onclick = () => { vibrate(); if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); };
+    
+    const otaBtn = document.getElementById('otaBtn');
+    if (otaBtn) otaBtn.onclick = () => { vibrate(); if(DEVICE_ID) pub(DEVICE_ID+'/system/ota','1'); };
+    
+    const restartBtn = document.getElementById('restartBtn');
+    if (restartBtn) restartBtn.onclick = () => { vibrate(); if(DEVICE_ID) pub(DEVICE_ID+'/system/restart','1'); };
+    
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    if (clearLogBtn) clearLogBtn.onclick = () => { vibrate(); const terminal = document.getElementById('terminal'); if(terminal) terminal.innerHTML=''; };
+    
     window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
   });
 </script>
