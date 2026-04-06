@@ -64,7 +64,12 @@
 
   <div class="card" id="connCard">
     <h3 style="color:var(--accent); margin-bottom:15px;">🔗 Setup Device</h3>
-    <button class="btn-primary" onclick="openQR()">📷 Scan QR Configuration</button>
+    <div class="grid-2">
+      <button class="btn-primary" onclick="openQR()">📷 Scan Kamera</button>
+      <button class="btn-secondary" onclick="$('qrFileInput').click()">📁 Upload QR</button>
+    </div>
+    <input type="file" id="qrFileInput" accept="image/*" style="display:none" onchange="handleFileUpload(event)">
+    
     <p id="connStatus" style="text-align:center; margin-top:15px; font-size:0.85rem; color:#94a3b8;">Status: Not Configured</p>
   </div>
 
@@ -273,7 +278,62 @@
     schedules.push(sch);
     saveSchedules();
   }
+  // FUNGSI UNTUK HANDLE UPLOAD FILE QR
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
+    // Tampilkan loading sebentar di log
+    log("Membaca file gambar...");
+    
+    const html5QrCode = new Html5Qrcode("reader"); // "reader" adalah ID element dummy untuk proses decode
+    html5QrCode.scanFile(file, true)
+      .then(decodedText => {
+        processConfig(decodedText);
+      })
+      .catch(err => {
+        log("Error: QR tidak terbaca. Pastikan gambar jelas.");
+        alert("Gagal membaca QR dari gambar. Silakan coba foto yang lebih jelas.");
+      });
+  }
+  // FUNGSI UNTUK PROSES KONFIGURASI (Dipakai Kamera & Upload)
+  function processConfig(text) {
+    try {
+      const cfg = JSON.parse(text);
+      if(!cfg.device || !cfg.broker) throw new Error("Invalid Config");
+      
+      localStorage.setItem('dm_full_config', text);
+      DEVICE_ID = cfg.device;
+      
+      // Reset ke default jika scan baru
+      relayCount = 5;
+      relayLabels = {};
+      
+      connectMQTT(cfg);
+      setUIState(true);
+      closeQR();
+      log("Konfigurasi berhasil dimuat!");
+    } catch(e) {
+      alert("Format QR tidak dikenali sebagai konfigurasi dMarch.");
+      log("Error Parsing QR: " + e.message);
+    }
+  }
+  // UPDATE FUNGSI openQR agar memakai processConfig
+  function openQR() {
+    $('qrModal').style.display = 'flex';
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" }, 
+      { fps: 10, qrbox: 250 }, 
+      (text) => {
+        processConfig(text);
+      }
+    ).catch(err => {
+      log("Gagal membuka kamera: " + err);
+      alert("Kamera tidak dapat diakses.");
+      closeQR();
+    });
+  }
   function saveSchedules() {
     localStorage.setItem('dm_schedules', JSON.stringify(schedules));
     renderSchedules();
