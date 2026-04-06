@@ -742,27 +742,32 @@
   // ==================== NOTIFICATIONS ====================
   function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
   
-  // FIXED: Added null checks for all DOM elements
+  // FIXED: Safe updateTgUI with null checks for all elements
   function updateTgUI() {
-    const b = $('#tgStatusBadge');
-    const c = $('#tgConfig');
-    const d = $('#tgConnected');
-    if (!b) return; // prevent error if element missing
+    const badge = document.getElementById('tgStatusBadge');
+    const configDiv = document.getElementById('tgConfig');
+    const connectedDiv = document.getElementById('tgConnected');
+    
+    if (!badge) {
+      console.warn('tgStatusBadge element not found');
+      return;
+    }
+    
     if (!tgEnabled) {
-      b.textContent = 'Inactive';
-      b.className = 'notif-status status-inactive';
-      if (c) c.classList.add('hidden');
-      if (d) d.classList.add('hidden');
+      badge.textContent = 'Inactive';
+      badge.className = 'notif-status status-inactive';
+      if (configDiv) configDiv.classList.add('hidden');
+      if (connectedDiv) connectedDiv.classList.add('hidden');
     } else if (tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
-      b.textContent = '● Active';
-      b.className = 'notif-status status-active';
-      if (c) c.classList.add('hidden');
-      if (d) d.classList.remove('hidden');
+      badge.textContent = '● Active';
+      badge.className = 'notif-status status-active';
+      if (configDiv) configDiv.classList.add('hidden');
+      if (connectedDiv) connectedDiv.classList.remove('hidden');
     } else {
-      b.textContent = '⚙️ Config';
-      b.className = 'notif-status status-inactive';
-      if (c) c.classList.remove('hidden');
-      if (d) d.classList.add('hidden');
+      badge.textContent = '⚙️ Config';
+      badge.className = 'notif-status status-inactive';
+      if (configDiv) configDiv.classList.remove('hidden');
+      if (connectedDiv) connectedDiv.classList.add('hidden');
     }
   }
   
@@ -774,9 +779,10 @@
       safeTxt('tgChatDisplay', tg.chatId);
       tgConnected = tg.connected || false;
     }
-    const tgToggle = $('#tgToggle');
+    const tgToggle = document.getElementById('tgToggle');
     if (tgToggle) {
-      safeCls(tgToggle, 'active', tgEnabled);
+      if (tgEnabled) tgToggle.classList.add('active');
+      else tgToggle.classList.remove('active');
       tgToggle.onclick = function () {
         tgEnabled = !tgEnabled;
         this.classList.toggle('active', tgEnabled);
@@ -785,6 +791,8 @@
         log(`Telegram: ${tgEnabled ? 'ON' : 'OFF'}`);
         vibrate();
       };
+    } else {
+      console.warn('tgToggle element not found');
     }
     updateTgUI();
   }
