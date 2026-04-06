@@ -18,10 +18,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
+    /* (existing styles remain, plus tab styles) */
     :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-    .container { max-width: 650px; margin: 0 auto; width: 100%; }
+    .container { max-width: 700px; margin: 0 auto; width: 100%; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; width: 100%; overflow: hidden; }
     .card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0 20px; cursor: pointer; }
     .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; font-size: 1.2rem; }
@@ -91,9 +92,6 @@
     .current-pins { font-size: 0.7rem; font-family: monospace; color: #94a3b8; }
     .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
     .disconnect-spacer { margin-bottom: 20px; }
-    .device-id-input-group { display: flex; gap: 8px; align-items: center; }
-    .device-id-input-group input { flex: 1; text-transform: uppercase; }
-    .device-id-input-group button { width: auto; padding: 10px 12px; }
     .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border); color: #64748b; font-size: 0.8rem; }
     .about-section { background: var(--card); border-radius: 12px; margin-bottom: 20px; }
     .contact-wa { display: inline-flex; align-items: center; gap: 8px; background: #075e54; padding: 8px 16px; border-radius: 40px; text-decoration: none; color: #fff; font-weight: 600; margin-top: 10px; }
@@ -110,6 +108,13 @@
     .label-input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
     .label-input-group span { min-width: 60px; font-size: 0.85rem; }
     .label-input-group input { flex: 1; }
+
+    /* Tab Styles */
+    .settings-tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 20px; gap: 4px; }
+    .tab-btn { background: transparent; border: none; padding: 10px 16px; font-size: 0.85rem; font-weight: 600; color: #94a3b8; cursor: pointer; border-radius: 8px 8px 0 0; transition: 0.2s; width: auto; }
+    .tab-btn.active { background: var(--accent); color: #000; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
   </style>
 </head>
 <body>
@@ -187,12 +192,20 @@
     </div>
   </div>
 
-  <!-- Relay Configuration Card -->
-  <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
+  <!-- ========== NEW SETTINGS CARD WITH TABS ========== -->
+  <div class="card app-card hidden" id="settingsTabCard">
+    <h3>⚙️ Settings</h3>
+    <div class="settings-tab-buttons">
+      <button class="tab-btn active" data-tab="tab-relay-config">🔌 Relay Config</button>
+      <button class="tab-btn" data-tab="tab-relay-labels">🏷️ Relay Labels</button>
+      <button class="tab-btn" data-tab="tab-scheduler">⏰ Scheduler</button>
+      <button class="tab-btn" data-tab="tab-notifications">🔔 Notifications</button>
+      <button class="tab-btn" data-tab="tab-network">🌐 Network</button>
+    </div>
+    <div class="tab-panel active" id="tab-relay-config">
+      <!-- Relay Configuration content -->
       <div class="form-group">
-        <label>Number of Relays (1 - <span id="maxRelayLimit">16</span>)</label>
+        <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
         <input id="relayCountInput" type="number" min="1" max="16" value="5">
         <small style="color:#64748b;">Changing this will restart the device</small>
       </div>
@@ -207,22 +220,14 @@
       </div>
       <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
     </div>
-  </div>
-
-  <!-- Relay Labels Card -->
-  <div class="card collapsible collapsed app-card hidden" id="relayLabelsCard">
-    <div class="card-header"><h3>🏷️ Relay Labels</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
+    <div class="tab-panel" id="tab-relay-labels">
+      <!-- Relay Labels content -->
       <div id="relayLabelsContainer"></div>
       <button class="btn-primary" id="saveLabelsBtn">💾 Save Labels to GitHub</button>
       <p style="font-size:0.7rem; color:#64748b; margin-top:10px;">Labels will be stored in device.json on GitHub and used on control buttons.</p>
     </div>
-  </div>
-
-  <!-- Relay Scheduler Card -->
-  <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
-    <div class="card-header"><h3>⏰ Relay Scheduler</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
+    <div class="tab-panel" id="tab-scheduler">
+      <!-- Scheduler content -->
       <div class="grid-2">
         <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
         <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
@@ -234,24 +239,16 @@
       <button class="btn-primary" id="addScheduleBtn">➕ Add Schedule</button>
       <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
-  </div>
-
-  <!-- Notification Card -->
-  <div class="card collapsible collapsed app-card hidden" id="notifCard">
-    <div class="card-header"><h3>🔔 Notifications</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
+    <div class="tab-panel" id="tab-notifications">
+      <!-- Notifications content -->
       <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
       <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" id="saveTelegramBtn">💾 Save</button><button class="btn-secondary btn-notif" id="testTelegramBtn">🧪 Test</button><button class="btn-secondary btn-notif" id="fetchChatIdBtn">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
       <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" id="editTelegramBtn">✏️ Edit</button><button class="btn-sm btn-secondary" id="testTelegramConnectedBtn">🧪 Test</button></div></div></div></div>
       <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
       <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
     </div>
-  </div>
-
-  <!-- Network Card -->
-  <div class="card collapsible collapsed app-card hidden" id="networkCard">
-    <div class="card-header"><h3>🌐 Network</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
+    <div class="tab-panel" id="tab-network">
+      <!-- Network content -->
       <div class="form-group"><label>SSID</label><input id="netSsid"></div>
       <div class="form-group"><label>Password</label><input id="netPass" type="password"></div>
       <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
@@ -322,7 +319,6 @@
   let ignoreDeviceUpdatesUntil = 0;
   const IGNORE_DURATION_MS = 15000;
   let periodicWhitelistCheckInterval = null;
-  
   let deferredPrompt = null;
 
   const $ = id => document.getElementById(id);
@@ -332,7 +328,23 @@
   const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
   function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // ==================== PWA INSTALL PROMPT ====================
+  // ==================== TAB HANDLER ====================
+  function initTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.getAttribute('data-tab');
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tabPanels.forEach(panel => panel.classList.remove('active'));
+        const activePanel = document.getElementById(tabId);
+        if (activePanel) activePanel.classList.add('active');
+      });
+    });
+  }
+
+  // ==================== PWA INSTALL ====================
   function initPwaInstall() {
     const installContainer = document.getElementById('pwaInstallContainer');
     const installBtn = document.getElementById('installPwaBtn');
@@ -346,19 +358,11 @@
         if (deferredPrompt) {
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
-          if (outcome === 'accepted') {
-            if (installContainer) installContainer.style.display = 'none';
-          }
+          if (outcome === 'accepted') if (installContainer) installContainer.style.display = 'none';
           deferredPrompt = null;
-        } else {
-          alert('Tap the menu (⋮) and select "Install app" or "Add to Home Screen"');
-        }
+        } else alert('Tap menu and select "Install app"');
       });
     }
-    window.addEventListener('appinstalled', () => {
-      if (installContainer) installContainer.style.display = 'none';
-      deferredPrompt = null;
-    });
   }
 
   // ==================== WHITELIST CHECK ====================
@@ -370,14 +374,9 @@
     if (cached) {
       try {
         const data = JSON.parse(cached);
-        if (Date.now() - data.timestamp < cacheExpiry) {
-          whitelist = data.list;
-        } else {
-          localStorage.removeItem(cacheKey);
-        }
-      } catch(e) {
-        localStorage.removeItem(cacheKey);
-      }
+        if (Date.now() - data.timestamp < cacheExpiry) whitelist = data.list;
+        else localStorage.removeItem(cacheKey);
+      } catch(e) { localStorage.removeItem(cacheKey); }
     }
     if (!whitelist) {
       const url = 'https://raw.githubusercontent.com/dreborn2k/dmarchFF/main/RELAY/config/whitelist.json';
@@ -387,54 +386,31 @@
         const text = await res.text();
         if (!text.trim()) throw new Error('Whitelist file is empty');
         whitelist = JSON.parse(text);
-        if (!Array.isArray(whitelist)) throw new Error('Whitelist is not an array');
-        if (whitelist.length > 0) {
-          localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
-        } else {
-          localStorage.removeItem(cacheKey);
-        }
-      } catch (e) {
-        console.error('Failed to fetch whitelist:', e);
-        localStorage.removeItem(cacheKey);
-        return false;
-      }
+        if (!Array.isArray(whitelist)) throw new Error('Not array');
+        if (whitelist.length > 0) localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+        else localStorage.removeItem(cacheKey);
+      } catch (e) { console.error(e); return false; }
     }
-    if (!Array.isArray(whitelist) || whitelist.length === 0) return false;
-    return whitelist.includes(deviceId);
+    return Array.isArray(whitelist) && whitelist.includes(deviceId);
   }
-
   async function refreshWhitelist() {
     localStorage.removeItem('dm_whitelist_cache');
     const statusEl = $('whitelistStatus');
     if (statusEl) statusEl.textContent = '🔄 Refreshing...';
     await isDeviceWhitelisted('');
     if (statusEl) statusEl.textContent = '✅ Whitelist refreshed';
-    setTimeout(() => {
-      if (statusEl) statusEl.textContent = '';
-    }, 2000);
+    setTimeout(() => { if(statusEl) statusEl.textContent = ''; }, 2000);
     if (DEVICE_ID) {
       const allowed = await isDeviceWhitelisted(DEVICE_ID);
-      if (!allowed) {
-        logoutAndReset('❌ Your device is no longer in the whitelist. Please contact support.');
-      }
+      if (!allowed) logoutAndReset('❌ Device not in whitelist.');
     }
   }
-
   function logoutAndReset(message) {
-    if (periodicWhitelistCheckInterval) { clearInterval(periodicWhitelistCheckInterval); periodicWhitelistCheckInterval = null; }
-    localStorage.removeItem('dm_full_config');
-    localStorage.removeItem('dm_gh_config');
-    localStorage.removeItem('dm_relay_count');
-    localStorage.removeItem('dm_gpio');
-    localStorage.removeItem('dm_schedules');
-    localStorage.removeItem('dm_device_suffix');
+    if (periodicWhitelistCheckInterval) clearInterval(periodicWhitelistCheckInterval);
+    localStorage.removeItem('dm_full_config'); localStorage.removeItem('dm_gh_config'); localStorage.removeItem('dm_relay_count');
+    localStorage.removeItem('dm_gpio'); localStorage.removeItem('dm_schedules'); localStorage.removeItem('dm_device_suffix');
     localStorage.removeItem('dm_device_id');
-    ghSyncEnabled = false;
-    DEVICE_ID = "";
-    mqttBroker = "";
-    mqttPort = "";
-    mqttUser = "";
-    mqttPass = "";
+    ghSyncEnabled = false; DEVICE_ID = ""; mqttBroker = ""; mqttPort = ""; mqttUser = ""; mqttPass = "";
     relayCount = 5;
     if (mqttClient && mqttClient.connected) mqttClient.end(true);
     $('connCard').classList.remove('hidden');
@@ -442,28 +418,19 @@
     safeTxt('connStatus', 'Status: Not configured');
     alert(message);
   }
-
   function startPeriodicWhitelistCheck() {
     if (periodicWhitelistCheckInterval) clearInterval(periodicWhitelistCheckInterval);
     periodicWhitelistCheckInterval = setInterval(async () => {
       if (!DEVICE_ID) return;
       const allowed = await isDeviceWhitelisted(DEVICE_ID);
-      if (!allowed) {
-        logoutAndReset('❌ Your device has been removed from the whitelist. Please contact support.');
-      }
+      if (!allowed) logoutAndReset('❌ Device removed from whitelist.');
     }, 30000);
   }
 
   // ==================== LOCATION & TIME ====================
   let timeInterval = null, geoCache = null;
   const GEO_CACHE_EXPIRY = 3600000;
-  function updateLocalTime() {
-    const now = new Date();
-    const localTimeElem = $('localTimeDisplay');
-    const timezoneElem = $('timezoneDisplay');
-    if (localTimeElem) localTimeElem.textContent = now.toLocaleTimeString();
-    if (timezoneElem) timezoneElem.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
+  function updateLocalTime() { const now = new Date(); if($('localTimeDisplay')) $('localTimeDisplay').textContent = now.toLocaleTimeString(); if($('timezoneDisplay')) $('timezoneDisplay').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone; }
   async function getGeolocation(forceRefresh = false) {
     if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { displayGeoData(geoCache); return; }
     if (!navigator.geolocation) { safeTxt('addressDisplay', 'Geolocation not supported'); return; }
@@ -486,7 +453,7 @@
         geoCache = { lat, lon, address, timestamp: Date.now() };
         localStorage.setItem('dm_geo_cache', JSON.stringify(geoCache));
       } catch (e) { safeTxt('addressDisplay', 'Unable to fetch address'); }
-    }, (error) => { safeTxt('addressDisplay', 'Location error'); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, () => { safeTxt('addressDisplay', 'Location error'); }, { enableHighAccuracy: true, timeout: 10000 });
   }
   function displayGeoData(cache) { safeTxt('latDisplay', cache.lat?.toFixed(6) || '--'); safeTxt('lonDisplay', cache.lon?.toFixed(6) || '--'); safeTxt('addressDisplay', cache.address || '--'); }
   function initLocationAndTime() {
@@ -514,46 +481,6 @@
     for (let p of pins) if (isNaN(parseInt(p))) { alert(`❌ Invalid GPIO: ${p}`); return false; }
     return true;
   }
-  function renderRelayLabelsInputs() {
-    const container = $('relayLabelsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    if (!relayCount) return;
-    while (relayLabels.length < relayCount) relayLabels.push(`Relay ${relayLabels.length+1}`);
-    while (relayLabels.length > relayCount) relayLabels.pop();
-    for (let i = 0; i < relayCount; i++) {
-      const div = document.createElement('div');
-      div.className = 'label-input-group';
-      div.innerHTML = `<span>Relay ${i+1}:</span><input type="text" id="label_relay_${i+1}" value="${escapeHtml(relayLabels[i])}" placeholder="Enter label">`;
-      container.appendChild(div);
-    }
-  }
-  function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-  function collectLabelsFromInputs() {
-    const labels = [];
-    for (let i = 1; i <= relayCount; i++) {
-      const input = $(`label_relay_${i}`);
-      if (input) labels.push(input.value.trim() || `Relay ${i}`);
-      else labels.push(`Relay ${i}`);
-    }
-    return labels;
-  }
-  async function saveRelayLabelsToGitHub() {
-    if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) {
-      alert('GitHub sync not enabled. Please configure device first.');
-      return;
-    }
-    const newLabels = collectLabelsFromInputs();
-    relayLabels = newLabels;
-    const success = await saveDeviceConfigToGitHub(0, true);
-    if (success) {
-      log('Relay labels saved to GitHub');
-      initRelayButtons();
-      alert('Labels saved successfully');
-    } else {
-      alert('Failed to save labels. Check console.');
-    }
-  }
   function updateRelayUIByCount() { 
     safeVal('relayCountInput', relayCount); 
     initRelayButtons(); 
@@ -561,9 +488,7 @@
     renderRelayLabelsInputs();
     log(`UI updated to ${relayCount} relays`); 
   }
-  function saveAllConfig() {
-    localStorage.setItem('dm_full_config', JSON.stringify({ broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID, ghOwner: ghConfig.owner, ghRepo: ghConfig.repo, ghBasePath: ghConfig.basePath, ghToken: ghConfig.token }));
-  }
+  function saveAllConfig() { localStorage.setItem('dm_full_config', JSON.stringify({ broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID, ghOwner: ghConfig.owner, ghRepo: ghConfig.repo, ghBasePath: ghConfig.basePath, ghToken: ghConfig.token })); }
   function loadFullConfig() {
     const saved = localStorage.getItem('dm_full_config');
     if (saved) {
@@ -573,7 +498,6 @@
         DEVICE_ID = cfg.device;
         if (cfg.ghOwner && cfg.ghToken) { ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' }; ghSyncEnabled = true; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); }
         const deviceIdDisplay = $('deviceIdDisplay'); if (deviceIdDisplay) deviceIdDisplay.textContent = DEVICE_ID;
-        updateGhPathDisplay();
         const savedRelayCount = localStorage.getItem('dm_relay_count');
         if (savedRelayCount) { relayCount = parseInt(savedRelayCount); safeVal('relayCountInput', relayCount); }
         return true;
@@ -593,7 +517,7 @@
       const d = JSON.parse(msg);
       safeTxt('sigVal', (d.rssi||'--')+'%'); safeTxt('upVal', d.uptime||'--'); safeTxt('tempVal', (d.temp||'--')+'°C'); safeTxt('fwVal', d.fw_version||'--');
       if(d.hw_type) { currentHardware = d.hw_type; safeTxt('hwType', d.hw_type); }
-      if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
+      if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); safeTxt('maxRelayLimitTab', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
       const now = Date.now();
       const ignore = (now < ignoreDeviceUpdatesUntil);
       if (ignore && d.relay_count !== undefined) { log(`Ignoring relay_count=${d.relay_count} (manual change active)`); }
@@ -667,7 +591,7 @@
     btn.textContent = isOn ? `${label} ✓` : label; 
     btn.className = isOn ? 'btn-success' : 'btn-secondary'; 
   }
-  function updateSchedulerRelaySelect() { const sel = $('schRelay'); if(!sel) return; const cur = sel.value; sel.innerHTML = ''; for(let i=1; i<=relayCount; i++) { const opt = document.createElement('option'); opt.value = i; opt.textContent = (relayLabels[i-1] && relayLabels[i-1].trim()) ? relayLabels[i-1] : `Relay ${i}`; sel.appendChild(opt); } if(cur && cur <= relayCount) sel.value = cur; else sel.value = '1'; }
+  function updateSchedulerRelaySelect() { const sel = $('schRelay'); if(!sel) return; const cur = sel.value; sel.innerHTML = ''; for(let i=1; i<=relayCount; i++) { const opt = document.createElement('option'); opt.value = i; opt.textContent = `Relay ${i}`; sel.appendChild(opt); } if(cur && cur <= relayCount) sel.value = cur; else sel.value = '1'; }
   async function applyRelayConfig() {
     if (!DEVICE_ID) { alert('Set Device ID first'); return; }
     const newCount = parseInt($('relayCountInput').value);
@@ -717,8 +641,7 @@
           initRelayButtons();
         }
       } else if (res.status === 404) {
-        relayLabels = [];
-        for(let i=1; i<=relayCount; i++) relayLabels.push(`Relay ${i}`);
+        relayLabels = []; for(let i=1; i<=relayCount; i++) relayLabels.push(`Relay ${i}`);
         renderRelayLabelsInputs();
         initRelayButtons();
         await saveDeviceConfigToGitHub(0, true);
@@ -732,13 +655,8 @@
     const gpioRaw = $('gpioInput').value.trim();
     const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s);
     let labelsToSave = relayLabels;
-    if (forceLabelSave) {
-      labelsToSave = collectLabelsFromInputs();
-      relayLabels = labelsToSave;
-    } else {
-      const firstInput = $(`label_relay_1`);
-      if (firstInput) labelsToSave = collectLabelsFromInputs();
-    }
+    if (forceLabelSave) { labelsToSave = collectLabelsFromInputs(); relayLabels = labelsToSave; }
+    else { const firstInput = $(`label_relay_1`); if (firstInput) labelsToSave = collectLabelsFromInputs(); }
     const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, relayLabels: labelsToSave, updatedAt: new Date().toISOString() };
     try {
       const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`;
@@ -782,6 +700,40 @@
   async function fetchChatId() { const token = $('tgToken').value.trim(); if(!token) return alert('Enter Bot Token first'); try { const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); const data = await res.json(); if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { safeVal('tgChatId', data.result[0].message.chat.id); alert('Chat ID found!'); } else alert('Send a message to the bot first, then try again.'); } catch(e) { alert('Failed to fetch Chat ID'); } }
   async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { log(`Telegram send error: ${e.message}`); } } }
 
+  // ==================== LABELS UI ====================
+  function renderRelayLabelsInputs() {
+    const container = $('relayLabelsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!relayCount) return;
+    while (relayLabels.length < relayCount) relayLabels.push(`Relay ${relayLabels.length+1}`);
+    while (relayLabels.length > relayCount) relayLabels.pop();
+    for (let i = 0; i < relayCount; i++) {
+      const div = document.createElement('div');
+      div.className = 'label-input-group';
+      div.innerHTML = `<span>Relay ${i+1}:</span><input type="text" id="label_relay_${i+1}" value="${escapeHtml(relayLabels[i])}" placeholder="Enter label">`;
+      container.appendChild(div);
+    }
+  }
+  function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+  function collectLabelsFromInputs() {
+    const labels = [];
+    for (let i = 1; i <= relayCount; i++) {
+      const input = $(`label_relay_${i}`);
+      if (input) labels.push(input.value.trim() || `Relay ${i}`);
+      else labels.push(`Relay ${i}`);
+    }
+    return labels;
+  }
+  async function saveRelayLabelsToGitHub() {
+    if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) { alert('GitHub sync not enabled.'); return; }
+    const newLabels = collectLabelsFromInputs();
+    relayLabels = newLabels;
+    const success = await saveDeviceConfigToGitHub(0, true);
+    if (success) { log('Relay labels saved to GitHub'); initRelayButtons(); alert('Labels saved successfully'); }
+    else alert('Failed to save labels.');
+  }
+
   // ==================== QR PROCESSING ====================
   async function processQR(data) {
     try {
@@ -795,17 +747,13 @@
       const allowed = await isDeviceWhitelisted(deviceId);
       if (!allowed) {
         localStorage.removeItem('dm_whitelist_cache');
-        const userChoice = confirm(`❌ Device ID ${deviceId} is not registered.\n\nDo you want to contact support on WhatsApp?`);
+        const userChoice = confirm(`❌ Device ID ${deviceId} is not registered.\n\nContact support on WhatsApp?`);
         if (userChoice) window.open('https://wa.me/628551291055', '_blank');
-        closeQR();
-        setTimeout(() => { location.reload(); }, 1000);
+        closeQR(); setTimeout(() => { location.reload(); }, 1000);
         return;
       }
       DEVICE_ID = deviceId;
-      mqttBroker = jsonData.broker;
-      mqttPort = jsonData.port;
-      mqttUser = jsonData.user;
-      mqttPass = jsonData.pass;
+      mqttBroker = jsonData.broker; mqttPort = jsonData.port; mqttUser = jsonData.user; mqttPass = jsonData.pass;
       safeTxt('deviceIdDisplay', DEVICE_ID);
       ghConfig = { owner: jsonData.ghOwner, repo: jsonData.ghRepo, basePath: jsonData.ghBasePath || 'RELAY/data', token: jsonData.ghToken, branch: 'main' };
       ghSyncEnabled = true;
@@ -823,14 +771,13 @@
       closeQR();
     } catch(e) { alert('Invalid QR data: ' + e.message); console.error(e); closeQR(); setTimeout(() => { location.reload(); }, 1000); }
   }
-
-  // ==================== QR MODAL ====================
-  let qrImagePreview = null;
-  function openQR(){ $('qrModal').style.display='flex'; $('reader').innerHTML = ''; if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
-  async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } }
+  function openQR(){ $('qrModal').style.display='flex'; $('reader').innerHTML=''; }
+  async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } }
   $('qrModal').onclick = function(e) { if (e.target === this) closeQR(); };
-  $('startCameraBtn').onclick = function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); };
-  $('qrFileInput').onchange = async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } $('reader').innerHTML=''; const reader=new FileReader(); reader.onload=function(evt){ const img=document.createElement('img'); img.src=evt.target.result; img.style.maxWidth='100%'; img.style.borderRadius='8px'; $('reader').appendChild(img); qrImagePreview=img; }; reader.readAsDataURL(file); try{ const tempScanner = new Html5Qrcode("reader"); const decodedText=await tempScanner.scanFile(file,true); onQRSuccess(decodedText); tempScanner.clear(); } catch(err){ alert('QR scan failed'); } };
+  const startCameraBtn = $('startCameraBtn');
+  if(startCameraBtn) { startCameraBtn.onclick = function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } $('reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); }; }
+  const qrFileInput = $('qrFileInput');
+  if(qrFileInput) { qrFileInput.onchange = async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } $('reader').innerHTML=''; try{ const tempScanner = new Html5Qrcode("reader"); const decodedText=await tempScanner.scanFile(file,true); onQRSuccess(decodedText); tempScanner.clear(); } catch(err){ alert('QR scan failed'); } }; }
   function onQRSuccess(decodedText){ processQR(decodedText); }
 
   // ==================== INIT ====================
@@ -852,15 +799,14 @@
   }
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered')).catch(err => console.log('SW failed'));
-    });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered')).catch(err => console.log('SW failed')); });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     initAccordion();
     initLocationAndTime();
     initPwaInstall();
+    initTabs();
     $('refreshGeoBtn').onclick = () => getGeolocation(true);
     $('refreshWhitelistBtn').onclick = () => refreshWhitelist();
     $('showQrBtn').onclick = () => openQR();
@@ -882,6 +828,7 @@
     $('fetchChatIdBtn').onclick = () => fetchChatId();
     $('editTelegramBtn').onclick = () => editTelegramConfig();
     $('testTelegramConnectedBtn').onclick = () => testTelegram();
+    
     const hasConfig = loadFullConfig();
     if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
       $('connCard').classList.add('hidden');
@@ -901,6 +848,7 @@
       document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
       initRelayButtons(); initScheduler(); initNotifUI();
       relayLabels = []; for(let i=1;i<=relayCount;i++) relayLabels.push(`Relay ${i}`);
+      renderRelayLabelsInputs();
     }
     window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
   });
