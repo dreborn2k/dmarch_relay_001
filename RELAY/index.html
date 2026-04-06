@@ -1,437 +1,849 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>dMarch Relay Pro | Professional IoT Relay Controller</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
+  
+  <!-- PWA Manifest & Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="dMarch Relay">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
-    :root {
-      --bg: #0f1115; --card-bg: #1a1d24; --border: #2d313a;
-      --primary: #007bff; --success: #28a745; --danger: #dc3545;
-      --text: #e0e0e0; --text-dim: #8892a0; --input-bg: #22262e;
-    }
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; padding: 16px; }
-    .container { max-width: 900px; margin: 0 auto; }
-    h1, h2, h3 { color: #fff; margin-bottom: 12px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
-    details { background: var(--input-bg); padding: 10px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; }
-    summary { font-weight: 600; color: #fff; }
-    input, select, button { font-family: inherit; }
-    input, select { width: 100%; padding: 10px; margin: 6px 0; background: var(--input-bg); border: 1px solid var(--border); color: #fff; border-radius: 6px; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s; }
-    button:hover { opacity: 0.9; }
-    .btn-primary { background: var(--primary); color: #fff; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 650px; margin: 0 auto; width: 100%; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; width: 100%; overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0 20px; cursor: pointer; }
+    .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; font-size: 1.2rem; }
+    .card-content { padding: 0 20px 20px 20px; margin-top: 5px; }
+    .card.collapsed .card-content { display: none; }
+    .card.collapsed .card-header { padding-bottom: 18px; }
+    .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
+    .card:not(.collapsible) { padding: 20px; }
+    .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    h1 { text-align: center; margin-bottom: 5px; font-size: 1.8rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: #000; }
     .btn-success { background: var(--success); color: #fff; }
     .btn-danger { background: var(--danger); color: #fff; }
-    .btn-secondary { background: #555; color: #fff; }
-    .relay-btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px; margin: 6px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; cursor: pointer; min-width: 110px; transition: 0.2s; }
-    .relay-btn:hover { background: #2a2d35; border-color: #007bff; }
-    .relay-btn.active { background: #143a23; border-color: var(--success); }
-    #eventLog { background: #0d0f13; padding: 10px; border-radius: 6px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.85em; color: #aaa; }
-    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dc3545; margin-right: 6px; }
-    .status-dot.online { background: var(--success); }
-    .hint { font-size: 0.8em; color: var(--text-dim); margin: 4px 0; }
-    #labelEditor { background: #15181e; padding: 12px; border-radius: 8px; border: 1px dashed #444; }
-    #labelInputsContainer > div { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    #labelInputsContainer span { min-width: 70px; color: #8892a0; font-size: 0.9em; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
-    .modal-content { background: var(--card-bg); padding: 20px; border-radius: 10px; max-width: 400px; width: 90%; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-qr { background: #6366f1; color: #fff; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; margin-top: 5px; }
+    .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    #connStatus { text-align: center; margin-top: 10px; font-size: 0.85rem; }
+    #qrModal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-box { background:var(--card); border-radius:12px; padding:16px; max-width:380px; width:90%; text-align:center; }
+    #reader { width:100%; border-radius:8px; overflow:hidden; background:#000; margin:0 auto; }
+    .qr-actions { display:flex; gap:8px; margin-top:12px; justify-content:center; }
+    .qr-actions button, .qr-actions label { flex:1; text-align:center; }
+    #qrFileInput { display:none; }
+    .qr-msg { margin-top:10px; font-size:0.8rem; text-align:center; word-break:break-word; }
+    .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .day-btn { padding:6px 0; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); cursor:pointer; font-size:0.75rem; }
+    .day-btn.active { background:var(--accent); color:#000; }
+    .schedule-item { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .sch-info { flex:1; }
+    .sch-time { font-weight:bold; color:var(--accent); }
+    .sch-actions { display:flex; gap:8px; align-items:center; }
+    .toggle-switch { position:relative; width:36px; height:20px; background:#475569; border-radius:10px; cursor:pointer; transition:0.3s; }
+    .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:0.3s; }
+    .toggle-switch.active { background:var(--success); }
+    .toggle-switch.active::after { left:18px; }
+    .toggle-switch.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .btn-sm { padding:6px 10px; font-size:0.8rem; width:auto; }
+    .sync-status { font-size:0.8rem; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; }
+    .sync-on { background:#064e3b; color:#10b981; }
+    .sync-off { background:#334155; color:#94a3b8; }
+    .notif-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
+    .notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .notif-status { font-size:0.75rem; padding:3px 8px; border-radius:12px; }
+    .status-active { background:#064e3b; color:#10b981; }
+    .status-inactive { background:#334155; color:#94a3b8; }
+    .notif-config { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+    .notif-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .btn-notif { padding:6px 12px; font-size:0.8rem; width: auto; }
+    .config-mask { color:#64748b; font-family:monospace; }
+    .info-panel { background: #0f172a; border-radius: 12px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
+    .badge-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .pin-badge { background: #1e293b; color: var(--accent); padding: 4px 8px; border-radius: 20px; font-size: 0.75rem; font-family: monospace; border: 1px solid var(--border); }
+    .gpio-suggest { font-size: 0.7rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .gpio-suggest button { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; width: auto; padding: 0; font-size: 0.7rem; }
+    .current-pins { font-size: 0.7rem; font-family: monospace; color: #94a3b8; }
+    .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
+    .disconnect-spacer { margin-bottom: 20px; }
+    .device-id-input-group { display: flex; gap: 8px; align-items: center; }
+    .device-id-input-group input { flex: 1; text-transform: uppercase; }
+    .device-id-input-group button { width: auto; padding: 10px 12px; }
+    .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border); color: #64748b; font-size: 0.8rem; }
+    .about-section { background: var(--card); border-radius: 12px; margin-bottom: 20px; }
+    .contact-wa { display: inline-flex; align-items: center; gap: 8px; background: #075e54; padding: 8px 16px; border-radius: 40px; text-decoration: none; color: #fff; font-weight: 600; margin-top: 10px; }
+    .contact-wa:hover { background: #128C7E; }
+    .location-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .location-time-item { background: #0f172a; border-radius: 8px; padding: 8px; }
+    .location-time-label { font-size: 0.7rem; color: #94a3b8; }
+    .location-time-value { font-size: 0.9rem; font-weight: 500; word-break: break-word; }
+    .refresh-geo { text-align: right; margin-top: 8px; }
+    .refresh-geo button { width: auto; padding: 4px 8px; font-size: 0.7rem; background: var(--border); }
+    .install-prompt { margin-top: 10px; text-align: center; }
+    .install-prompt button { width: auto; padding: 8px 20px; background: var(--accent); color: #000; font-size: 0.85rem; }
+    .install-prompt p { font-size: 0.7rem; margin-top: 5px; color: #94a3b8; }
   </style>
 </head>
 <body>
-
 <div class="container">
-  <header style="text-align:center; margin-bottom:20px;">
-    <h1>🔌 dMarch Relay Pro</h1>
-    <p style="color:var(--text-dim)">Professional IoT Control Panel</p>
-  </header>
+  <h1>🔌 dMarch Relay Pro</h1>
+  <p class="subtitle">Professional IoT Relay Control Panel</p>
 
-  <!-- Setup -->
-  <div class="card">
+  <!-- MQTT Card (only shown if no stored config) -->
+  <div class="card" id="connCard">
     <h3>🔗 Setup Device</h3>
-    <p>Scan QR code or upload image to configure MQTT and GitHub sync.</p>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <button class="btn-primary" onclick="document.getElementById('qrModal').style.display='flex'">📷 Scan QR / Upload Image</button>
-      <button class="btn-secondary">🔄 Refresh Whitelist</button>
-      <button class="btn-success">📱 Install App</button>
+    <p style="margin-bottom:15px; color:#94a3b8;">Scan QR code or upload image to configure MQTT and GitHub sync.</p>
+    <button class="btn-qr" id="showQrBtn">📷 Scan QR / Upload Image</button>
+    <div class="form-group" style="margin-top:10px;">
+      <button class="btn-secondary" id="refreshWhitelistBtn" type="button">🔄 Refresh Whitelist</button>
+      <span id="whitelistStatus" style="margin-left:8px; font-size:0.7rem;"></span>
     </div>
-    <p class="hint" style="margin-top:8px;">Status: <span style="color:var(--danger)">● Not configured</span></p>
+    <!-- PWA Install Prompt (will show if not installed) -->
+    <div id="pwaInstallContainer" class="install-prompt" style="display:none;">
+      <button id="installPwaBtn" class="btn-primary">📱 Install App</button>
+      <p>Install to home screen for quick access</p>
+    </div>
+    <p id="connStatus" style="margin-top:10px;">Status: Not configured</p>
   </div>
 
-  <!-- Health & Info -->
-  <div class="grid-2">
-    <div class="card">
-      <h3>📊 System Health</h3>
-      <p>📶 Signal: <strong>--</strong> | ⏱️ Uptime: <strong>--</strong></p>
-      <p>🌡️ Temp: <strong>--°C</strong> | 📟 FW: <strong>v1.0</strong></p>
-      <p>☁️ Cloud Sync: <span class="status-dot"></span> Offline</p>
+  <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer">🔌 Disconnect MQTT</button>
+
+  <!-- System Health Card -->
+  <div class="card app-card hidden" id="healthCard">
+    <h3>📊 System Health</h3>
+    <div class="stat-grid">
+      <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
+      <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
+      <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
+      <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
     </div>
-    <div class="card">
-      <h3>🖥️ Device Information</h3>
-      <details>
-        <summary>Hardware & Network</summary>
-        <p>Device ID: <strong>--</strong> | Max Relay: <strong>16</strong></p>
-        <p>Active Relay: <strong id="activeRelayCount">4</strong> | Pin Mapping: <strong>--</strong></p>
-      </details>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border);">
+      <span style="font-size:0.85rem;">☁️ Cloud Sync</span>
+      <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
     </div>
   </div>
 
-  <!-- Relay Control -->
-  <div class="card">
+  <!-- Device Information Card -->
+  <div class="card collapsible collapsed app-card hidden">
+    <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="info-panel">
+        <div class="grid-2" style="margin-bottom: 10px;">
+          <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
+          <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay">--</strong></div>
+        </div>
+        <div class="grid-2">
+          <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
+          <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
+        </div>
+        <div style="margin-top: 10px;"><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Relay Control Card -->
+  <div class="card app-card hidden">
     <h3>⚡ Relay Control</h3>
-    <div style="margin-bottom:10px;">
-      <button class="btn-primary" onclick="addLog('⚡ ALL RELAYS ON')">▶️ ALL ON</button>
-      <button class="btn-danger" onclick="addLog('⏹️ ALL RELAYS OFF')">⏹️ ALL OFF</button>
-    </div>
-    <div id="relayButtonsContainer" style="display:flex; flex-wrap:wrap; gap:8px;">
-      <!-- Dynamic Buttons -->
+    <div class="grid-2"><button class="btn-success" id="allOnBtn">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button></div>
+    <div class="grid-4" style="margin-top:15px;" id="relayBtns"></div>
+  </div>
+
+  <!-- NTP Card -->
+  <div class="card collapsible collapsed app-card hidden">
+    <div class="card-header"><h3>🕐 NTP Settings</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="grid-2">
+        <div class="form-group"><label>NTP Server</label><select id="ntpSelect"><option>id.pool.ntp.org</option><option>pool.ntp.org</option><option>time.google.com</option></select></div>
+        <div class="form-group"><label>Timezone (hour)</label><input id="tzInput" value="7" type="number"></div>
+      </div>
+      <button class="btn-primary" id="saveNTPBtn">💾 Save NTP</button>
     </div>
   </div>
 
-  <!-- NTP Settings -->
-  <div class="card">
-    <h3>🕐 NTP Settings</h3>
-    <details>
-      <summary>NTP Server Configuration</summary>
-      <input type="text" placeholder="id.pool.ntp.org" value="id.pool.ntp.org">
-      <select>
-        <option>pool.ntp.org</option><option>time.google.com</option>
-      </select>
-      <input type="number" placeholder="Timezone (hour)" value="7">
-      <button class="btn-success">💾 Save NTP</button>
-    </details>
-  </div>
-
-  <!-- Relay Configuration -->
-  <div class="card" id="relayConfigSection">
-    <h3>🔌 Relay Configuration</h3>
-    <details>
-      <summary>Number of Relays (1 - 16)</summary>
-      <p class="hint">Changing this will restart the device</p>
-      <input type="number" id="relayCountInput" min="1" max="16" value="4">
-    </details>
-    <details>
-      <summary>GPIO Pins (comma separated)</summary>
-      <input type="text" id="gpioInput" placeholder="e.g., 5,4,14,12,13">
-      <button class="btn-secondary" onclick="document.getElementById('gpioInput').value='5,4,14,12,13'">💡 Suggest Default Pins</button>
-      <button class="btn-success" onclick="addLog('✅ Relay & GPIO Applied. Restarting...')">✅ Apply Relay & GPIO</button>
-    </details>
-
-    <!-- FITUR EDIT LABEL RELAY -->
-    <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #444;">
-      <button id="btnEditLabels" onclick="toggleLabelEditor()" class="btn-primary">✏️ Edit Label Relay</button>
-      
-      <div id="labelEditor" style="display:none; margin-top:10px;">
-        <h4 style="margin-bottom:8px; color:#fff;">🏷️ Pengaturan Label Relay</h4>
-        <div id="labelInputsContainer"></div>
-        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn-success" onclick="saveRelayLabels()">💾 Simpan & Sinkronkan</button>
-          <button class="btn-secondary" onclick="toggleLabelEditor()">❌ Batal</button>
+  <!-- Relay Configuration Card -->
+  <div class="card collapsible collapsed app-card hidden">
+    <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="form-group">
+        <label>Number of Relays (1 - <span id="maxRelayLimit">16</span>)</label>
+        <input id="relayCountInput" type="number" min="1" max="16" value="5">
+        <small style="color:#64748b;">Changing this will restart the device</small>
+      </div>
+      <div class="form-group">
+        <label>🔌 GPIO Pins (comma separated)</label>
+        <input id="gpioInput" placeholder="e.g., 12,14,27,26,25" list="gpioSuggestions">
+        <datalist id="gpioSuggestions"></datalist>
+        <div class="gpio-suggest">
+          <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
+          <div id="currentGpioText" class="current-pins"></div>
         </div>
       </div>
+      <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
     </div>
   </div>
 
-  <!-- Relay Scheduler -->
-  <div class="card" id="relaySchedulerSection">
-    <h3>⏰ Relay Scheduler</h3>
-    <details open>
-      <summary>Relay Target & Schedule</summary>
-      <label style="font-size:0.9em; color:#aaa;">Target Relay:</label>
-      <select id="schedulerRelaySelect"></select>
-      
-      <label style="font-size:0.9em; color:#aaa;">Action:</label>
-      <select id="schedulerAction">
-        <option value="ON">🟢 ON</option>
-        <option value="OFF">🔴 OFF</option>
-      </select>
-      
-      <label style="font-size:0.9em; color:#aaa;">Time:</label>
-      <input type="time" id="schedulerTime">
-      
-      <label style="font-size:0.9em; color:#aaa; margin-top:6px; display:block;">Active Days:</label>
-      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Mon</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Tue</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Wed</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Thu</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Fri</label>
-        <label><input type="checkbox" style="width:auto; margin-right:4px;"> Sat</label>
-        <label><input type="checkbox" style="width:auto; margin-right:4px;"> Sun</label>
+  <!-- Relay Scheduler Card -->
+  <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
+    <div class="card-header"><h3>⏰ Relay Scheduler</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="grid-2">
+        <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
+        <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
       </div>
-      <button class="btn-success" onclick="addSchedule()">➕ Add Schedule</button>
-    </details>
-  </div>
-
-  <!-- Notifications & Network -->
-  <div class="grid-2">
-    <div class="card">
-      <h3>🔔 Notifications</h3>
-      <details>
-        <summary>📱 Telegram</summary>
-        <input type="password" placeholder="Bot Token">
-        <input type="text" placeholder="Chat ID">
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn-success">💾 Save</button>
-          <button class="btn-secondary">🧪 Test</button>
-        </div>
-      </details>
-    </div>
-    <div class="card">
-      <h3>🌐 Network</h3>
-      <details>
-        <summary>WiFi Configuration</summary>
-        <input type="text" placeholder="SSID">
-        <input type="password" placeholder="Password">
-        <button class="btn-success">💾 Update WiFi</button>
-        <button class="btn-danger" style="margin-top:6px;">🔄 Reset AP</button>
-      </details>
+      <div class="grid-2">
+        <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
+        <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
+      </div>
+      <button class="btn-primary" onclick="addSchedule()">➕ Add Schedule</button>
+      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
   </div>
 
-  <!-- System & Location -->
-  <div class="grid-2">
-    <div class="card">
-      <h3>🔄 System</h3>
-      <details>
-        <summary>Maintenance</summary>
-        <button class="btn-primary" style="width:100%; margin-bottom:6px;">⬇️ OTA Update</button>
-        <button class="btn-danger" style="width:100%;" onclick="addLog('🔄 Device Restarting...')">🔄 Restart Device</button>
-      </details>
-    </div>
-    <div class="card">
-      <h3>🌍 Location & Time</h3>
-      <details>
-        <summary>Geo Data</summary>
-        <p>🕐 Local Time: <strong>--:--:--</strong></p>
-        <p>📍 Lat: -- | Lon: --</p>
-        <button class="btn-secondary" onclick="addLog('🔄 Refreshing Location...')">🔄 Refresh Location</button>
-      </details>
+  <!-- Notification Card -->
+  <div class="card collapsible collapsed app-card hidden" id="notifCard">
+    <div class="card-header"><h3>🔔 Notifications</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
+      <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" onclick="saveTelegramConfig()">💾 Save</button><button class="btn-secondary btn-notif" onclick="testTelegram()">🧪 Test</button><button class="btn-secondary btn-notif" onclick="fetchChatId()">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
+      <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" onclick="editTelegramConfig()">✏️ Edit</button><button class="btn-sm btn-secondary" onclick="testTelegram()">🧪 Test</button></div></div></div></div>
+      <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
+      <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
     </div>
   </div>
 
-  <!-- Event Log -->
-  <div class="card">
-    <h3>📝 Event Log</h3>
-    <div id="eventLog"></div>
-    <button class="btn-secondary" style="margin-top:8px;" onclick="document.getElementById('eventLog').innerHTML=''">🗑️ Clear Log</button>
+  <!-- Network Card -->
+  <div class="card collapsible collapsed app-card hidden" id="networkCard">
+    <div class="card-header"><h3>🌐 Network</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="form-group"><label>SSID</label><input id="netSsid"></div>
+      <div class="form-group"><label>Password</label><input id="netPass" type="password"></div>
+      <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
+      <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset AP</button>
+    </div>
   </div>
 
-  <footer style="text-align:center; padding:16px; color:#666; font-size:0.8em;">
-    <p>© 2026 dMarchFF | Industrial IoT Solutions</p>
-  </footer>
+  <!-- System Card -->
+  <div class="card collapsible collapsed app-card hidden">
+    <div class="card-header"><h3>🔄 System</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="grid-2" style="margin-top:8px;"><button class="btn-primary" id="otaBtn">⬇️ OTA Update</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div>
+    </div>
+  </div>
+
+  <!-- Location & Time Card -->
+  <div class="card collapsible collapsed app-card hidden" id="locationTimeCard">
+    <div class="card-header"><h3>🌍 Location & Time</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <div class="location-time-grid">
+        <div class="location-time-item"><div class="location-time-label">🕐 Local Time</div><div class="location-time-value" id="localTimeDisplay">--:--:--</div></div>
+        <div class="location-time-item"><div class="location-time-label">🌐 Timezone</div><div class="location-time-value" id="timezoneDisplay">--</div></div>
+        <div class="location-time-item"><div class="location-time-label">📍 Latitude</div><div class="location-time-value" id="latDisplay">--</div></div>
+        <div class="location-time-item"><div class="location-time-label">📍 Longitude</div><div class="location-time-value" id="lonDisplay">--</div></div>
+        <div class="location-time-item" style="grid-column: span 2;"><div class="location-time-label">🏠 Address</div><div class="location-time-value" id="addressDisplay">--</div></div>
+      </div>
+      <div class="refresh-geo"><button id="refreshGeoBtn" class="btn-secondary">🔄 Refresh Location</button></div>
+    </div>
+  </div>
+
+  <!-- About & Support Card -->
+  <div class="card collapsible collapsed app-card hidden about-section">
+    <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-content">
+      <p><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
+      <p>✔ Multi-device isolated data<br>✔ Cloud backup (GitHub)<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO</p>
+      <div style="text-align:center; margin-top:15px;"><a href="https://wa.me/628551291055" target="_blank" class="contact-wa">📱 Contact us on WhatsApp</a><p style="margin-top:10px; font-size:0.75rem;">Design & Build by <strong>d'marchFF Engineering</strong></p></div>
+    </div>
+  </div>
+
+  <!-- Terminal Card -->
+  <div class="card app-card hidden"><h3>📝 Event Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" id="clearLogBtn">🗑️ Clear Log</button></div>
+
+  <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
 
 <!-- QR Modal -->
-<div id="qrModal" class="modal">
-  <div class="modal-content">
-    <h3>📷 Scan QR / Upload</h3>
-    <p>QR must contain JSON with: <code>broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken</code></p>
-    <button class="btn-primary" onclick="document.getElementById('qrModal').style.display='none'">📷 Camera</button>
-    <button class="btn-secondary" onclick="document.getElementById('qrModal').style.display='none'">📁 Image</button>
-    <button class="btn-danger" style="margin-top:10px;" onclick="document.getElementById('qrModal').style.display='none'">❌ Close</button>
-  </div>
-</div>
+<div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:10px;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">QR must contain JSON with broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken</p></div></div>
 
 <script>
-/**
- * dMarch Relay Pro - Relay Label Management & GitHub Sync
- */
-(function() {
-  const KEYS = {
-    LABELS: 'dMarch_relayLabels',
-    COUNT: 'dMarch_relayCount',
-    GITHUB: 'dMarch_githubConfig' // Format: {ghOwner, ghRepo, ghToken, ghBasePath}
-  };
+  // ==================== GLOBALS ====================
+  let mqttClient = null, qrScanner = null;
+  let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
+  let schedulerInterval = null, lastTriggered = {};
+  let ghSyncEnabled = false, ghConfig = {}, ghSyncTimeout = null;
+  let notifConfig = JSON.parse(localStorage.getItem('dm_notif_config') || '{}');
+  let tgEnabled = notifConfig.tg?.enabled||false, tgConnected = notifConfig.tg?.connected||false;
+  let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
+  let maxRelayFromDevice = 16;
+  let currentHardware = "";
+  let currentRelayState = [];
+  let DEVICE_ID = "";
+  let mqttBroker = "", mqttPort = "", mqttUser = "", mqttPass = "";
+  
+  let lastGpioSyncTime = 0;
+  const GPIO_SYNC_THROTTLE_MS = 10000;
+  let ignoreDeviceUpdatesUntil = 0;
+  const IGNORE_DURATION_MS = 15000;
+  let periodicWhitelistCheckInterval = null;
+  
+  // PWA Install
+  let deferredPrompt = null;
 
-  // 🔹 Inisialisasi saat halaman dimuat
-  document.addEventListener('DOMContentLoaded', () => {
-    initRelayLabels();
-    setupRelayCountListener();
-    addLog('🚀 System initialized. Ready.');
-  });
+  const $ = id => document.getElementById(id);
+  const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
+  const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; };
+  const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
+  const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
+  function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
-  // 🔹 Helper: Log
-  window.addLog = function(msg) {
-    const log = document.getElementById('eventLog');
-    if(!log) return;
-    const time = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.style.padding = '4px 0'; entry.style.borderBottom = '1px solid #333';
-    entry.textContent = `[${time}] ${msg}`;
-    log.prepend(entry);
-  };
-
-  // 🔹 Ambil & Validasi Jumlah Relay
-  function getRelayCount() {
-    return parseInt(localStorage.getItem(KEYS.COUNT) || '4');
-  }
-
-  // 🔹 Load Labels dari LocalStorage
-  function getRelayLabels() {
-    let labels = JSON.parse(localStorage.getItem(KEYS.LABELS) || '[]');
-    const count = getRelayCount();
-    // Pastikan panjang array sesuai jumlah relay
-    while(labels.length < count) labels.push(`Relay ${labels.length + 1}`);
-    labels.length = count;
-    localStorage.setItem(KEYS.LABELS, JSON.stringify(labels));
-    return labels;
-  }
-
-  // 🔹 Inisialisasi UI
-  function initRelayLabels() {
-    const labels = getRelayLabels();
-    renderRelayButtons(labels);
-    renderSchedulerDropdown(labels);
-  }
-
-  // 🔹 Render Tombol Kontrol
-  function renderRelayButtons(labels) {
-    const container = document.getElementById('relayButtonsContainer');
-    if(!container) return;
-    container.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'relay-btn';
-      btn.textContent = lbl;
-      btn.dataset.index = i;
-      btn.onclick = () => toggleRelay(i, lbl);
-      container.appendChild(btn);
-    });
-  }
-
-  // 🔹 Render Dropdown Scheduler
-  function renderSchedulerDropdown(labels) {
-    const select = document.getElementById('schedulerRelaySelect');
-    if(!select) return;
-    const currentVal = select.value;
-    select.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      const opt = document.createElement('option');
-      opt.value = i; opt.textContent = lbl;
-      select.appendChild(opt);
-    });
-    if(currentVal !== '' && currentVal < labels.length) select.value = currentVal;
-  }
-
-  // 🔹 Toggle Relay (Simulasi)
-  window.toggleRelay = function(idx, name) {
-    addLog(`🔄 ${name} toggled (State: ${Math.random() > 0.5 ? 'ON' : 'OFF'})`);
-  };
-
-  // 🔹 Toggle Editor Label
-  window.toggleLabelEditor = function() {
-    const editor = document.getElementById('labelEditor');
-    const btn = document.getElementById('btnEditLabels');
-    const isHidden = editor.style.display === 'none';
-    editor.style.display = isHidden ? 'block' : 'none';
-    btn.textContent = isHidden ? '🔄 Tutup Editor' : '✏️ Edit Label Relay';
-    if(isHidden) renderLabelInputs();
-  };
-
-  // 🔹 Render Input Fields
-  function renderLabelInputs() {
-    const container = document.getElementById('labelInputsContainer');
-    const labels = getRelayLabels();
-    container.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      container.innerHTML += `
-        <div>
-          <span>Relay ${i+1}:</span>
-          <input type="text" id="lbl_${i}" value="${lbl}" placeholder="Relay ${i+1}">
-        </div>`;
-    });
-  }
-
-  // 🔹 Simpan & Sinkronkan
-  window.saveRelayLabels = async function() {
-    const labels = [];
-    for(let i=0; i<getRelayCount(); i++) {
-      const val = document.getElementById(`lbl_${i}`).value.trim();
-      labels.push(val || `Relay ${i+1}`);
-    }
-    localStorage.setItem(KEYS.LABELS, JSON.stringify(labels));
-    initRelayLabels(); // Update UI
-    toggleLabelEditor();
-    addLog('✅ Label relay disimpan di LocalStorage.');
-    await syncToGitHub(labels);
-  };
-
-  // 🔹 Sinkronisasi ke GitHub
-  async function syncToGitHub(labels) {
-    const cfgStr = localStorage.getItem(KEYS.GITHUB);
-    if(!cfgStr) { addLog('⚠️ Konfigurasi GitHub belum diatur. Gunakan QR/Setup.'); return; }
+  // ==================== PWA INSTALL PROMPT ====================
+  function initPwaInstall() {
+    const installContainer = document.getElementById('pwaInstallContainer');
+    const installBtn = document.getElementById('installPwaBtn');
     
-    let cfg;
-    try { cfg = JSON.parse(cfgStr); } catch(e) { addLog('❌ Format config GitHub rusak.'); return; }
-    if(!cfg.ghToken || !cfg.ghOwner || !cfg.ghRepo) {
-      addLog('⚠️ Token/Repo GitHub tidak lengkap.'); return;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installContainer) installContainer.style.display = 'block';
+    });
+    
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            console.log('User accepted install');
+            if (installContainer) installContainer.style.display = 'none';
+          }
+          deferredPrompt = null;
+        } else {
+          // Fallback for browsers that don't support beforeinstallprompt
+          alert('Tap the menu (⋮) and select "Install app" or "Add to Home Screen"');
+        }
+      });
     }
+    
+    window.addEventListener('appinstalled', () => {
+      if (installContainer) installContainer.style.display = 'none';
+      deferredPrompt = null;
+      console.log('PWA installed');
+    });
+  }
 
-    const filePath = `${cfg.ghBasePath || 'config'}/relay_labels.json`;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(labels, null, 2))));
-    const url = `https://api.github.com/repos/${cfg.ghOwner}/${cfg.ghRepo}/contents/${filePath}`;
+  // ==================== WHITELIST CHECK (cache 1 menit) ====================
+  async function isDeviceWhitelisted(deviceId) {
+    const cacheKey = 'dm_whitelist_cache';
+    const cacheExpiry = 60000;
+    let whitelist = null;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        if (Date.now() - data.timestamp < cacheExpiry) {
+          whitelist = data.list;
+        } else {
+          localStorage.removeItem(cacheKey);
+        }
+      } catch(e) {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+    if (!whitelist) {
+      const url = 'https://raw.githubusercontent.com/dreborn2k/dmarchFF/main/RELAY/config/whitelist.json';
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (!text.trim()) throw new Error('Whitelist file is empty');
+        whitelist = JSON.parse(text);
+        if (!Array.isArray(whitelist)) throw new Error('Whitelist is not an array');
+        if (whitelist.length > 0) {
+          localStorage.setItem(cacheKey, JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+        } else {
+          localStorage.removeItem(cacheKey);
+        }
+      } catch (e) {
+        console.error('Failed to fetch whitelist:', e);
+        localStorage.removeItem(cacheKey);
+        return false;
+      }
+    }
+    if (!Array.isArray(whitelist) || whitelist.length === 0) return false;
+    return whitelist.includes(deviceId);
+  }
 
+  async function refreshWhitelist() {
+    localStorage.removeItem('dm_whitelist_cache');
+    const statusEl = $('whitelistStatus');
+    if (statusEl) statusEl.textContent = '🔄 Refreshing...';
+    await isDeviceWhitelisted(''); // force refetch
+    if (statusEl) statusEl.textContent = '✅ Whitelist refreshed';
+    setTimeout(() => {
+      if (statusEl) statusEl.textContent = '';
+    }, 2000);
+    if (DEVICE_ID) {
+      const allowed = await isDeviceWhitelisted(DEVICE_ID);
+      if (!allowed) {
+        logoutAndReset('❌ Your device is no longer in the whitelist. Please contact support.');
+      }
+    }
+  }
+
+  function logoutAndReset(message) {
+    if (periodicWhitelistCheckInterval) { clearInterval(periodicWhitelistCheckInterval); periodicWhitelistCheckInterval = null; }
+    localStorage.removeItem('dm_full_config');
+    localStorage.removeItem('dm_gh_config');
+    localStorage.removeItem('dm_relay_count');
+    localStorage.removeItem('dm_gpio');
+    localStorage.removeItem('dm_schedules');
+    localStorage.removeItem('dm_device_suffix');
+    localStorage.removeItem('dm_device_id');
+    ghSyncEnabled = false;
+    DEVICE_ID = "";
+    mqttBroker = "";
+    mqttPort = "";
+    mqttUser = "";
+    mqttPass = "";
+    relayCount = 5;
+    if (mqttClient && mqttClient.connected) mqttClient.end(true);
+    $('connCard').classList.remove('hidden');
+    document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
+    safeTxt('connStatus', 'Status: Not configured');
+    alert(message);
+  }
+
+  function startPeriodicWhitelistCheck() {
+    if (periodicWhitelistCheckInterval) clearInterval(periodicWhitelistCheckInterval);
+    periodicWhitelistCheckInterval = setInterval(async () => {
+      if (!DEVICE_ID) return;
+      const allowed = await isDeviceWhitelisted(DEVICE_ID);
+      if (!allowed) {
+        logoutAndReset('❌ Your device has been removed from the whitelist. Please contact support.');
+      }
+    }, 30000);
+  }
+
+  // ==================== LOCATION & TIME ====================
+  let timeInterval = null;
+  let geoCache = null;
+  const GEO_CACHE_EXPIRY = 3600000;
+  function updateLocalTime() {
+    const now = new Date();
+    const localTimeElem = $('localTimeDisplay');
+    const timezoneElem = $('timezoneDisplay');
+    if (localTimeElem) localTimeElem.textContent = now.toLocaleTimeString();
+    if (timezoneElem) timezoneElem.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+  async function getGeolocation(forceRefresh = false) {
+    if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { displayGeoData(geoCache); return; }
+    if (!navigator.geolocation) { safeTxt('addressDisplay', 'Geolocation not supported'); return; }
+    safeTxt('addressDisplay', 'Requesting location...');
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const lat = position.coords.latitude, lon = position.coords.longitude;
+      safeTxt('latDisplay', lat.toFixed(6)); safeTxt('lonDisplay', lon.toFixed(6));
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+        const data = await response.json();
+        let address = '';
+        if (data && data.address) {
+          const road = data.address.road || data.address.pedestrian || '';
+          const city = data.address.city || data.address.town || data.address.village || '';
+          const country = data.address.country || '';
+          address = [road, city, country].filter(s => s).join(', ');
+        }
+        if (!address) address = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        safeTxt('addressDisplay', address);
+        geoCache = { lat, lon, address, timestamp: Date.now() };
+        localStorage.setItem('dm_geo_cache', JSON.stringify(geoCache));
+      } catch (e) { safeTxt('addressDisplay', 'Unable to fetch address'); }
+    }, (error) => { safeTxt('addressDisplay', 'Location error'); }, { enableHighAccuracy: true, timeout: 10000 });
+  }
+  function displayGeoData(cache) { safeTxt('latDisplay', cache.lat?.toFixed(6) || '--'); safeTxt('lonDisplay', cache.lon?.toFixed(6) || '--'); safeTxt('addressDisplay', cache.address || '--'); }
+  function initLocationAndTime() {
+    const cached = localStorage.getItem('dm_geo_cache');
+    if (cached) { try { geoCache = JSON.parse(cached); if (geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) displayGeoData(geoCache); else getGeolocation(); } catch(e) { getGeolocation(); } } else { getGeolocation(); }
+    if (timeInterval) clearInterval(timeInterval);
+    timeInterval = setInterval(updateLocalTime, 1000);
+    updateLocalTime();
+  }
+
+  // ==================== UI HELPERS ====================
+  function updateCurrentGpioText() {
+    const container = $('currentGpioText');
+    if (!container) return;
+    const gpioRaw = $('gpioInput').value.trim();
+    if (!gpioRaw) { container.textContent = 'Current: --'; return; }
+    const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
+    container.textContent = `Current: ${pins.join(',')}`;
+  }
+  function validateGpioAndRelayCount(gpioRaw, relayCnt) {
+    const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
+    if (pins.length !== relayCnt) { alert(`❌ GPIO count (${pins.length}) != relays (${relayCnt})`); return false; }
+    const uniquePins = new Set(pins);
+    if (uniquePins.size !== pins.length) { alert(`❌ Duplicate GPIO pins: ${pins.join(',')}`); return false; }
+    for (let p of pins) if (isNaN(parseInt(p))) { alert(`❌ Invalid GPIO: ${p}`); return false; }
+    return true;
+  }
+  function updateRelayUIByCount() { safeVal('relayCountInput', relayCount); initRelayButtons(); updateSchedulerRelaySelect(); log(`UI updated to ${relayCount} relays`); }
+  function saveAllConfig() {
+    localStorage.setItem('dm_full_config', JSON.stringify({ broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID, ghOwner: ghConfig.owner, ghRepo: ghConfig.repo, ghBasePath: ghConfig.basePath, ghToken: ghConfig.token }));
+  }
+  function loadFullConfig() {
+    const saved = localStorage.getItem('dm_full_config');
+    if (saved) {
+      try {
+        const cfg = JSON.parse(saved);
+        mqttBroker = cfg.broker; mqttPort = cfg.port; mqttUser = cfg.user; mqttPass = cfg.pass;
+        DEVICE_ID = cfg.device;
+        if (cfg.ghOwner && cfg.ghToken) { ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' }; ghSyncEnabled = true; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); }
+        const deviceIdDisplay = $('deviceIdDisplay'); if (deviceIdDisplay) deviceIdDisplay.textContent = DEVICE_ID;
+        const deviceIdSuffix = $('deviceIdSuffix'); if (deviceIdSuffix) deviceIdSuffix.value = DEVICE_ID.replace('DmarchFF_', '');
+        updateGhPathDisplay();
+        const savedRelayCount = localStorage.getItem('dm_relay_count');
+        if (savedRelayCount) { relayCount = parseInt(savedRelayCount); safeVal('relayCountInput', relayCount); }
+        return true;
+      } catch(e) { console.warn(e); }
+    }
+    return false;
+  }
+  function getDeviceDataPath() { if (!DEVICE_ID) return null; const base = ghConfig.basePath || 'RELAY/data'; return `${base}/${DEVICE_ID}`; }
+  function getSchedulerPath() { const base = getDeviceDataPath(); return base ? `${base}/scheduler.json` : null; }
+  function getDeviceConfigPath() { const base = getDeviceDataPath(); return base ? `${base}/device.json` : null; }
+  function updateGhPathDisplay() { if (DEVICE_ID && ghConfig.basePath) { safeTxt('ghDetails', `${ghConfig.basePath}/${DEVICE_ID}/device.json & scheduler.json`); } else { safeTxt('ghDetails', '-- set Device ID first --'); } }
+
+  // ==================== MQTT ====================
+  function pub(topic, payload) { if(mqttClient && mqttClient.connected) mqttClient.publish(topic, payload, {qos:0}); else log('⚠️ Disconnected'); }
+  function updateSystemHealth(msg) {
     try {
-      addLog('☁️ Menghubungkan ke GitHub...');
-      // 1. Ambil SHA file saat ini
-      const getRes = await fetch(url, {
-        headers: { 'Authorization': `token ${cfg.ghToken}`, 'Accept': 'application/vnd.github.v3+json' }
-      });
-      let sha = '';
-      if(getRes.ok) {
-        const data = await getRes.json();
-        sha = data.sha || '';
+      const d = JSON.parse(msg);
+      safeTxt('sigVal', (d.rssi||'--')+'%'); safeTxt('upVal', d.uptime||'--'); safeTxt('tempVal', (d.temp||'--')+'°C'); safeTxt('fwVal', d.fw_version||'--');
+      if(d.hw_type) { currentHardware = d.hw_type; safeTxt('hwType', d.hw_type); }
+      if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
+      const now = Date.now();
+      const ignore = (now < ignoreDeviceUpdatesUntil);
+      if (ignore && d.relay_count !== undefined) { log(`Ignoring relay_count=${d.relay_count} (manual change active)`); }
+      else if (d.relay_count !== undefined) { safeTxt('activeRelay', d.relay_count); if(d.relay_count != relayCount) { relayCount = d.relay_count; localStorage.setItem('dm_relay_count', relayCount); updateRelayUIByCount(); log(`Relay count updated to ${relayCount} from device`); } }
+      if(d.relay_pins) {
+        renderPinBadges(d.relay_pins);
+        if (!ignore) {
+          if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) { safeVal('gpioInput', d.relay_pins); window.lastGpio = d.relay_pins; updateCurrentGpioText(); lastGpioSyncTime = now; log(`GPIO updated from device`); }
+          else { log(`GPIO sync throttled`); }
+        } else { log(`Ignoring GPIO update (manual change active)`); }
       }
+      updateGPIOSuggestions();
+    } catch(e) {}
+  }
+  function renderPinBadges(pinStr) { const container = $('relayPinsContainer'); if(!container) return; container.innerHTML = ''; if(!pinStr || pinStr === '--') { container.innerHTML = '<span style="color:#94a3b8;">--</span>'; return; } const pins = pinStr.split(','); pins.forEach(p => { const badge = document.createElement('span'); badge.className = 'pin-badge'; badge.textContent = `GPIO ${p.trim()}`; container.appendChild(badge); }); }
+  function updateGPIOSuggestions() {
+    const datalist = $('gpioSuggestions'); if(!datalist) return; datalist.innerHTML = ''; let commonPins = [];
+    if(currentHardware.includes('ESP32S2')) commonPins = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    else if(currentHardware.includes('ESP32C3')) commonPins = [0,1,3,4,5,6,7,10,18,19];
+    else if(currentHardware.includes('ESP32')) commonPins = [12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33];
+    else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) commonPins = [5,4,14,12,13,15];
+    commonPins.forEach(p => { const opt = document.createElement('option'); opt.value = p; datalist.appendChild(opt); });
+  }
+  function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); updateCurrentGpioText(); log(`Suggested GPIO: ${suggested.join(',')}`); }
+  function setConnectionState(connected) { safeCls($('connCard'), 'hidden', connected); safeCls($('disconnectBtn'), 'hidden', !connected); document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected)); safeTxt('connStatus', connected?'Status: Connected':'Status: Not configured'); if(connected) currentRelayState = new Array(relayCount).fill(false); }
+  function connectMQTT() {
+    if (!DEVICE_ID || !mqttBroker) return;
+    const url = `wss://${mqttBroker}:${mqttPort}/mqtt`;
+    const clientId = 'web_' + Math.random().toString(16).substr(2,8);
+    if (mqttClient && mqttClient.connected) mqttClient.end();
+    mqttClient = mqtt.connect(url, {clientId, username:mqttUser, password:mqttPass, clean:true, reconnectPeriod:0});
+    mqttClient.on('connect', () => { log('MQTT Connected'); setConnectionState(true); mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]); mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } });
+    mqttClient.on('message', (topic, msg) => { const t=topic.toString(), m=msg.toString().trim(); if(t.includes('/terminal')) log(m); else if(t.includes('/status')) updateSystemHealth(m); else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); } });
+    mqttClient.on('error', err => { log('MQTT Error'); setConnectionState(false); });
+    mqttClient.on('close', () => { log('Disconnected'); setConnectionState(false); });
+  }
 
-      // 2. Upload/Push update
-      const putRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${cfg.ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Update relay labels via dMarch Pro', content, sha })
-      });
+  // ==================== RELAY UI ====================
+  function initRelayButtons() { const box = $('relayBtns'); if(!box) return; box.innerHTML = ''; currentRelayState = new Array(relayCount).fill(false); for(let i=1; i<=relayCount; i++) { const btn = document.createElement('button'); btn.id = `btn-relay-${i}`; btn.className = 'btn-secondary'; btn.dataset.state = 'off'; btn.textContent = `Relay ${i}`; btn.style.cssText = 'font-size:0.8rem;padding:8px 0'; btn.onclick = () => { sendRelayCommand(i); vibrate(); }; btn.type = 'button'; box.appendChild(btn); } updateSchedulerRelaySelect(); }
+  function sendRelayCommand(num) { if(!mqttClient||!mqttClient.connected) return alert('MQTT disconnected!'); const btn = $(`btn-relay-${num}`); if(!btn) return; const cmd = btn.dataset.state === 'on' ? 0 : 1; mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd)); }
+  function updateRelayUI(num, state) { const btn = $(`btn-relay-${num}`); if(!btn) return; const isOn = (state==='1'||state===1||state===true); const idx = num-1; if (currentRelayState[idx] !== isOn) { currentRelayState[idx] = isOn; sendNotif(`🔌 Relay ${num}`, `Relay ${num} turned ${isOn ? 'ON' : 'OFF'}`); } btn.dataset.state = isOn ? 'on' : 'off'; btn.textContent = `Relay ${num}${isOn?' ✓':' ⚪'}`; btn.className = isOn ? 'btn-success' : 'btn-secondary'; }
+  function updateSchedulerRelaySelect() { const sel = $('schRelay'); if(!sel) return; const cur = sel.value; sel.innerHTML = ''; for(let i=1; i<=relayCount; i++) { const opt = document.createElement('option'); opt.value = i; opt.textContent = `Relay ${i}`; sel.appendChild(opt); } if(cur && cur <= relayCount) sel.value = cur; else sel.value = '1'; }
+  async function applyRelayConfig() {
+    if (!DEVICE_ID) { alert('Set Device ID first'); return; }
+    const newCount = parseInt($('relayCountInput').value);
+    const gpioRaw = $('gpioInput').value.trim();
+    if (!validateGpioAndRelayCount(gpioRaw, newCount)) return;
+    if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { alert(`Relay count must be between 1 and ${maxRelayFromDevice}`); return; }
+    if (mqttClient && mqttClient.connected) { if (newCount !== relayCount) pub(DEVICE_ID + '/config/relayCount', String(newCount)); if (gpioRaw !== (window.lastGpio || '')) pub(DEVICE_ID + '/gpio/update', gpioRaw); } else { alert('MQTT not connected. Changes saved locally only.'); }
+    localStorage.setItem('dm_relay_count', newCount); localStorage.setItem('dm_gpio', gpioRaw); relayCount = newCount; updateRelayUIByCount(); window.lastGpio = gpioRaw; updateCurrentGpioText(); ignoreDeviceUpdatesUntil = Date.now() + IGNORE_DURATION_MS; lastGpioSyncTime = Date.now(); log(`Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}`); alert('Configuration sent. Device will restart if changed.'); if (ghSyncEnabled && ghConfig.token && DEVICE_ID) await saveDeviceConfigToGitHub();
+  }
 
-      if(putRes.ok) {
-        addLog('☁️ Label berhasil disinkronkan ke GitHub.');
-      } else {
-        const err = await putRes.json();
-        addLog(`❌ Gagal sinkron: ${err.message || putRes.status}`);
+  // ==================== GITHUB SYNC ====================
+  function setSyncStatus(online) { ghSyncEnabled = online; const statusEl = $('ghSyncStatus'); if(statusEl) { statusEl.textContent = online ? '● Online' : '● Offline'; statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off'; } log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE'); }
+  async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('Pull schedules: '+e.message); } }
+  async function loadDeviceConfigFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getDeviceConfigPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), config = JSON.parse(atob(data.content)); if(config.device === DEVICE_ID) { let changed = false; if(config.relayCount && config.relayCount !== relayCount) { relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount)); localStorage.setItem('dm_relay_count', relayCount); changed = true; log(`Load device config: relayCount=${relayCount}`); } if(config.gpio && config.gpio.length) { const gpioStr = config.gpio.join(','); safeVal('gpioInput', gpioStr); window.lastGpio = gpioStr; updateCurrentGpioText(); changed = true; } if(changed) updateRelayUIByCount(); } } } catch(e) { log('device.json not yet exists'); } }
+  async function saveDeviceConfigToGitHub(retry = 0) { if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false; const path = getDeviceConfigPath(); if (!path) return false; const gpioRaw = $('gpioInput').value.trim(); const gpioList = gpioRaw.split(',').map(s=>s.trim()).filter(s=>s); const deviceConfig = { device: DEVICE_ID, relayCount, gpio: gpioList, updatedAt: new Date().toISOString() }; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if (getRes.ok) { const data = await getRes.json(); sha = data.sha; } else if (getRes.status !== 404) { throw new Error(`Failed to get file info: ${getRes.status}`); } const content = btoa(unescape(encodeURIComponent(JSON.stringify(deviceConfig, null, 2)))); const body = { message: `Update device config for ${DEVICE_ID}`, content, branch: 'main' }; if (sha) body.sha = sha; const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (putRes.ok) { log('Device config saved to GitHub'); return true; } if (putRes.status === 409 && retry < 2) { log(`Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1); } const errText = await putRes.text(); throw new Error(`HTTP ${putRes.status}: ${errText}`); } catch (err) { log(`Save device config error: ${err.message}`); return false; } }
+  async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('Push schedules: '+e.message); } }
+
+  // ==================== SCHEDULER ====================
+  function initScheduler() { document.querySelectorAll('.day-btn').forEach(btn=>{ btn.onclick=function(){ this.classList.toggle('active'); vibrate(); }; }); renderSchedules(); startSchedulerEngine(); }
+  function addSchedule() { if (!DEVICE_ID) { alert('Set Device ID first'); return; } vibrate(); const time = $('schTime').value, relay = $('schRelay').value, action = $('schAction').value; const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day)); if(!time||activeDays.length===0) return alert('Time & active days required!'); const newSch = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() }; schedules.push(newSch); saveSchedules(); renderSchedules(); log(`Schedule: Relay ${relay} ${action=='1'?'ON':'OFF'} @ ${time}`); }
+  function toggleSchedule(id) { const sch = schedules.find(s=>s.id===id); if(sch){ sch.enabled=!sch.enabled; sch._modified=new Date().toISOString(); saveSchedules(); renderSchedules(); } }
+  function deleteSchedule(id) { if(confirm('Delete schedule?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); } }
+  function mergeScheduleArrays(localArr, serverArr) { const map = new Map(); (serverArr||[]).forEach(s=>{ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(clean.id,clean); }); (localArr||[]).forEach(s=>{ const existing=map.get(s.id); const isNewer = s._modified && (!existing?._modified || s._modified > existing._modified); if(!existing||isNewer){ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(s.id,clean); } }); return Array.from(map.values()).sort((a,b)=>a.time.localeCompare(b.time)); }
+  function saveSchedules() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); if(ghSyncEnabled && navigator.onLine && ghConfig.token && DEVICE_ID) { clearTimeout(ghSyncTimeout); ghSyncTimeout = setTimeout(()=>pushToGitHub(), 1000+Math.random()*150); } }
+  function saveSchedulesLocal() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
+  function renderSchedules() { const list = $('scheduleList'); if(!list) return; list.innerHTML = ''; if(schedules.length===0) { list.innerHTML='<p style="color:#64748b;text-align:center;">No schedules yet.</p>'; return; } const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; schedules.forEach(sch=>{ const daysStr = sch.days.map(d=>dayNames[d]).join(', '); const div = document.createElement('div'); div.className='schedule-item'; div.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span><span>Relay ${sch.relay} → ${sch.action=='1'?'ON':'OFF'}</span><br><span class="sch-days">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`; list.appendChild(div); }); }
+  function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('Scheduler running'); }
+  function checkSchedules() { if (!DEVICE_ID) return; const now = new Date(), curTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`, curDay = now.getDay(), dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`; schedules.forEach(sch=>{ if(!sch.enabled || sch.time!==curTime || !sch.days.includes(curDay)) return; const key = `${sch.id}_${dateKey}`; if(lastTriggered[sch.id]===key) return; lastTriggered[sch.id]=key; if(mqttClient && mqttClient.connected) { pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action); log(`[AUTO] Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'} @ ${curTime}`); sendNotif(`⏰ Auto: Relay ${sch.relay} ${sch.action=='1'?'ON':'OFF'}`,`Schedule ${curTime}`); } }); }
+
+  // ==================== NOTIFICATIONS ====================
+  function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
+  function updateTgUI() { const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnected'); if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  function initNotifUI() {
+    const tg = notifConfig.tg||{}; if(tg.token && tg.chatId){ safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected = tg.connected || false; }
+    safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
+    $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`Telegram: ${tgEnabled?'ON':'OFF'}`); vibrate(); };
+  }
+  function editTelegramConfig() { const tgConfigDiv = $('tgConfig'); const tgConnectedDiv = $('tgConnected'); if (tgConfigDiv) tgConfigDiv.classList.remove('hidden'); if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden'); safeVal('tgToken', notifConfig.tg?.token && notifConfig.tg.token !== '••••••••' ? notifConfig.tg.token : ''); safeVal('tgChatId', notifConfig.tg?.chatId || ''); const badge = $('tgStatusBadge'); if (badge) { badge.textContent = '⚙️ Editing'; badge.className = 'notif-status status-inactive'; } }
+  function saveTelegramConfig() { vibrate(); let token = $('tgToken').value.trim(); let chatId = $('tgChatId').value.trim(); if(!token) return alert('Bot Token required!'); if(!chatId) return alert('Chat ID required!'); notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false }; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay', chatId); updateTgUI(); alert('Telegram config saved'); }
+  async function testTelegram() { if (!notifConfig.tg?.token || !notifConfig.tg?.chatId) { alert('Save Telegram config first'); return; } try { const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: `<b>✅ dMarch Test</b>\nDevice: ${DEVICE_ID}\nTime: ${new Date().toLocaleString()}`, parse_mode: 'HTML' }) }); const result = await response.json(); if (response.ok && result.ok) { tgConnected = true; notifConfig.tg.connected = true; saveNotifConfig(); updateTgUI(); log('Telegram test OK'); alert('Test message sent!'); } else throw new Error(result.description); } catch (e) { tgConnected = false; notifConfig.tg.connected = false; saveNotifConfig(); updateTgUI(); log(`Telegram test failed: ${e.message}`); alert(`Test failed: ${e.message}`); } }
+  async function fetchChatId() { const token = $('tgToken').value.trim(); if(!token) return alert('Enter Bot Token first'); try { const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); const data = await res.json(); if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { safeVal('tgChatId', data.result[0].message.chat.id); alert('Chat ID found!'); } else alert('Send a message to the bot first, then try again.'); } catch(e) { alert('Failed to fetch Chat ID'); } }
+  async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { log(`Telegram send error: ${e.message}`); } } }
+
+  // ==================== QR PROCESSING ====================
+  async function processQR(data) {
+    try {
+      let jsonData;
+      try {
+        jsonData = JSON.parse(data);
+      } catch(e) {
+        let fixed = data.replace(/"device":\s*([^",\n\}]+)/, '"device":"$1"');
+        jsonData = JSON.parse(fixed);
       }
+      
+      if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) {
+        throw new Error('Missing MQTT fields');
+      }
+      
+      if (!jsonData.ghOwner || !jsonData.ghRepo || !jsonData.ghToken) {
+        throw new Error('Missing GitHub fields');
+      }
+      
+      let deviceRaw = jsonData.device;
+      if (!deviceRaw.startsWith('DmarchFF_')) {
+        deviceRaw = 'DmarchFF_' + deviceRaw;
+      }
+      const deviceId = deviceRaw;
+      
+      const allowed = await isDeviceWhitelisted(deviceId);
+      if (!allowed) {
+        localStorage.removeItem('dm_whitelist_cache');
+        const userChoice = confirm(`❌ Device ID ${deviceId} is not registered.\n\nDo you want to contact support on WhatsApp?`);
+        if (userChoice) {
+          window.open('https://wa.me/628551291055', '_blank');
+        }
+        closeQR();
+        setTimeout(() => { location.reload(); }, 1000);
+        return;
+      }
+      
+      DEVICE_ID = deviceId;
+      mqttBroker = jsonData.broker;
+      mqttPort = jsonData.port;
+      mqttUser = jsonData.user;
+      mqttPass = jsonData.pass;
+      
+      safeTxt('deviceIdDisplay', DEVICE_ID);
+      if ($('deviceIdSuffix')) {
+        $('deviceIdSuffix').value = DEVICE_ID.replace('DmarchFF_', '');
+      }
+      
+      ghConfig = {
+        owner: jsonData.ghOwner,
+        repo: jsonData.ghRepo,
+        basePath: jsonData.ghBasePath || 'RELAY/data',
+        token: jsonData.ghToken,
+        branch: 'main'
+      };
+      ghSyncEnabled = true;
+      
+      localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig));
+      saveAllConfig();
+      
+      setSyncStatus(true);
+      updateGhPathDisplay();
+      $('connCard').classList.add('hidden');
+      document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
+      connectMQTT();
+      
+      setTimeout(() => {
+        if (ghSyncEnabled) {
+          loadFromGitHub();
+          loadDeviceConfigFromGitHub();
+        }
+      }, 1000);
+      
+      startPeriodicWhitelistCheck();
+      
+      log('✅ Configuration loaded from QR. MQTT connecting...');
+      alert('Configuration successful! MQTT connecting...');
+      closeQR();
+      
     } catch(e) {
-      addLog(`❌ Error jaringan/GitHub: ${e.message}`);
+      alert('Invalid QR data: ' + e.message);
+      console.error(e);
+      closeQR();
+      setTimeout(() => { location.reload(); }, 1000);
     }
   }
 
-  // 🔹 Listener Perubahan Jumlah Relay
-  function setupRelayCountListener() {
-    const countInput = document.getElementById('relayCountInput');
-    if(!countInput) return;
-    
-    countInput.addEventListener('change', (e) => {
-      const newCount = parseInt(e.target.value);
-      if(newCount >= 1 && newCount <= 16) {
-        localStorage.setItem(KEYS.COUNT, newCount);
-        document.getElementById('activeRelayCount').textContent = newCount;
-        getRelayLabels(); // Re-sync array size
-        initRelayLabels();
-        addLog(`🔢 Jumlah relay diubah menjadi ${newCount}.`);
-      }
+  // ==================== QR MODAL ====================
+  let qrImagePreview = null;
+  function openQR(){ 
+    $('qrModal').style.display='flex'; 
+    $('reader').innerHTML = ''; 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  async function closeQR(){ 
+    $('qrModal').style.display='none'; 
+    if(qrScanner){ 
+      try{ await qrScanner.stop(); }catch(e){} 
+      qrScanner.clear(); 
+      qrScanner=null; 
+    } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+  }
+  $('qrModal').onclick = function(e) {
+    if (e.target === this) closeQR();
+  };
+  const startCameraBtn = $('startCameraBtn');
+  if(startCameraBtn) { startCameraBtn.onclick = function(){ 
+    if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+    $('reader').innerHTML=''; 
+    qrScanner=new Html5Qrcode("reader"); 
+    qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); 
+  }; }
+  const qrFileInput = $('qrFileInput');
+  if(qrFileInput) { qrFileInput.onchange = async function(e){ 
+    const file=e.target.files[0]; 
+    if(!file) return; 
+    if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } 
+    if(qrImagePreview){ qrImagePreview.remove(); qrImagePreview=null; } 
+    $('reader').innerHTML=''; 
+    const reader=new FileReader(); 
+    reader.onload=function(evt){ 
+      const img=document.createElement('img'); 
+      img.src=evt.target.result; 
+      img.style.maxWidth='100%'; 
+      img.style.borderRadius='8px'; 
+      $('reader').appendChild(img); 
+      qrImagePreview=img; 
+    }; 
+    reader.readAsDataURL(file); 
+    try{ 
+      const tempScanner = new Html5Qrcode("reader"); 
+      const decodedText=await tempScanner.scanFile(file,true); 
+      onQRSuccess(decodedText); 
+      tempScanner.clear();
+    } catch(err){ alert('QR scan failed'); } 
+  }; }
+  function onQRSuccess(decodedText){ processQR(decodedText); }
+
+  // ==================== INIT ====================
+  function initAccordion() {
+    document.querySelectorAll('.card.collapsible').forEach(card => {
+      const header = card.querySelector('.card-header');
+      const btn = card.querySelector('.toggle-btn');
+      if (!header) return;
+      header.addEventListener('click', (e) => {
+        e.stopPropagation(); vibrate();
+        if (card.classList.contains('collapsed')) {
+          document.querySelectorAll('.card.collapsible').forEach(c => c.classList.add('collapsed'));
+          card.classList.remove('collapsed');
+          if (btn) btn.textContent = '▲';
+        } else { card.classList.add('collapsed'); if (btn) btn.textContent = '▼'; }
+        document.querySelectorAll('.card.collapsible').forEach(c => { const b = c.querySelector('.toggle-btn'); if (b) b.textContent = c.classList.contains('collapsed') ? '▼' : '▲'; });
+      });
     });
   }
 
-  window.addSchedule = function() {
-    const target = document.getElementById('schedulerRelaySelect').options[document.getElementById('schedulerRelaySelect').selectedIndex].text;
-    const time = document.getElementById('schedulerTime').value;
-    if(!time) { addLog('⚠️ Waktu jadwal belum diisi.'); return; }
-    addLog(`⏰ Jadwal dibuat: ${target} -> ${time}`);
-  };
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered:', reg))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    });
+  }
 
-  // Expose modal close globally
-  window.closeQrModal = () => document.getElementById('qrModal').style.display = 'none';
-})();
+  document.addEventListener('DOMContentLoaded', () => {
+    initAccordion();
+    initLocationAndTime();
+    initPwaInstall(); // Initialize PWA install button
+    
+    const refreshBtn = $('refreshGeoBtn');
+    if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
+    
+    const refreshWhitelistBtn = $('refreshWhitelistBtn');
+    if (refreshWhitelistBtn) {
+      refreshWhitelistBtn.onclick = () => refreshWhitelist();
+    }
+    
+    const hasConfig = loadFullConfig();
+    if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
+      $('connCard').classList.add('hidden');
+      document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
+      setSyncStatus(true);
+      updateGhPathDisplay();
+      connectMQTT();
+      updateRelayUIByCount();
+      initScheduler(); initNotifUI();
+      updateCurrentGpioText();
+      const gpioInputElem = $('gpioInput');
+      if (gpioInputElem) gpioInputElem.addEventListener('input', updateCurrentGpioText);
+      startPeriodicWhitelistCheck();
+      setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
+    } else {
+      $('connCard').classList.remove('hidden');
+      document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
+      initRelayButtons(); initScheduler(); initNotifUI();
+    }
+    const showQrBtn = $('showQrBtn');
+    if(showQrBtn) showQrBtn.onclick = () => openQR();
+    const attachVibration = (el, handler) => { if(!el) return; el.onclick = (e) => { vibrate(); if(handler) handler(e); }; };
+    attachVibration($('disconnectBtn'), () => { if(mqttClient) mqttClient.end(true); });
+    attachVibration($('allOnBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/all/on','1'); });
+    attachVibration($('allOffBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/all/off','1'); });
+    attachVibration($('saveNTPBtn'), () => { if(DEVICE_ID) { pub(DEVICE_ID+'/ntp/set', $('ntpSelect').value); pub(DEVICE_ID+'/timezone/set', $('tzInput').value); } });
+    attachVibration($('applyRelayConfigBtn'), () => { applyRelayConfig(); });
+    attachVibration($('suggestDefaultPinsBtn'), () => suggestDefaultPins());
+    attachVibration($('updateNetBtn'), () => { const ssid=$('netSsid').value.trim(); if(!ssid) return alert('SSID required!'); if(DEVICE_ID) pub(DEVICE_ID+'/network/update', JSON.stringify({ssid,pass:$('netPass').value.trim()})); alert('Command sent.'); });
+    attachVibration($('resetNetBtn'), () => { if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); });
+    attachVibration($('otaBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/ota','1'); });
+    attachVibration($('restartBtn'), () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/restart','1'); });
+    attachVibration($('clearLogBtn'), () => { const t=$('terminal'); if(t) t.innerHTML=''; });
+    window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
+  });
 </script>
-
 </body>
 </html>
