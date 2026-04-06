@@ -1,11 +1,12 @@
 {
   "device": "DmarchFF_EBCF08",
-  "relayCount": 4,
-  "gpio": [],
-  "labels": {
-    "1": "Lampu Teras",
-    "2": "Relay 2",
-    "3": "Relay 3"
-  },
-  "updatedAt": "2026-04-06T13:00:09.356Z"
+  "relayCount": 5,
+  "gpio": [
+    "12",
+    "11",
+    "9",
+    "7",
+    "5"
+  ],
+  "updatedAt": "2026-04-06T13:44:32.440Z"
 }
