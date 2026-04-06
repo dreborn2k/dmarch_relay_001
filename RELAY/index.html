@@ -166,7 +166,9 @@
     </div>
   </div>
 
-  <!-- Relay Control Card (with edit label toggle) -->
+  <!-- ============================================ -->
+  <!-- RELAY CONTROL CARD - WITH EDIT LABELS BUTTON -->
+  <!-- ============================================ -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2">
@@ -850,8 +852,12 @@
     
     const editLabelsBtn = $('#editLabelsBtn');
     const saveLabelsBtn = $('#saveLabelsBtn');
-    if (editLabelsBtn) editLabelsBtn.onclick = () => enterEditLabelsMode();
-    if (saveLabelsBtn) saveLabelsBtn.onclick = () => saveLabels();
+    if (editLabelsBtn) {
+      editLabelsBtn.onclick = () => enterEditLabelsMode();
+    }
+    if (saveLabelsBtn) {
+      saveLabelsBtn.onclick = () => saveLabels();
+    }
     
     const hasConfig = loadFullConfig();
     if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
