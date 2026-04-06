@@ -6,7 +6,6 @@
   <title>dMarch Relay Pro | Professional IoT Relay Controller</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
   
-  <!-- PWA Manifest & Meta Tags -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -115,7 +114,6 @@
   <h1>🔌 dMarch Relay Pro</h1>
   <p class="subtitle">Professional IoT Relay Control Panel</p>
 
-  <!-- MQTT Card (only shown if no stored config) -->
   <div class="card" id="connCard">
     <h3>🔗 Setup Device</h3>
     <p style="margin-bottom:15px; color:#94a3b8;">Scan QR code or upload image to configure MQTT and GitHub sync.</p>
@@ -133,7 +131,6 @@
 
   <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer">🔌 Disconnect MQTT</button>
 
-  <!-- System Health Card -->
   <div class="card app-card hidden" id="healthCard">
     <h3>📊 System Health</h3>
     <div class="stat-grid">
@@ -148,7 +145,6 @@
     </div>
   </div>
 
-  <!-- Device Information Card -->
   <div class="card collapsible collapsed app-card hidden" id="deviceInfoCard">
     <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -166,7 +162,6 @@
     </div>
   </div>
 
-  <!-- Relay Control Card -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2">
@@ -176,7 +171,6 @@
     <div class="grid-4" style="margin-top:12px;" id="relayBtns"></div>
   </div>
 
-  <!-- NTP Card -->
   <div class="card collapsible collapsed app-card hidden" id="ntpCard">
     <div class="card-header"><h3>🕐 NTP Settings</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -188,7 +182,6 @@
     </div>
   </div>
 
-  <!-- Relay Configuration Card (with Edit Labels buttons) -->
   <div class="card collapsible collapsed app-card hidden" id="relayConfigCard">
     <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -214,7 +207,6 @@
     </div>
   </div>
 
-  <!-- Relay Scheduler Card -->
   <div class="card collapsible collapsed app-card hidden" id="schedulerCard">
     <div class="card-header"><h3>⏰ Relay Scheduler</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -231,7 +223,6 @@
     </div>
   </div>
 
-  <!-- Notification Card -->
   <div class="card collapsible collapsed app-card hidden" id="notifCard">
     <div class="card-header"><h3>🔔 Notifications</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -243,7 +234,6 @@
     </div>
   </div>
 
-  <!-- Network Card -->
   <div class="card collapsible collapsed app-card hidden" id="networkCard">
     <div class="card-header"><h3>🌐 Network</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -254,7 +244,6 @@
     </div>
   </div>
 
-  <!-- System Card -->
   <div class="card collapsible collapsed app-card hidden" id="systemCard">
     <div class="card-header"><h3>🔄 System</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -262,7 +251,6 @@
     </div>
   </div>
 
-  <!-- Location & Time Card -->
   <div class="card collapsible collapsed app-card hidden" id="locationTimeCard">
     <div class="card-header"><h3>🌍 Location & Time</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -277,7 +265,6 @@
     </div>
   </div>
 
-  <!-- About & Support Card -->
   <div class="card collapsible collapsed app-card hidden about-section" id="aboutCard">
     <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -287,7 +274,6 @@
     </div>
   </div>
 
-  <!-- Terminal Card -->
   <div class="card app-card hidden" id="terminalCard">
     <h3>📝 Event Log</h3>
     <div class="terminal" id="terminal"></div>
@@ -297,7 +283,6 @@
   <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
 
-<!-- QR Modal -->
 <div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:10px;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg" id="qrMsg">QR must contain JSON with broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken</p></div></div>
 
 <script>
@@ -742,32 +727,28 @@
   // ==================== NOTIFICATIONS ====================
   function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
   
-  // FIXED: Safe updateTgUI with null checks for all elements
+  // FIXED: Robust updateTgUI logic
   function updateTgUI() {
-    const badge = document.getElementById('tgStatusBadge');
-    const configDiv = document.getElementById('tgConfig');
-    const connectedDiv = document.getElementById('tgConnected');
-    
-    if (!badge) {
-      console.warn('tgStatusBadge element not found');
-      return;
-    }
+    const b = $('#tgStatusBadge');
+    const c = $('#tgConfig');
+    const d = $('#tgConnected');
+    if (!b) return; // prevent error if element missing
     
     if (!tgEnabled) {
-      badge.textContent = 'Inactive';
-      badge.className = 'notif-status status-inactive';
-      if (configDiv) configDiv.classList.add('hidden');
-      if (connectedDiv) connectedDiv.classList.add('hidden');
+      b.textContent = 'Inactive';
+      b.className = 'notif-status status-inactive';
+      if (c) c.classList.add('hidden');
+      if (d) d.classList.add('hidden');
     } else if (tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
-      badge.textContent = '● Active';
-      badge.className = 'notif-status status-active';
-      if (configDiv) configDiv.classList.add('hidden');
-      if (connectedDiv) connectedDiv.classList.remove('hidden');
+      b.textContent = '● Active';
+      b.className = 'notif-status status-active';
+      if (c) c.classList.add('hidden');
+      if (d) d.classList.remove('hidden');
     } else {
-      badge.textContent = '⚙️ Config';
-      badge.className = 'notif-status status-inactive';
-      if (configDiv) configDiv.classList.remove('hidden');
-      if (connectedDiv) connectedDiv.classList.add('hidden');
+      b.textContent = '⚙️ Config';
+      b.className = 'notif-status status-inactive';
+      if (c) c.classList.remove('hidden');
+      if (d) d.classList.add('hidden');
     }
   }
   
@@ -779,10 +760,9 @@
       safeTxt('tgChatDisplay', tg.chatId);
       tgConnected = tg.connected || false;
     }
-    const tgToggle = document.getElementById('tgToggle');
+    const tgToggle = $('#tgToggle');
     if (tgToggle) {
-      if (tgEnabled) tgToggle.classList.add('active');
-      else tgToggle.classList.remove('active');
+      safeCls(tgToggle, 'active', tgEnabled);
       tgToggle.onclick = function () {
         tgEnabled = !tgEnabled;
         this.classList.toggle('active', tgEnabled);
@@ -791,8 +771,6 @@
         log(`Telegram: ${tgEnabled ? 'ON' : 'OFF'}`);
         vibrate();
       };
-    } else {
-      console.warn('tgToggle element not found');
     }
     updateTgUI();
   }
@@ -883,60 +861,23 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    initAccordion();
-    initLocationAndTime();
-    initPwaInstall();
-    
-    // Safe element checks
+    // --- 1. DAFTARKAN SEMUA EVENT LISTENER TOMBOL TERLEBIH DAHULU ---
     const refreshBtn = document.getElementById('refreshGeoBtn');
     if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
     
     const refreshWhitelistBtn = document.getElementById('refreshWhitelistBtn');
     if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
 
-    // Edit label buttons
     const editLabelsBtn = document.getElementById('editLabelsBtn');
-    const saveLabelsBtn = document.getElementById('saveLabelsBtn');
     if (editLabelsBtn) editLabelsBtn.onclick = () => enterEditLabelsMode();
+    const saveLabelsBtn = document.getElementById('saveLabelsBtn');
     if (saveLabelsBtn) saveLabelsBtn.onclick = () => saveLabels();
-
-    const hasConfig = loadFullConfig();
-    if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
-      const connCard = document.getElementById('connCard');
-      if (connCard) connCard.classList.add('hidden');
-      document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
-      setSyncStatus(true);
-      updateGhPathDisplay();
-      connectMQTT();
-      updateRelayUIByCount();
-      initScheduler(); 
-      initNotifUI();
-      updateCurrentGpioText();
-      
-      const gpioInputElem = document.getElementById('gpioInput');
-      if (gpioInputElem) gpioInputElem.addEventListener('input', updateCurrentGpioText);
-      
-      startPeriodicWhitelistCheck();
-      setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
-    } else {
-      const connCard = document.getElementById('connCard');
-      if (connCard) connCard.classList.remove('hidden');
-      document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
-      initRelayButtons(); 
-      initScheduler(); 
-      initNotifUI();
-    }
     
     const showQrBtn = document.getElementById('showQrBtn');
     if (showQrBtn) showQrBtn.onclick = () => openQR();
     
-    // QR modal event bindings (fixed)
     const qrModal = document.getElementById('qrModal');
-    if (qrModal) {
-      qrModal.onclick = function(e) {
-        if (e.target === this) closeQR();
-      };
-    }
+    if (qrModal) qrModal.onclick = function(e) { if (e.target === this) closeQR(); };
     
     const startCameraBtn = document.getElementById('startCameraBtn');
     if (startCameraBtn) {
@@ -998,7 +939,6 @@
       };
     }
     
-    // Other buttons
     const disconnectBtn = document.getElementById('disconnectBtn');
     if (disconnectBtn) disconnectBtn.onclick = () => { vibrate(); if (mqttClient) mqttClient.end(true); };
     
@@ -1047,7 +987,6 @@
     const addScheduleBtn = document.getElementById('addScheduleBtn');
     if (addScheduleBtn) addScheduleBtn.onclick = () => addSchedule();
     
-    // Telegram buttons
     const saveTelegramBtn = document.getElementById('saveTelegramBtn');
     if (saveTelegramBtn) saveTelegramBtn.onclick = () => saveTelegramConfig();
     const testTelegramBtn = document.getElementById('testTelegramBtn');
@@ -1058,8 +997,40 @@
     if (fetchChatIdBtn) fetchChatIdBtn.onclick = () => fetchChatId();
     const editTelegramBtn = document.getElementById('editTelegramBtn');
     if (editTelegramBtn) editTelegramBtn.onclick = () => editTelegramConfig();
+
+    const gpioInputElem = document.getElementById('gpioInput');
+    if (gpioInputElem) gpioInputElem.addEventListener('input', updateCurrentGpioText);
+
+    // --- 2. INISIALISASI SISTEM & UI ---
+    initAccordion();
+    initLocationAndTime();
+    initPwaInstall();
+
+    const hasConfig = loadFullConfig();
+    if (hasConfig && DEVICE_ID && mqttBroker && ghConfig.token) {
+      const connCard = document.getElementById('connCard');
+      if (connCard) connCard.classList.add('hidden');
+      document.querySelectorAll('.app-card').forEach(c => c.classList.remove('hidden'));
+      setSyncStatus(true);
+      updateGhPathDisplay();
+      connectMQTT();
+      updateRelayUIByCount();
+      initScheduler(); 
+      initNotifUI();
+      updateCurrentGpioText();
+      
+      startPeriodicWhitelistCheck();
+      setTimeout(() => { if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } }, 1000);
+    } else {
+      const connCard = document.getElementById('connCard');
+      if (connCard) connCard.classList.remove('hidden');
+      document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
+      initRelayButtons(); 
+      initScheduler(); 
+      initNotifUI();
+    }
     
-    window.addEventListener('online',()=>{ if(ghSyncEnabled) pushToGitHub(); });
+    window.addEventListener('online',() => { if(ghSyncEnabled) pushToGitHub(); });
   });
 </script>
 </body>
