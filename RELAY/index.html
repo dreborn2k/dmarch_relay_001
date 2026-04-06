@@ -18,7 +18,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
-    /* (existing styles remain, plus tab styles) */
+    /* ========== BASE STYLES ========== */
     :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --accent:#38bdf8; --success:#10b981; --danger:#ef4444; --border:#334155; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
@@ -26,10 +26,10 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; width: 100%; overflow: hidden; }
     .card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0 20px; cursor: pointer; }
     .card-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; font-size: 1.2rem; }
-    .card-content { padding: 0 20px 20px 20px; margin-top: 5px; }
+    .card-content { padding: 0 20px 20px 20px; margin-top: 5px; font-size: 0.85rem; }
     .card.collapsed .card-content { display: none; }
     .card.collapsed .card-header { padding-bottom: 18px; }
-    .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; }
+    .toggle-btn { background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; width: auto; padding: 0 8px; font-weight: bold; }
     .card:not(.collapsible) { padding: 20px; }
     .card:not(.collapsible) h3 { margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
     h1 { text-align: center; margin-bottom: 5px; font-size: 1.8rem; }
@@ -39,7 +39,7 @@
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
-    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; }
     button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-primary { background: var(--accent); color: #000; }
     .btn-success { background: var(--success); color: #fff; }
@@ -93,21 +93,14 @@
     .info-label { font-weight: 600; color: #94a3b8; font-size: 0.75rem; }
     .disconnect-spacer { margin-bottom: 20px; }
     .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border); color: #64748b; font-size: 0.8rem; }
-    .about-section { background: var(--card); border-radius: 12px; margin-bottom: 20px; }
     .contact-wa { display: inline-flex; align-items: center; gap: 8px; background: #075e54; padding: 8px 16px; border-radius: 40px; text-decoration: none; color: #fff; font-weight: 600; margin-top: 10px; }
     .contact-wa:hover { background: #128C7E; }
-    .location-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
-    .location-time-item { background: #0f172a; border-radius: 8px; padding: 8px; }
-    .location-time-label { font-size: 0.7rem; color: #94a3b8; }
-    .location-time-value { font-size: 0.9rem; font-weight: 500; word-break: break-word; }
-    .refresh-geo { text-align: right; margin-top: 8px; }
-    .refresh-geo button { width: auto; padding: 4px 8px; font-size: 0.7rem; background: var(--border); }
-    .install-prompt { margin-top: 10px; text-align: center; }
-    .install-prompt button { width: auto; padding: 8px 20px; background: var(--accent); color: #000; font-size: 0.85rem; }
-    .install-prompt p { font-size: 0.7rem; margin-top: 5px; color: #94a3b8; }
     .label-input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
     .label-input-group span { min-width: 60px; font-size: 0.85rem; }
     .label-input-group input { flex: 1; }
+    .install-prompt { margin-top: 10px; text-align: center; }
+    .install-prompt button { width: auto; padding: 8px 20px; background: var(--accent); color: #000; font-size: 0.85rem; }
+    .install-prompt p { font-size: 0.7rem; margin-top: 5px; color: #94a3b8; }
 
     /* Tab Styles */
     .settings-tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 20px; gap: 4px; }
@@ -115,12 +108,30 @@
     .tab-btn.active { background: var(--accent); color: #000; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    
+    /* Header card style */
+    .header-card { background: linear-gradient(135deg, var(--card) 0%, #0f172a 100%); text-align: center; padding: 20px; }
+    .header-card h1 { margin: 0; font-size: 1.8rem; }
+    .header-card .subtitle { margin: 5px 0 0 0; }
+    
+    /* Location info line (above footer) */
+    .location-info { font-size: 0.75rem; color: #64748b; text-align: center; margin: 10px 0 5px 0; line-height: 1.4; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .location-info span { margin: 0 2px; }
+    .refresh-loc-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; padding: 0 4px; vertical-align: middle; }
+    .refresh-loc-btn:hover { opacity: 0.8; }
+    
+    /* 2-column layout for relay labels */
+    .labels-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .labels-grid-2 .label-input-group { margin-bottom: 0; }
   </style>
 </head>
 <body>
 <div class="container">
-  <h1>🔌 dMarch Relay Pro</h1>
-  <p class="subtitle">Professional IoT Relay Control Panel</p>
+  <!-- HEADER CARD (Title & Subtitle) -->
+  <div class="card header-card">
+    <h1>🔌 dMarch Relay Pro</h1>
+    <p class="subtitle">Professional IoT Relay Control Panel</p>
+  </div>
 
   <!-- MQTT Card (only shown if no stored config) -->
   <div class="card" id="connCard">
@@ -155,9 +166,9 @@
     </div>
   </div>
 
-  <!-- Device Information Card -->
+  <!-- Device Information Card (collapsible) -->
   <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">▼</button></div>
+    <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
       <div class="info-panel">
         <div class="grid-2" style="margin-bottom: 10px;">
@@ -180,117 +191,99 @@
     <div class="grid-4" style="margin-top:15px;" id="relayBtns"></div>
   </div>
 
-  <!-- NTP Card -->
-  <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🕐 NTP Settings</h3><button class="toggle-btn">▼</button></div>
+  <!-- ========== SETTINGS CARD (COLLAPSIBLE + TABS) ========== -->
+  <div class="card collapsible app-card hidden" id="settingsTabCard">
+    <div class="card-header"><h3>⚙️ Settings</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
-      <div class="grid-2">
-        <div class="form-group"><label>NTP Server</label><select id="ntpSelect"><option>id.pool.ntp.org</option><option>pool.ntp.org</option><option>time.google.com</option></select></div>
-        <div class="form-group"><label>Timezone (hour)</label><input id="tzInput" value="7" type="number"></div>
+      <div class="settings-tab-buttons">
+        <button class="tab-btn active" data-tab="tab-config">⚙️ Config</button>
+        <button class="tab-btn" data-tab="tab-labels">🏷️ Labels</button>
+        <button class="tab-btn" data-tab="tab-scheduler">⏰ Scheduler</button>
+        <button class="tab-btn" data-tab="tab-notif">🔔 Notif</button>
+        <button class="tab-btn" data-tab="tab-wifi">📶 Wi-Fi</button>
+        <button class="tab-btn" data-tab="tab-ntp">🕐 NTP</button>
+        <button class="tab-btn" data-tab="tab-system">🔄 System</button>
+        <button class="tab-btn" data-tab="tab-about">ℹ️ About</button>
       </div>
-      <button class="btn-primary" id="saveNTPBtn">💾 Save NTP</button>
-    </div>
-  </div>
-
-  <!-- ========== NEW SETTINGS CARD WITH TABS ========== -->
-  <div class="card app-card hidden" id="settingsTabCard">
-    <h3>⚙️ Settings</h3>
-    <div class="settings-tab-buttons">
-      <button class="tab-btn active" data-tab="tab-relay-config">🔌 Relay Config</button>
-      <button class="tab-btn" data-tab="tab-relay-labels">🏷️ Relay Labels</button>
-      <button class="tab-btn" data-tab="tab-scheduler">⏰ Scheduler</button>
-      <button class="tab-btn" data-tab="tab-notifications">🔔 Notifications</button>
-      <button class="tab-btn" data-tab="tab-network">🌐 Network</button>
-    </div>
-    <div class="tab-panel active" id="tab-relay-config">
-      <!-- Relay Configuration content -->
-      <div class="form-group">
-        <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
-        <input id="relayCountInput" type="number" min="1" max="16" value="5">
-        <small style="color:#64748b;">Changing this will restart the device</small>
-      </div>
-      <div class="form-group">
-        <label>🔌 GPIO Pins (comma separated)</label>
-        <input id="gpioInput" placeholder="e.g., 12,14,27,26,25" list="gpioSuggestions">
-        <datalist id="gpioSuggestions"></datalist>
-        <div class="gpio-suggest">
-          <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
-          <div id="currentGpioText" class="current-pins"></div>
+      <div class="tab-panel active" id="tab-config">
+        <div class="form-group">
+          <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
+          <input id="relayCountInput" type="number" min="1" max="16" value="5">
+          <small style="color:#64748b;">Changing this will restart the device</small>
         </div>
+        <div class="form-group">
+          <label>🔌 GPIO Pins (comma separated)</label>
+          <input id="gpioInput" placeholder="e.g., 12,14,27,26,25" list="gpioSuggestions">
+          <datalist id="gpioSuggestions"></datalist>
+          <div class="gpio-suggest">
+            <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
+            <div id="currentGpioText" class="current-pins"></div>
+          </div>
+        </div>
+        <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
       </div>
-      <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
-    </div>
-    <div class="tab-panel" id="tab-relay-labels">
-      <!-- Relay Labels content -->
-      <div id="relayLabelsContainer"></div>
-      <button class="btn-primary" id="saveLabelsBtn">💾 Save Labels to GitHub</button>
-      <p style="font-size:0.7rem; color:#64748b; margin-top:10px;">Labels will be stored in device.json on GitHub and used on control buttons.</p>
-    </div>
-    <div class="tab-panel" id="tab-scheduler">
-      <!-- Scheduler content -->
-      <div class="grid-2">
-        <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
-        <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
+      <div class="tab-panel" id="tab-labels">
+        <div id="relayLabelsContainer" class="labels-grid-2"></div>
+        <button class="btn-primary" id="saveLabelsBtn" style="margin-top: 15px;">💾 Save Labels to GitHub</button>
+        <p style="font-size:0.7rem; color:#64748b; margin-top:10px;">Labels stored in device.json</p>
       </div>
-      <div class="grid-2">
-        <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
-        <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
+      <div class="tab-panel" id="tab-scheduler">
+        <div class="grid-2">
+          <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
+          <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
+          <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
+        </div>
+        <button class="btn-primary" id="addScheduleBtn">➕ Add Schedule</button>
+        <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <button class="btn-primary" id="addScheduleBtn">➕ Add Schedule</button>
-      <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
-    </div>
-    <div class="tab-panel" id="tab-notifications">
-      <!-- Notifications content -->
-      <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
-      <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" id="saveTelegramBtn">💾 Save</button><button class="btn-secondary btn-notif" id="testTelegramBtn">🧪 Test</button><button class="btn-secondary btn-notif" id="fetchChatIdBtn">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
-      <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" id="editTelegramBtn">✏️ Edit</button><button class="btn-sm btn-secondary" id="testTelegramConnectedBtn">🧪 Test</button></div></div></div></div>
-      <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
-      <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
-    </div>
-    <div class="tab-panel" id="tab-network">
-      <!-- Network content -->
-      <div class="form-group"><label>SSID</label><input id="netSsid"></div>
-      <div class="form-group"><label>Password</label><input id="netPass" type="password"></div>
-      <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
-      <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset AP</button>
+      <div class="tab-panel" id="tab-notif">
+        <div class="notif-card"><div class="notif-header"><div><span>📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
+        <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" id="saveTelegramBtn">💾 Save</button><button class="btn-secondary btn-notif" id="testTelegramBtn">🧪 Test</button><button class="btn-secondary btn-notif" id="fetchChatIdBtn">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
+        <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" id="editTelegramBtn">✏️ Edit</button><button class="btn-sm btn-secondary" id="testTelegramConnectedBtn">🧪 Test</button></div></div></div></div>
+        <div class="notif-card"><div class="notif-header"><div><span>📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
+        <div class="notif-card"><div class="notif-header"><div><span>💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
+      </div>
+      <div class="tab-panel" id="tab-wifi">
+        <div class="form-group"><label>SSID</label><input id="netSsid"></div>
+        <div class="form-group"><label>Password</label><input id="netPass" type="password"></div>
+        <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
+        <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset AP</button>
+      </div>
+      <div class="tab-panel" id="tab-ntp">
+        <div class="grid-2">
+          <div class="form-group"><label>NTP Server</label><select id="ntpSelect"><option>id.pool.ntp.org</option><option>pool.ntp.org</option><option>time.google.com</option></select></div>
+          <div class="form-group"><label>Timezone (hour)</label><input id="tzInput" value="7" type="number"></div>
+        </div>
+        <button class="btn-primary" id="saveNTPBtn">💾 Save NTP</button>
+      </div>
+      <div class="tab-panel" id="tab-system">
+        <div class="grid-2" style="margin-top:8px;"><button class="btn-primary" id="otaBtn">⬇️ OTA Update</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div>
+      </div>
+      <div class="tab-panel" id="tab-about">
+        <p><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
+        <p>✔ Multi-device isolated data<br>✔ Cloud backup (GitHub)<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO & Labels</p>
+        <div style="text-align:center; margin-top:15px;"><a href="https://wa.me/628551291055" target="_blank" class="contact-wa">📱 Contact us on WhatsApp</a><p style="margin-top:10px; font-size:0.75rem;">Design & Build by <strong>d'marchFF Engineering</strong></p></div>
+      </div>
     </div>
   </div>
 
-  <!-- System Card -->
-  <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🔄 System</h3><button class="toggle-btn">▼</button></div>
+  <!-- Event Log Card (collapsible) -->
+  <div class="card collapsible app-card hidden" id="eventLogCard">
+    <div class="card-header"><h3>📝 Event Log</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
-      <div class="grid-2" style="margin-top:8px;"><button class="btn-primary" id="otaBtn">⬇️ OTA Update</button><button class="btn-danger" id="restartBtn">🔄 Restart Device</button></div>
+      <div class="terminal" id="terminal"></div>
+      <button class="btn-secondary" id="clearLogBtn">🗑️ Clear Log</button>
     </div>
   </div>
 
-  <!-- Location & Time Card -->
-  <div class="card collapsible collapsed app-card hidden" id="locationTimeCard">
-    <div class="card-header"><h3>🌍 Location & Time</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
-      <div class="location-time-grid">
-        <div class="location-time-item"><div class="location-time-label">🕐 Local Time</div><div class="location-time-value" id="localTimeDisplay">--:--:--</div></div>
-        <div class="location-time-item"><div class="location-time-label">🌐 Timezone</div><div class="location-time-value" id="timezoneDisplay">--</div></div>
-        <div class="location-time-item"><div class="location-time-label">📍 Latitude</div><div class="location-time-value" id="latDisplay">--</div></div>
-        <div class="location-time-item"><div class="location-time-label">📍 Longitude</div><div class="location-time-value" id="lonDisplay">--</div></div>
-        <div class="location-time-item" style="grid-column: span 2;"><div class="location-time-label">🏠 Address</div><div class="location-time-value" id="addressDisplay">--</div></div>
-      </div>
-      <div class="refresh-geo"><button id="refreshGeoBtn" class="btn-secondary">🔄 Refresh Location</button></div>
-    </div>
+  <!-- Location info (above footer) with refresh button -->
+  <div id="locationInfo" class="location-info" style="display: none;">
+    <span id="locText"></span>
+    <button class="refresh-loc-btn" id="refreshLocationBtn" title="Refresh location">🔄</button>
   </div>
-
-  <!-- About & Support Card -->
-  <div class="card collapsible collapsed app-card hidden about-section">
-    <div class="card-header"><h3>✨ About & Support</h3><button class="toggle-btn">▼</button></div>
-    <div class="card-content">
-      <p><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
-      <p>✔ Multi-device isolated data<br>✔ Cloud backup (GitHub)<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO & Labels</p>
-      <div style="text-align:center; margin-top:15px;"><a href="https://wa.me/628551291055" target="_blank" class="contact-wa">📱 Contact us on WhatsApp</a><p style="margin-top:10px; font-size:0.75rem;">Design & Build by <strong>d'marchFF Engineering</strong></p></div>
-    </div>
-  </div>
-
-  <!-- Terminal Card -->
-  <div class="card app-card hidden"><h3>📝 Event Log</h3><div class="terminal" id="terminal"></div><button class="btn-secondary" id="clearLogBtn">🗑️ Clear Log</button></div>
 
   <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
@@ -427,17 +420,31 @@
     }, 30000);
   }
 
-  // ==================== LOCATION & TIME ====================
+  // ==================== LOCATION & TIME (with refresh button) ====================
   let timeInterval = null, geoCache = null;
   const GEO_CACHE_EXPIRY = 3600000;
-  function updateLocalTime() { const now = new Date(); if($('localTimeDisplay')) $('localTimeDisplay').textContent = now.toLocaleTimeString(); if($('timezoneDisplay')) $('timezoneDisplay').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone; }
+  function updateLocationInfoDisplay() {
+    const locTextSpan = document.getElementById('locText');
+    if (!locTextSpan) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    const tzStr = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let latStr = '--', lonStr = '--', addressStr = '';
+    if (geoCache) {
+      latStr = geoCache.lat?.toFixed(6) || '--';
+      lonStr = geoCache.lon?.toFixed(6) || '--';
+      addressStr = geoCache.address || '';
+    }
+    locTextSpan.innerHTML = `🕐 ${timeStr} &nbsp; 🌐 ${tzStr} &nbsp; 📍 ${latStr} ${lonStr}<br>🏠 ${addressStr}`;
+  }
   async function getGeolocation(forceRefresh = false) {
-    if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { displayGeoData(geoCache); return; }
-    if (!navigator.geolocation) { safeTxt('addressDisplay', 'Geolocation not supported'); return; }
-    safeTxt('addressDisplay', 'Requesting location...');
+    if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { updateLocationInfoDisplay(); return; }
+    if (!navigator.geolocation) { updateLocationInfoDisplay(); return; }
+    const locTextSpan = document.getElementById('locText');
+    if (locTextSpan) locTextSpan.innerHTML = '🔄 Fetching location...';
     navigator.geolocation.getCurrentPosition(async (position) => {
       const lat = position.coords.latitude, lon = position.coords.longitude;
-      safeTxt('latDisplay', lat.toFixed(6)); safeTxt('lonDisplay', lon.toFixed(6));
+      geoCache = { lat, lon, timestamp: Date.now() };
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
         const data = await response.json();
@@ -449,19 +456,25 @@
           address = [road, city, country].filter(s => s).join(', ');
         }
         if (!address) address = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-        safeTxt('addressDisplay', address);
-        geoCache = { lat, lon, address, timestamp: Date.now() };
+        geoCache.address = address;
         localStorage.setItem('dm_geo_cache', JSON.stringify(geoCache));
-      } catch (e) { safeTxt('addressDisplay', 'Unable to fetch address'); }
-    }, () => { safeTxt('addressDisplay', 'Location error'); }, { enableHighAccuracy: true, timeout: 10000 });
+      } catch (e) { geoCache.address = 'Unable to fetch address'; }
+      updateLocationInfoDisplay();
+    }, () => { 
+      geoCache = { lat: '--', lon: '--', address: 'Location error', timestamp: Date.now() };
+      updateLocationInfoDisplay();
+    }, { enableHighAccuracy: true, timeout: 10000 });
   }
-  function displayGeoData(cache) { safeTxt('latDisplay', cache.lat?.toFixed(6) || '--'); safeTxt('lonDisplay', cache.lon?.toFixed(6) || '--'); safeTxt('addressDisplay', cache.address || '--'); }
-  function initLocationAndTime() {
+  function initLocationInfo() {
     const cached = localStorage.getItem('dm_geo_cache');
-    if (cached) { try { geoCache = JSON.parse(cached); if (geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) displayGeoData(geoCache); else getGeolocation(); } catch(e) { getGeolocation(); } } else { getGeolocation(); }
+    if (cached) { try { geoCache = JSON.parse(cached); if (geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { updateLocationInfoDisplay(); } else getGeolocation(); } catch(e) { getGeolocation(); } } else { getGeolocation(); }
     if (timeInterval) clearInterval(timeInterval);
-    timeInterval = setInterval(updateLocalTime, 1000);
-    updateLocalTime();
+    timeInterval = setInterval(() => { updateLocationInfoDisplay(); }, 1000);
+    updateLocationInfoDisplay();
+    
+    // Refresh button handler
+    const refreshBtn = document.getElementById('refreshLocationBtn');
+    if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
   }
 
   // ==================== UI HELPERS ====================
@@ -542,7 +555,20 @@
     commonPins.forEach(p => { const opt = document.createElement('option'); opt.value = p; datalist.appendChild(opt); });
   }
   function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); updateCurrentGpioText(); log(`Suggested GPIO: ${suggested.join(',')}`); }
-  function setConnectionState(connected) { safeCls($('connCard'), 'hidden', connected); safeCls($('disconnectBtn'), 'hidden', !connected); document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected)); safeTxt('connStatus', connected?'Status: Connected':'Status: Not configured'); if(connected) currentRelayState = new Array(relayCount).fill(false); }
+  function setConnectionState(connected) { 
+    safeCls($('connCard'), 'hidden', connected); 
+    safeCls($('disconnectBtn'), 'hidden', !connected); 
+    document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected)); 
+    safeTxt('connStatus', connected?'Status: Connected':'Status: Not configured'); 
+    if(connected) { 
+      currentRelayState = new Array(relayCount).fill(false);
+      const locDiv = document.getElementById('locationInfo');
+      if (locDiv) locDiv.style.display = 'flex';
+    } else {
+      const locDiv = document.getElementById('locationInfo');
+      if (locDiv) locDiv.style.display = 'none';
+    }
+  }
   function connectMQTT() {
     if (!DEVICE_ID || !mqttBroker) return;
     const url = `wss://${mqttBroker}:${mqttPort}/mqtt`;
@@ -700,7 +726,7 @@
   async function fetchChatId() { const token = $('tgToken').value.trim(); if(!token) return alert('Enter Bot Token first'); try { const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); const data = await res.json(); if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { safeVal('tgChatId', data.result[0].message.chat.id); alert('Chat ID found!'); } else alert('Send a message to the bot first, then try again.'); } catch(e) { alert('Failed to fetch Chat ID'); } }
   async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { log(`Telegram send error: ${e.message}`); } } }
 
-  // ==================== LABELS UI ====================
+  // ==================== LABELS UI (2 columns) ====================
   function renderRelayLabelsInputs() {
     const container = $('relayLabelsContainer');
     if (!container) return;
@@ -791,9 +817,9 @@
         if (card.classList.contains('collapsed')) {
           document.querySelectorAll('.card.collapsible').forEach(c => c.classList.add('collapsed'));
           card.classList.remove('collapsed');
-          if (btn) btn.textContent = '▲';
-        } else { card.classList.add('collapsed'); if (btn) btn.textContent = '▼'; }
-        document.querySelectorAll('.card.collapsible').forEach(c => { const b = c.querySelector('.toggle-btn'); if (b) b.textContent = c.classList.contains('collapsed') ? '▼' : '▲'; });
+          if (btn) btn.textContent = '☰';
+        } else { card.classList.add('collapsed'); if (btn) btn.textContent = '☰'; }
+        document.querySelectorAll('.card.collapsible').forEach(c => { const b = c.querySelector('.toggle-btn'); if (b) b.textContent = c.classList.contains('collapsed') ? '☰' : '☰'; });
       });
     });
   }
@@ -804,10 +830,9 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initAccordion();
-    initLocationAndTime();
+    initLocationInfo();   // initialize location info with refresh button
     initPwaInstall();
     initTabs();
-    $('refreshGeoBtn').onclick = () => getGeolocation(true);
     $('refreshWhitelistBtn').onclick = () => refreshWhitelist();
     $('showQrBtn').onclick = () => openQR();
     $('disconnectBtn').onclick = () => { if(mqttClient) mqttClient.end(true); };
