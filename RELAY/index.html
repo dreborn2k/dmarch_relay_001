@@ -166,18 +166,12 @@
     </div>
   </div>
 
-  <!-- ============================================ -->
-  <!-- RELAY CONTROL CARD - WITH EDIT LABELS BUTTON -->
-  <!-- ============================================ -->
+  <!-- Relay Control Card -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2">
       <button class="btn-success" id="allOnBtn">▶️ ALL ON</button>
       <button class="btn-danger" id="allOffBtn">⏹️ ALL OFF</button>
-    </div>
-    <div class="grid-2" style="margin-top:10px;">
-      <button class="btn-secondary" id="editLabelsBtn">✏️ Edit Labels</button>
-      <button class="btn-primary hidden" id="saveLabelsBtn">💾 Save Labels</button>
     </div>
     <div class="grid-4" style="margin-top:12px;" id="relayBtns"></div>
   </div>
@@ -194,7 +188,7 @@
     </div>
   </div>
 
-  <!-- Relay Configuration Card -->
+  <!-- Relay Configuration Card (with Edit Labels buttons) -->
   <div class="card collapsible collapsed app-card hidden" id="relayConfigCard">
     <div class="card-header"><h3>🔌 Relay Configuration</h3><button class="toggle-btn">▼</button></div>
     <div class="card-content">
@@ -211,6 +205,10 @@
           <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
           <div id="currentGpioText" class="current-pins"></div>
         </div>
+      </div>
+      <div class="grid-2" style="margin-top:10px; margin-bottom:10px;">
+        <button class="btn-secondary" id="editLabelsBtn">✏️ Edit Labels</button>
+        <button class="btn-primary hidden" id="saveLabelsBtn">💾 Save Labels</button>
       </div>
       <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
     </div>
@@ -846,13 +844,14 @@
     initLocationAndTime();
     initPwaInstall();
     
-    // Safe element checks - only attach if element exists
+    // Safe element checks
     const refreshBtn = document.getElementById('refreshGeoBtn');
     if (refreshBtn) refreshBtn.onclick = () => getGeolocation(true);
     
     const refreshWhitelistBtn = document.getElementById('refreshWhitelistBtn');
     if (refreshWhitelistBtn) refreshWhitelistBtn.onclick = () => refreshWhitelist();
 
+    // Edit label buttons are now in Relay Configuration card (always exists)
     const editLabelsBtn = document.getElementById('editLabelsBtn');
     const saveLabelsBtn = document.getElementById('saveLabelsBtn');
     if (editLabelsBtn) {
@@ -892,7 +891,7 @@
     const showQrBtn = document.getElementById('showQrBtn');
     if (showQrBtn) showQrBtn.onclick = () => openQR();
     
-    // Safe attach for all buttons
+    // Other buttons
     const disconnectBtn = document.getElementById('disconnectBtn');
     if (disconnectBtn) disconnectBtn.onclick = () => { vibrate(); if (mqttClient) mqttClient.end(true); };
     
