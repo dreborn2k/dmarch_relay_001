@@ -741,29 +741,54 @@
 
   // ==================== NOTIFICATIONS ====================
   function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
-  function updateTgUI() { const b=$('#tgStatusBadge'),c=$('#tgConfig'),d=$('#tgConnected'); if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); } else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); } else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); } }
+  
+  // FIXED: Added null checks for all DOM elements
+  function updateTgUI() {
+    const b = $('#tgStatusBadge');
+    const c = $('#tgConfig');
+    const d = $('#tgConnected');
+    if (!b) return; // prevent error if element missing
+    if (!tgEnabled) {
+      b.textContent = 'Inactive';
+      b.className = 'notif-status status-inactive';
+      if (c) c.classList.add('hidden');
+      if (d) d.classList.add('hidden');
+    } else if (tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) {
+      b.textContent = '● Active';
+      b.className = 'notif-status status-active';
+      if (c) c.classList.add('hidden');
+      if (d) d.classList.remove('hidden');
+    } else {
+      b.textContent = '⚙️ Config';
+      b.className = 'notif-status status-inactive';
+      if (c) c.classList.remove('hidden');
+      if (d) d.classList.add('hidden');
+    }
+  }
+  
   function initNotifUI() {
-    const tg = notifConfig.tg||{}; 
-    if(tg.token && tg.chatId){ 
-      safeVal('tgToken','••••••••'); 
-      safeVal('tgChatId',tg.chatId); 
-      safeTxt('tgChatDisplay',tg.chatId); 
-      tgConnected = tg.connected || false; 
+    const tg = notifConfig.tg || {};
+    if (tg.token && tg.chatId) {
+      safeVal('tgToken', '••••••••');
+      safeVal('tgChatId', tg.chatId);
+      safeTxt('tgChatDisplay', tg.chatId);
+      tgConnected = tg.connected || false;
     }
     const tgToggle = $('#tgToggle');
     if (tgToggle) {
-      safeCls(tgToggle, 'active', tgEnabled); 
-      tgToggle.onclick = function(){ 
-        tgEnabled = !tgEnabled; 
-        this.classList.toggle('active', tgEnabled); 
-        updateTgUI(); 
-        saveNotifConfig(); 
-        log(`Telegram: ${tgEnabled?'ON':'OFF'}`); 
-        vibrate(); 
+      safeCls(tgToggle, 'active', tgEnabled);
+      tgToggle.onclick = function () {
+        tgEnabled = !tgEnabled;
+        this.classList.toggle('active', tgEnabled);
+        updateTgUI();
+        saveNotifConfig();
+        log(`Telegram: ${tgEnabled ? 'ON' : 'OFF'}`);
+        vibrate();
       };
     }
     updateTgUI();
   }
+  
   function editTelegramConfig() { const tgConfigDiv = $('#tgConfig'); const tgConnectedDiv = $('#tgConnected'); if (tgConfigDiv) tgConfigDiv.classList.remove('hidden'); if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden'); safeVal('tgToken', notifConfig.tg?.token && notifConfig.tg.token !== '••••••••' ? notifConfig.tg.token : ''); safeVal('tgChatId', notifConfig.tg?.chatId || ''); const badge = $('#tgStatusBadge'); if (badge) { badge.textContent = '⚙️ Editing'; badge.className = 'notif-status status-inactive'; } }
   function saveTelegramConfig() { vibrate(); let token = $('#tgToken').value.trim(); let chatId = $('#tgChatId').value.trim(); if(!token) return alert('Bot Token required!'); if(!chatId) return alert('Chat ID required!'); notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false }; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay', chatId); updateTgUI(); alert('Telegram config saved'); }
   async function testTelegram() { if (!notifConfig.tg?.token || !notifConfig.tg?.chatId) { alert('Save Telegram config first'); return; } try { const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: `<b>✅ dMarch Test</b>\nDevice: ${DEVICE_ID}\nTime: ${new Date().toLocaleString()}`, parse_mode: 'HTML' }) }); const result = await response.json(); if (response.ok && result.ok) { tgConnected = true; notifConfig.tg.connected = true; saveNotifConfig(); updateTgUI(); log('Telegram test OK'); alert('Test message sent!'); } else throw new Error(result.description); } catch (e) { tgConnected = false; notifConfig.tg.connected = false; saveNotifConfig(); updateTgUI(); log(`Telegram test failed: ${e.message}`); alert(`Test failed: ${e.message}`); } }
