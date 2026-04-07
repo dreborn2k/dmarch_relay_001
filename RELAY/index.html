@@ -137,13 +137,15 @@
     .header-card .subtitle { margin: 4px 0 0 0; }
     
     /* WiFi scan list */
-    .wifi-scan-list { margin-top: 12px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
-    .wifi-scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .wifi-scan-list { margin-top: 12px; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .wifi-scan-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
     .wifi-scan-item:last-child { border-bottom: none; }
-    .wifi-scan-item:hover { background: rgba(56, 189, 248, 0.1); }
+    .wifi-scan-item:hover { background: rgba(56, 189, 248, 0.15); }
     .wifi-scan-item .wifi-name { font-size: 0.85rem; font-weight: 500; }
     .wifi-scan-item .wifi-signal { font-size: 0.7rem; color: #94a3b8; }
-    .scan-status { font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 10px; }
+    .scan-status { font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 12px; }
+    .scan-loading { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
   </style>
 </head>
 <body>
@@ -194,7 +196,7 @@
     <div class="grid-4" style="margin-top:15px;" id="relayBtns"></div>
   </div>
 
-  <!-- Device Information Card (collapsed by default) -->
+  <!-- Device Information Card -->
   <div class="card collapsible collapsed app-card hidden">
     <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
@@ -216,7 +218,6 @@
   <div class="card collapsible collapsed app-card hidden" id="settingsTabCard">
     <div class="card-header"><h3>⚙️ Settings</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
-      <!-- Elegant Dropdown -->
       <div class="settings-dropdown">
         <div class="dropdown-selected" id="dropdownSelected">
           <span><span class="item-icon">⚙️</span> <span id="selectedLabel">Config</span></span>
@@ -234,7 +235,6 @@
         </div>
       </div>
       
-      <!-- Settings Panels -->
       <div id="panel-config" class="settings-panel active">
         <div class="form-group">
           <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
@@ -370,6 +370,125 @@
     return `Relay ${relayNum}`;
   }
 
+  // ==================== WIFI SCAN HANDLER ====================
+  function handleWifiScanResult(data) {
+    const scanResultDiv = document.getElementById('wifiScanResult');
+    if (!scanResultDiv) return;
+    
+    log('📡 Processing WiFi scan result...');
+    
+    try {
+      // Parse JSON data
+      let networks;
+      if (typeof data === 'string') {
+        networks = JSON.parse(data);
+      } else {
+        networks = data;
+      }
+      
+      if (!Array.isArray(networks)) {
+        throw new Error('Invalid format: not an array');
+      }
+      
+      if (networks.length === 0) {
+        scanResultDiv.innerHTML = '<div class="scan-status">📡 No WiFi networks found</div>';
+        scanResultDiv.style.display = 'block';
+        log('No networks found in scan result');
+        return;
+      }
+      
+      log(`Found ${networks.length} networks, rendering list...`);
+      
+      let html = '';
+      networks.forEach((net, idx) => {
+        const ssid = net.ssid || 'Hidden Network';
+        const rssi = net.rssi || 0;
+        let signalIcon = '📶';
+        let signalBars = '';
+        if (rssi > -50) signalBars = '████';
+        else if (rssi > -60) signalBars = '███▌';
+        else if (rssi > -70) signalBars = '██▌';
+        else if (rssi > -80) signalBars = '█▌';
+        else signalBars = '▌';
+        
+        html += `<div class="wifi-scan-item" data-ssid="${escapeHtml(ssid)}">
+          <span class="wifi-name">${escapeHtml(ssid)}</span>
+          <span class="wifi-signal">${signalIcon} ${rssi} dBm ${signalBars}</span>
+        </div>`;
+      });
+      
+      scanResultDiv.innerHTML = html;
+      scanResultDiv.style.display = 'block';
+      
+      // Attach click event to each item
+      document.querySelectorAll('.wifi-scan-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const ssid = item.getAttribute('data-ssid');
+          if (ssid) {
+            document.getElementById('netSsid').value = ssid;
+            // Check localStorage for saved password
+            const savedPass = localStorage.getItem(`wifi_pass_${ssid}`);
+            if (savedPass) {
+              document.getElementById('netPass').value = savedPass;
+              log(`🔐 Auto-filled password for "${ssid}" from saved credentials`);
+            } else {
+              document.getElementById('netPass').value = '';
+              log(`📝 No saved password for "${ssid}", please enter password`);
+            }
+            // Hide scan result after selection
+            scanResultDiv.style.display = 'none';
+            vibrate();
+          }
+        });
+      });
+      
+      log('✅ WiFi scan results displayed');
+      
+    } catch(e) {
+      log(`❌ WiFi scan result error: ${e.message}`);
+      console.error('WiFi scan error:', e);
+      scanResultDiv.innerHTML = '<div class="scan-status">❌ Failed to parse scan result</div>';
+      scanResultDiv.style.display = 'block';
+    }
+  }
+
+  function scanWifi() {
+    if (!mqttClient || !mqttClient.connected) {
+      alert('MQTT not connected. Cannot scan Wi-Fi.');
+      return;
+    }
+    if (!DEVICE_ID) {
+      alert('Device ID not set.');
+      return;
+    }
+    
+    const scanResultDiv = document.getElementById('wifiScanResult');
+    scanResultDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning Wi-Fi networks... Please wait 5-10 seconds</div>';
+    scanResultDiv.style.display = 'block';
+    
+    // Publish scan command to ESP32
+    const topic = `${DEVICE_ID}/wifi/scan`;
+    mqttClient.publish(topic, '1');
+    log(`📡 WiFi scan requested to: ${topic}`);
+    
+    // Auto-hide after 20 seconds if no response
+    setTimeout(() => {
+      if (scanResultDiv.innerHTML.includes('Scanning')) {
+        scanResultDiv.innerHTML = '<div class="scan-status">⚠️ Scan timeout. Make sure device supports WiFi scan and MQTT is connected.</div>';
+        log('⚠️ WiFi scan timeout - no response from device');
+      }
+    }, 20000);
+  }
+
+  function saveWifiPassword() {
+    const ssid = document.getElementById('netSsid').value.trim();
+    const pass = document.getElementById('netPass').value;
+    if (ssid && pass) {
+      localStorage.setItem(`wifi_pass_${ssid}`, pass);
+      log(`💾 WiFi password for "${ssid}" saved locally`);
+    }
+  }
+
   // ==================== DROPDOWN HANDLER ====================
   function initDropdown() {
     const selected = document.getElementById('dropdownSelected');
@@ -461,6 +580,7 @@
     }
     return Array.isArray(whitelist) && whitelist.includes(deviceId);
   }
+  
   async function refreshWhitelist() {
     localStorage.removeItem('dm_whitelist_cache');
     const statusEl = $('whitelistStatus');
@@ -473,6 +593,7 @@
       if (!allowed) logoutAndReset('❌ Device not in whitelist.');
     }
   }
+  
   function logoutAndReset(message) {
     if (periodicWhitelistCheckInterval) clearInterval(periodicWhitelistCheckInterval);
     localStorage.removeItem('dm_full_config'); localStorage.removeItem('dm_gh_config'); localStorage.removeItem('dm_relay_count');
@@ -486,6 +607,7 @@
     safeTxt('connStatus', 'Status: Not configured');
     alert(message);
   }
+  
   function startPeriodicWhitelistCheck() {
     if (periodicWhitelistCheckInterval) clearInterval(periodicWhitelistCheckInterval);
     periodicWhitelistCheckInterval = setInterval(async () => {
@@ -498,6 +620,7 @@
   // ==================== LOCATION & TIME ====================
   let timeInterval = null, geoCache = null;
   const GEO_CACHE_EXPIRY = 3600000;
+  
   function updateLocationInfoDisplay() {
     const locTextSpan = document.getElementById('locText');
     if (!locTextSpan) return;
@@ -512,6 +635,7 @@
     }
     locTextSpan.innerHTML = `🕐 ${timeStr} &nbsp; 🌐 ${tzStr} &nbsp; 📍 ${latStr} ${lonStr}<br>🏠 ${addressStr}`;
   }
+  
   async function getGeolocation(forceRefresh = false) {
     if (!forceRefresh && geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { updateLocationInfoDisplay(); return; }
     if (!navigator.geolocation) { updateLocationInfoDisplay(); return; }
@@ -540,6 +664,7 @@
       updateLocationInfoDisplay();
     }, { enableHighAccuracy: true, timeout: 10000 });
   }
+  
   function initLocationInfo() {
     const cached = localStorage.getItem('dm_geo_cache');
     if (cached) { try { geoCache = JSON.parse(cached); if (geoCache && (Date.now() - geoCache.timestamp) < GEO_CACHE_EXPIRY) { updateLocationInfoDisplay(); } else getGeolocation(); } catch(e) { getGeolocation(); } } else { getGeolocation(); }
@@ -559,6 +684,7 @@
     const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
     container.textContent = `Current: ${pins.join(',')}`;
   }
+  
   function validateGpioAndRelayCount(gpioRaw, relayCnt) {
     const pins = gpioRaw.split(',').map(p => p.trim()).filter(p => p);
     if (pins.length !== relayCnt) { alert(`❌ GPIO count (${pins.length}) != relays (${relayCnt})`); return false; }
@@ -567,6 +693,7 @@
     for (let p of pins) if (isNaN(parseInt(p))) { alert(`❌ Invalid GPIO: ${p}`); return false; }
     return true;
   }
+  
   function updateRelayUIByCount() { 
     safeVal('relayCountInput', relayCount); 
     initRelayButtons(); 
@@ -574,7 +701,9 @@
     renderRelayLabelsInputs();
     log(`UI updated to ${relayCount} relays`); 
   }
+  
   function saveAllConfig() { localStorage.setItem('dm_full_config', JSON.stringify({ broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID, ghOwner: ghConfig.owner, ghRepo: ghConfig.repo, ghBasePath: ghConfig.basePath, ghToken: ghConfig.token })); }
+  
   function loadFullConfig() {
     const saved = localStorage.getItem('dm_full_config');
     if (saved) {
@@ -591,6 +720,7 @@
     }
     return false;
   }
+  
   function getDeviceDataPath() { if (!DEVICE_ID) return null; const base = ghConfig.basePath || 'RELAY/data'; return `${base}/${DEVICE_ID}`; }
   function getSchedulerPath() { const base = getDeviceDataPath(); return base ? `${base}/scheduler.json` : null; }
   function getDeviceConfigPath() { const base = getDeviceDataPath(); return base ? `${base}/device.json` : null; }
@@ -598,6 +728,7 @@
 
   // ==================== MQTT ====================
   function pub(topic, payload) { if(mqttClient && mqttClient.connected) mqttClient.publish(topic, payload, {qos:0}); else log('⚠️ Disconnected'); }
+  
   function updateSystemHealth(msg) {
     try {
       const d = JSON.parse(msg);
@@ -618,7 +749,9 @@
       updateGPIOSuggestions();
     } catch(e) {}
   }
+  
   function renderPinBadges(pinStr) { const container = $('relayPinsContainer'); if(!container) return; container.innerHTML = ''; if(!pinStr || pinStr === '--') { container.innerHTML = '<span style="color:#94a3b8;">--</span>'; return; } const pins = pinStr.split(','); pins.forEach(p => { const badge = document.createElement('span'); badge.className = 'pin-badge'; badge.textContent = `GPIO ${p.trim()}`; container.appendChild(badge); }); }
+  
   function updateGPIOSuggestions() {
     const datalist = $('gpioSuggestions'); if(!datalist) return; datalist.innerHTML = ''; let commonPins = [];
     if(currentHardware.includes('ESP32S2')) commonPins = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
@@ -627,7 +760,9 @@
     else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) commonPins = [5,4,14,12,13,15];
     commonPins.forEach(p => { const opt = document.createElement('option'); opt.value = p; datalist.appendChild(opt); });
   }
+  
   function suggestDefaultPins() { let defaultPinsAll = []; if(currentHardware.includes('ESP32S2')) defaultPinsAll = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; else if(currentHardware.includes('ESP32C3')) defaultPinsAll = [0,1,3,4,5,6,7,10,18,19]; else if(currentHardware.includes('ESP32')) defaultPinsAll = [12,13,14,15,16,17,18,19,21,22,23,25]; else if(currentHardware.includes('WEMOS') || currentHardware.includes('ESP8266')) defaultPinsAll = [5,4,14,12,13,15]; else defaultPinsAll = [12,14,27,26,25]; let pinCount = relayCount; if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length; const suggested = defaultPinsAll.slice(0, pinCount); $('gpioInput').value = suggested.join(','); updateCurrentGpioText(); log(`Suggested GPIO: ${suggested.join(',')}`); }
+  
   function setConnectionState(connected) { 
     safeCls($('connCard'), 'hidden', connected); 
     safeCls($('disconnectBtn'), 'hidden', !connected); 
@@ -642,19 +777,35 @@
       if (locDiv) locDiv.style.display = 'none';
     }
   }
+  
   function connectMQTT() {
     if (!DEVICE_ID || !mqttBroker) return;
     const url = `wss://${mqttBroker}:${mqttPort}/mqtt`;
     const clientId = 'web_' + Math.random().toString(16).substr(2,8);
     if (mqttClient && mqttClient.connected) mqttClient.end();
     mqttClient = mqtt.connect(url, {clientId, username:mqttUser, password:mqttPass, clean:true, reconnectPeriod:0});
-    mqttClient.on('connect', () => { log('MQTT Connected'); setConnectionState(true); mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`,`${DEVICE_ID}/wifi/scan_result`]); mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } });
+    mqttClient.on('connect', () => { 
+      log('MQTT Connected'); 
+      setConnectionState(true); 
+      // Subscribe to all required topics
+      mqttClient.subscribe(`${DEVICE_ID}/relay/+/state`);
+      mqttClient.subscribe(`${DEVICE_ID}/status`);
+      mqttClient.subscribe(`${DEVICE_ID}/terminal`);
+      mqttClient.subscribe(`${DEVICE_ID}/wifi/scan_result`); // IMPORTANT: Subscribe to scan result
+      log(`Subscribed to ${DEVICE_ID}/wifi/scan_result`);
+      mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); 
+      if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } 
+    });
     mqttClient.on('message', (topic, msg) => { 
       const t=topic.toString(), m=msg.toString().trim(); 
+      log(`MQTT message: ${t} -> ${m.substring(0, 100)}`);
       if(t.includes('/terminal')) log(m); 
       else if(t.includes('/status')) updateSystemHealth(m); 
       else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); }
-      else if(t.includes('/wifi/scan_result')) { handleWifiScanResult(m); }
+      else if(t.includes('/wifi/scan_result')) { 
+        log('📡 WiFi scan result received!');
+        handleWifiScanResult(m); 
+      }
     });
     mqttClient.on('error', err => { log('MQTT Error'); setConnectionState(false); });
     mqttClient.on('close', () => { log('Disconnected'); setConnectionState(false); });
@@ -680,7 +831,9 @@
     } 
     updateSchedulerRelaySelect(); 
   }
+  
   function sendRelayCommand(num) { if(!mqttClient||!mqttClient.connected) return alert('MQTT disconnected!'); const btn = $(`btn-relay-${num}`); if(!btn) return; const cmd = btn.dataset.state === 'on' ? 0 : 1; mqttClient.publish(`${DEVICE_ID}/relay/${num}/cmd`, String(cmd)); }
+  
   function updateRelayUI(num, state) { 
     const btn = $(`btn-relay-${num}`); 
     if(!btn) return; 
@@ -696,6 +849,7 @@
     btn.textContent = isOn ? `${label} ✓` : label; 
     btn.className = isOn ? 'btn-success' : 'btn-secondary'; 
   }
+  
   function updateSchedulerRelaySelect() { 
     const sel = $('schRelay'); 
     if(!sel) return; 
@@ -710,6 +864,7 @@
     if(cur && cur <= relayCount) sel.value = cur; 
     else sel.value = '1'; 
   }
+  
   async function applyRelayConfig() {
     if (!DEVICE_ID) { alert('Set Device ID first'); return; }
     const newCount = parseInt($('relayCountInput').value);
@@ -722,7 +877,9 @@
 
   // ==================== GITHUB SYNC ====================
   function setSyncStatus(online) { ghSyncEnabled = online; const statusEl = $('ghSyncStatus'); if(statusEl) { statusEl.textContent = online ? '● Online' : '● Offline'; statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off'; } log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE'); }
+  
   async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('Pull schedules: '+e.message); } }
+  
   async function loadDeviceConfigFromGitHub() {
     if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return;
     const path = getDeviceConfigPath();
@@ -769,6 +926,7 @@
       }
     } catch(e) { log('device.json load error: '+e.message); }
   }
+  
   async function saveDeviceConfigToGitHub(retry = 0, forceLabelSave = false) {
     if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return false;
     const path = getDeviceConfigPath();
@@ -793,6 +951,7 @@
       throw new Error(`HTTP ${putRes.status}`);
     } catch (err) { log(`Save device config error: ${err.message}`); return false; }
   }
+  
   async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('Push schedules: '+e.message); } }
 
   // ==================== SCHEDULER ====================
@@ -869,101 +1028,6 @@
     else alert('Failed to save labels.');
   }
 
-  // ==================== WiFi SCAN FEATURE ====================
-  function handleWifiScanResult(data) {
-    const scanResultDiv = document.getElementById('wifiScanResult');
-    if (!scanResultDiv) return;
-    try {
-      const networks = JSON.parse(data);
-      if (!Array.isArray(networks)) throw new Error('Invalid format');
-      if (networks.length === 0) {
-        scanResultDiv.innerHTML = '<div class="scan-status">📡 No networks found</div>';
-        scanResultDiv.style.display = 'block';
-        return;
-      }
-      let html = '';
-      networks.forEach(net => {
-        const ssid = net.ssid || net.SSID || '';
-        const rssi = net.rssi || net.signal || 0;
-        const signalIcon = rssi > -50 ? '📶' : (rssi > -70 ? '📶' : '📶');
-        html += `<div class="wifi-scan-item" data-ssid="${escapeHtml(ssid)}">
-          <span class="wifi-name">${escapeHtml(ssid)}</span>
-          <span class="wifi-signal">${signalIcon} ${rssi} dBm</span>
-        </div>`;
-      });
-      scanResultDiv.innerHTML = html;
-      scanResultDiv.style.display = 'block';
-      // Attach click event to each item
-      document.querySelectorAll('.wifi-scan-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const ssid = item.getAttribute('data-ssid');
-          if (ssid) {
-            document.getElementById('netSsid').value = ssid;
-            // Check localStorage for saved password
-            const savedPass = localStorage.getItem(`wifi_pass_${ssid}`);
-            if (savedPass) {
-              document.getElementById('netPass').value = savedPass;
-              log(`Auto-filled password for ${ssid} from saved credentials`);
-            } else {
-              document.getElementById('netPass').value = '';
-              log(`No saved password for ${ssid}, please enter password`);
-            }
-            // Hide scan result after selection
-            scanResultDiv.style.display = 'none';
-          }
-        });
-      });
-    } catch(e) {
-      log(`WiFi scan result error: ${e.message}`);
-      scanResultDiv.innerHTML = '<div class="scan-status">❌ Failed to parse scan result</div>';
-      scanResultDiv.style.display = 'block';
-    }
-  }
-
-  function scanWifi() {
-    if (!mqttClient || !mqttClient.connected) {
-      alert('MQTT not connected. Cannot scan Wi-Fi.');
-      return;
-    }
-    if (!DEVICE_ID) {
-      alert('Device ID not set.');
-      return;
-    }
-    const scanResultDiv = document.getElementById('wifiScanResult');
-    scanResultDiv.innerHTML = '<div class="scan-status">⏳ Scanning Wi-Fi networks...</div>';
-    scanResultDiv.style.display = 'block';
-    // Publish scan command (adjust topic as needed for your firmware)
-    pub(`${DEVICE_ID}/wifi/scan`, '1');
-    log('Wi-Fi scan requested');
-    // Auto-hide after 15 seconds if no response
-    setTimeout(() => {
-      if (scanResultDiv.innerHTML.includes('Scanning')) {
-        scanResultDiv.innerHTML = '<div class="scan-status">⚠️ Scan timeout. Make sure device supports Wi-Fi scan.</div>';
-      }
-    }, 15000);
-  }
-
-  // Save WiFi password to localStorage when updating network
-  function saveWifiPassword() {
-    const ssid = document.getElementById('netSsid').value.trim();
-    const pass = document.getElementById('netPass').value;
-    if (ssid && pass) {
-      localStorage.setItem(`wifi_pass_${ssid}`, pass);
-      log(`WiFi password for "${ssid}" saved locally`);
-    }
-  }
-
-  // Override updateNetBtn to also save password
-  const originalUpdateNet = () => {
-    const ssid = document.getElementById('netSsid').value.trim();
-    if (!ssid) return alert('SSID required!');
-    if (DEVICE_ID) {
-      saveWifiPassword();
-      pub(DEVICE_ID + '/network/update', JSON.stringify({ssid, pass: document.getElementById('netPass').value.trim()}));
-      alert('Command sent.');
-    }
-  };
-
   // ==================== QR PROCESSING ====================
   async function processQR(data) {
     try {
@@ -1001,13 +1065,17 @@
       closeQR();
     } catch(e) { alert('Invalid QR data: ' + e.message); console.error(e); closeQR(); setTimeout(() => { location.reload(); }, 1000); }
   }
+  
   function openQR(){ $('qrModal').style.display='flex'; $('reader').innerHTML=''; }
   async function closeQR(){ $('qrModal').style.display='none'; if(qrScanner){ try{ await qrScanner.stop(); }catch(e){} qrScanner.clear(); qrScanner=null; } }
   $('qrModal').onclick = function(e) { if (e.target === this) closeQR(); };
+  
   const startCameraBtn = $('startCameraBtn');
   if(startCameraBtn) { startCameraBtn.onclick = function(){ if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); } $('reader').innerHTML=''; qrScanner=new Html5Qrcode("reader"); qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},onQRSuccess,()=>{}).catch(err=>{ alert('Camera error: '+err); }); }; }
+  
   const qrFileInput = $('qrFileInput');
   if(qrFileInput) { qrFileInput.onchange = async function(e){ const file=e.target.files[0]; if(!file) return; if(qrScanner){ qrScanner.stop().catch(()=>{}); qrScanner.clear(); qrScanner=null; } $('reader').innerHTML=''; try{ const tempScanner = new Html5Qrcode("reader"); const decodedText=await tempScanner.scanFile(file,true); onQRSuccess(decodedText); tempScanner.clear(); } catch(err){ alert('QR scan failed'); } }; }
+  
   function onQRSuccess(decodedText){ processQR(decodedText); }
 
   // ==================== INIT ====================
@@ -1035,6 +1103,7 @@
     initLocationInfo();
     initPwaInstall();
     initDropdown();
+    
     $('refreshWhitelistBtn').onclick = () => refreshWhitelist();
     $('showQrBtn').onclick = () => openQR();
     $('disconnectBtn').onclick = () => { if(mqttClient) mqttClient.end(true); };
@@ -1047,8 +1116,20 @@
     // WiFi buttons
     const scanBtn = document.getElementById('scanWifiBtn');
     if (scanBtn) scanBtn.onclick = () => scanWifi();
+    
     const updateNetBtn = document.getElementById('updateNetBtn');
-    if (updateNetBtn) updateNetBtn.onclick = originalUpdateNet;
+    if (updateNetBtn) {
+      updateNetBtn.onclick = () => {
+        const ssid = document.getElementById('netSsid').value.trim();
+        if (!ssid) return alert('SSID required!');
+        if (DEVICE_ID) {
+          saveWifiPassword();
+          pub(DEVICE_ID + '/network/update', JSON.stringify({ssid, pass: document.getElementById('netPass').value.trim()}));
+          alert('Command sent.');
+        }
+      };
+    }
+    
     const resetNetBtn = document.getElementById('resetNetBtn');
     if (resetNetBtn) resetNetBtn.onclick = () => { if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); };
     
