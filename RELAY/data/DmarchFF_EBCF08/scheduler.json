@@ -2,9 +2,9 @@
   "device": "DmarchFF_EBCF08",
   "schedules": [
     {
-      "id": "mnonvmxrrbrq",
+      "id": "mnn9kvtojgjo",
       "time": "12:00",
-      "relay": "4",
+      "relay": "1",
       "action": "1",
       "days": [
         1,
@@ -16,42 +16,8 @@
         0
       ],
       "enabled": true,
-      "_modified": "2026-04-07T13:34:59.295Z"
-    },
-    {
-      "id": "mnonxdgnlmof",
-      "time": "20:37",
-      "relay": "4",
-      "action": "1",
-      "days": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        0
-      ],
-      "enabled": true,
-      "_modified": "2026-04-07T13:36:20.327Z"
-    },
-    {
-      "id": "mnonypvmk2iy",
-      "time": "20:38",
-      "relay": "4",
-      "action": "0",
-      "days": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        0
-      ],
-      "enabled": true,
-      "_modified": "2026-04-07T13:37:23.075Z"
+      "_modified": "2026-04-06T14:06:56.796Z"
     }
   ],
-  "updatedAt": "2026-04-07T13:43:21.340Z"
+  "updatedAt": "2026-04-07T13:43:25.944Z"
 }
