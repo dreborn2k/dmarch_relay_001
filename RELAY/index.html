@@ -459,26 +459,23 @@
 
   function scanWifi() {
     if (!mqttClient || !mqttClient.connected) {
-      alert('MQTT not connected. Cannot scan Wi-Fi.');
+      alert('MQTT not connected.');
       return;
     }
-    if (!DEVICE_ID) {
-      alert('Device ID not set.');
-      return;
-    }
-    
-    const scanResultDiv = document.getElementById('wifiScanResult');
-    scanResultDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning Wi-Fi networks... Please wait 5-10 seconds</div>';
-    scanResultDiv.style.display = 'block';
+    const scanDiv = document.getElementById('wifiScanResult');
+    scanDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning... (max 20 detik)</div>';
+    scanDiv.style.display = 'block';
     
     const topic = `${DEVICE_ID}/wifi/scan`;
     mqttClient.publish(topic, '1');
-    log(`📡 WiFi scan requested to: ${topic}`);
+    log(`📡 Scan request sent to ${topic}`);
     
-    setTimeout(() => {
-      if (scanResultDiv.innerHTML.includes('Scanning')) {
-        scanResultDiv.innerHTML = '<div class="scan-status">⚠️ Scan timeout. Make sure device supports WiFi scan and MQTT is connected.</div>';
-        log('⚠️ WiFi scan timeout - no response from device');
+    // Hanya tampilkan timeout jika setelah 20 detik belum ada hasil
+    if (window.scanTimeout) clearTimeout(window.scanTimeout);
+    window.scanTimeout = setTimeout(() => {
+      if (scanDiv.innerHTML.includes('Scanning...')) {
+        scanDiv.innerHTML = '<div class="scan-status">⚠️ Timeout - no response. Check MQTT connection.</div>';
+        log('⚠️ WiFi scan timeout');
       }
     }, 20000);
   }
@@ -816,7 +813,7 @@
       else if(t.includes('/status')) updateSystemHealth(m); 
       else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); }
       else if(t.includes('/wifi/scan_result')) { 
-        log('📡 WiFi scan result received!');
+        log('📡 Raw scan result received: ' + m.substring(0, 200));
         handleWifiScanResult(m); 
       }
     });
