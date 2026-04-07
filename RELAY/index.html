@@ -118,7 +118,7 @@
     .dropdown-item .item-icon { font-size: 1.1rem; min-width: 28px; }
     .dropdown-item .item-label { font-size: 0.85rem; font-weight: 500; }
     
-    /* Settings panels - only active panel visible */
+    /* Settings panels */
     .settings-panel { display: none; }
     .settings-panel.active { display: block; }
     
@@ -135,6 +135,15 @@
     .header-card { background: linear-gradient(135deg, var(--card) 0%, #0f172a 100%); text-align: center; padding: 20px; }
     .header-card h1 { margin: 0; font-size: 1.6rem; }
     .header-card .subtitle { margin: 4px 0 0 0; }
+    
+    /* WiFi scan list */
+    .wifi-scan-list { margin-top: 12px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .wifi-scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .wifi-scan-item:last-child { border-bottom: none; }
+    .wifi-scan-item:hover { background: rgba(56, 189, 248, 0.1); }
+    .wifi-scan-item .wifi-name { font-size: 0.85rem; font-weight: 500; }
+    .wifi-scan-item .wifi-signal { font-size: 0.7rem; color: #94a3b8; }
+    .scan-status { font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 10px; }
   </style>
 </head>
 <body>
@@ -163,7 +172,7 @@
 
   <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer" style="font-size:0.8rem;">🔌 Disconnect MQTT</button>
 
-  <!-- System Health Card (expanded by default) -->
+  <!-- System Health Card -->
   <div class="card app-card hidden" id="healthCard">
     <h3>📊 System Health</h3>
     <div class="stat-grid">
@@ -178,7 +187,7 @@
     </div>
   </div>
 
-  <!-- Relay Control Card (expanded by default) -->
+  <!-- Relay Control Card -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2"><button class="btn-success" id="allOnBtn" style="font-size:0.8rem;">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" style="font-size:0.8rem;">⏹️ ALL OFF</button></div>
@@ -203,7 +212,7 @@
     </div>
   </div>
 
-  <!-- ========== SETTINGS CARD (COLLAPSIBLE + ELEGANT DROPDOWN) ========== -->
+  <!-- ========== SETTINGS CARD ========== -->
   <div class="card collapsible collapsed app-card hidden" id="settingsTabCard">
     <div class="card-header"><h3>⚙️ Settings</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
@@ -225,7 +234,7 @@
         </div>
       </div>
       
-      <!-- Settings Panels - only one visible at a time -->
+      <!-- Settings Panels -->
       <div id="panel-config" class="settings-panel active">
         <div class="form-group">
           <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
@@ -271,11 +280,16 @@
         <div class="notif-card"><div class="notif-header"><div><span style="font-size:0.85rem;">💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
       </div>
       
+      <!-- Wi-Fi Panel with Scan Feature -->
       <div id="panel-wifi" class="settings-panel">
-        <div class="form-group"><label>SSID</label><input id="netSsid"></div>
-        <div class="form-group"><label>Password</label><input id="netPass" type="password"></div>
-        <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
-        <button class="btn-danger" id="resetNetBtn" style="margin-top:10px;">🔄 Reset AP</button>
+        <div class="form-group"><label>SSID</label><input id="netSsid" placeholder="Wi-Fi SSID"></div>
+        <div class="form-group"><label>Password</label><input id="netPass" type="password" placeholder="Wi-Fi Password"></div>
+        <div class="grid-2" style="gap: 10px; margin-bottom: 10px;">
+          <button class="btn-primary" id="scanWifiBtn">📡 Scan Wi-Fi</button>
+          <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
+        </div>
+        <button class="btn-danger" id="resetNetBtn" style="margin-top:0;">🔄 Reset AP</button>
+        <div id="wifiScanResult" class="wifi-scan-list" style="display: none;"></div>
       </div>
       
       <div id="panel-ntp" class="settings-panel">
@@ -298,7 +312,7 @@
     </div>
   </div>
 
-  <!-- Event Log Card (collapsed by default) -->
+  <!-- Event Log Card -->
   <div class="card collapsible collapsed app-card hidden" id="eventLogCard">
     <div class="card-header"><h3>📝 Event Log</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
@@ -364,44 +378,32 @@
     const selectedLabel = document.getElementById('selectedLabel');
     const panels = document.querySelectorAll('.settings-panel');
     
-    // Function to switch panel
     function switchPanel(panelId, itemElement) {
-      // Hide all panels
       panels.forEach(panel => panel.classList.remove('active'));
-      // Show selected panel
       document.getElementById(panelId).classList.add('active');
-      
-      // Update dropdown display
       const icon = itemElement.querySelector('.item-icon').innerHTML;
       const label = itemElement.querySelector('.item-label').innerHTML;
       selectedLabel.innerHTML = label;
       selected.querySelector('span:first-child').innerHTML = `<span class="item-icon">${icon}</span> <span>${label}</span>`;
-      
-      // Update active class on items
       items.forEach(i => i.classList.remove('active'));
       itemElement.classList.add('active');
     }
     
-    // Click handler for dropdown items
     items.forEach(item => {
       item.addEventListener('click', () => {
         const panelId = item.getAttribute('data-panel');
         switchPanel(panelId, item);
-        
-        // Close dropdown
         menu.classList.remove('show');
         selected.classList.remove('open');
       });
     });
     
-    // Toggle dropdown
     selected.addEventListener('click', (e) => {
       e.stopPropagation();
       menu.classList.toggle('show');
       selected.classList.toggle('open');
     });
     
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (!selected.contains(e.target) && !menu.contains(e.target)) {
         menu.classList.remove('show');
@@ -646,8 +648,14 @@
     const clientId = 'web_' + Math.random().toString(16).substr(2,8);
     if (mqttClient && mqttClient.connected) mqttClient.end();
     mqttClient = mqtt.connect(url, {clientId, username:mqttUser, password:mqttPass, clean:true, reconnectPeriod:0});
-    mqttClient.on('connect', () => { log('MQTT Connected'); setConnectionState(true); mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`]); mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } });
-    mqttClient.on('message', (topic, msg) => { const t=topic.toString(), m=msg.toString().trim(); if(t.includes('/terminal')) log(m); else if(t.includes('/status')) updateSystemHealth(m); else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); } });
+    mqttClient.on('connect', () => { log('MQTT Connected'); setConnectionState(true); mqttClient.subscribe([`${DEVICE_ID}/relay/+/state`,`${DEVICE_ID}/status`,`${DEVICE_ID}/terminal`,`${DEVICE_ID}/wifi/scan_result`]); mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } });
+    mqttClient.on('message', (topic, msg) => { 
+      const t=topic.toString(), m=msg.toString().trim(); 
+      if(t.includes('/terminal')) log(m); 
+      else if(t.includes('/status')) updateSystemHealth(m); 
+      else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); }
+      else if(t.includes('/wifi/scan_result')) { handleWifiScanResult(m); }
+    });
     mqttClient.on('error', err => { log('MQTT Error'); setConnectionState(false); });
     mqttClient.on('close', () => { log('Disconnected'); setConnectionState(false); });
   }
@@ -861,6 +869,101 @@
     else alert('Failed to save labels.');
   }
 
+  // ==================== WiFi SCAN FEATURE ====================
+  function handleWifiScanResult(data) {
+    const scanResultDiv = document.getElementById('wifiScanResult');
+    if (!scanResultDiv) return;
+    try {
+      const networks = JSON.parse(data);
+      if (!Array.isArray(networks)) throw new Error('Invalid format');
+      if (networks.length === 0) {
+        scanResultDiv.innerHTML = '<div class="scan-status">📡 No networks found</div>';
+        scanResultDiv.style.display = 'block';
+        return;
+      }
+      let html = '';
+      networks.forEach(net => {
+        const ssid = net.ssid || net.SSID || '';
+        const rssi = net.rssi || net.signal || 0;
+        const signalIcon = rssi > -50 ? '📶' : (rssi > -70 ? '📶' : '📶');
+        html += `<div class="wifi-scan-item" data-ssid="${escapeHtml(ssid)}">
+          <span class="wifi-name">${escapeHtml(ssid)}</span>
+          <span class="wifi-signal">${signalIcon} ${rssi} dBm</span>
+        </div>`;
+      });
+      scanResultDiv.innerHTML = html;
+      scanResultDiv.style.display = 'block';
+      // Attach click event to each item
+      document.querySelectorAll('.wifi-scan-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const ssid = item.getAttribute('data-ssid');
+          if (ssid) {
+            document.getElementById('netSsid').value = ssid;
+            // Check localStorage for saved password
+            const savedPass = localStorage.getItem(`wifi_pass_${ssid}`);
+            if (savedPass) {
+              document.getElementById('netPass').value = savedPass;
+              log(`Auto-filled password for ${ssid} from saved credentials`);
+            } else {
+              document.getElementById('netPass').value = '';
+              log(`No saved password for ${ssid}, please enter password`);
+            }
+            // Hide scan result after selection
+            scanResultDiv.style.display = 'none';
+          }
+        });
+      });
+    } catch(e) {
+      log(`WiFi scan result error: ${e.message}`);
+      scanResultDiv.innerHTML = '<div class="scan-status">❌ Failed to parse scan result</div>';
+      scanResultDiv.style.display = 'block';
+    }
+  }
+
+  function scanWifi() {
+    if (!mqttClient || !mqttClient.connected) {
+      alert('MQTT not connected. Cannot scan Wi-Fi.');
+      return;
+    }
+    if (!DEVICE_ID) {
+      alert('Device ID not set.');
+      return;
+    }
+    const scanResultDiv = document.getElementById('wifiScanResult');
+    scanResultDiv.innerHTML = '<div class="scan-status">⏳ Scanning Wi-Fi networks...</div>';
+    scanResultDiv.style.display = 'block';
+    // Publish scan command (adjust topic as needed for your firmware)
+    pub(`${DEVICE_ID}/wifi/scan`, '1');
+    log('Wi-Fi scan requested');
+    // Auto-hide after 15 seconds if no response
+    setTimeout(() => {
+      if (scanResultDiv.innerHTML.includes('Scanning')) {
+        scanResultDiv.innerHTML = '<div class="scan-status">⚠️ Scan timeout. Make sure device supports Wi-Fi scan.</div>';
+      }
+    }, 15000);
+  }
+
+  // Save WiFi password to localStorage when updating network
+  function saveWifiPassword() {
+    const ssid = document.getElementById('netSsid').value.trim();
+    const pass = document.getElementById('netPass').value;
+    if (ssid && pass) {
+      localStorage.setItem(`wifi_pass_${ssid}`, pass);
+      log(`WiFi password for "${ssid}" saved locally`);
+    }
+  }
+
+  // Override updateNetBtn to also save password
+  const originalUpdateNet = () => {
+    const ssid = document.getElementById('netSsid').value.trim();
+    if (!ssid) return alert('SSID required!');
+    if (DEVICE_ID) {
+      saveWifiPassword();
+      pub(DEVICE_ID + '/network/update', JSON.stringify({ssid, pass: document.getElementById('netPass').value.trim()}));
+      alert('Command sent.');
+    }
+  };
+
   // ==================== QR PROCESSING ====================
   async function processQR(data) {
     try {
@@ -940,8 +1043,15 @@
     $('saveNTPBtn').onclick = () => { if(DEVICE_ID) { pub(DEVICE_ID+'/ntp/set', $('ntpSelect').value); pub(DEVICE_ID+'/timezone/set', $('tzInput').value); } };
     $('applyRelayConfigBtn').onclick = () => { applyRelayConfig(); };
     $('suggestDefaultPinsBtn').onclick = () => suggestDefaultPins();
-    $('updateNetBtn').onclick = () => { const ssid=$('netSsid').value.trim(); if(!ssid) return alert('SSID required!'); if(DEVICE_ID) pub(DEVICE_ID+'/network/update', JSON.stringify({ssid,pass:$('netPass').value.trim()})); alert('Command sent.'); };
-    $('resetNetBtn').onclick = () => { if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); };
+    
+    // WiFi buttons
+    const scanBtn = document.getElementById('scanWifiBtn');
+    if (scanBtn) scanBtn.onclick = () => scanWifi();
+    const updateNetBtn = document.getElementById('updateNetBtn');
+    if (updateNetBtn) updateNetBtn.onclick = originalUpdateNet;
+    const resetNetBtn = document.getElementById('resetNetBtn');
+    if (resetNetBtn) resetNetBtn.onclick = () => { if(confirm('Reset WiFi to AP mode?')) if(DEVICE_ID) pub(DEVICE_ID+'/network/reset','1'); };
+    
     $('otaBtn').onclick = () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/ota','1'); };
     $('restartBtn').onclick = () => { if(DEVICE_ID) pub(DEVICE_ID+'/system/restart','1'); };
     $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t) t.innerHTML=''; };
