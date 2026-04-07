@@ -17,7 +17,24 @@
       ],
       "enabled": true,
       "_modified": "2026-04-07T13:34:59.295Z"
+    },
+    {
+      "id": "mnonxdgnlmof",
+      "time": "20:37",
+      "relay": "4",
+      "action": "1",
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-07T13:36:20.327Z"
     }
   ],
-  "updatedAt": "2026-04-07T13:35:01.053Z"
+  "updatedAt": "2026-04-07T13:36:23.889Z"
 }
