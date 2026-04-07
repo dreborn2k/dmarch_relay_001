@@ -146,6 +146,9 @@
     .scan-status { font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 12px; }
     .scan-loading { animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    
+    /* WiFi status in health card */
+    .wifi-status-row { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 0.7rem; color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -186,6 +189,10 @@
     <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);">
       <span style="font-size:0.75rem;">☁️ Cloud Sync</span>
       <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+    </div>
+    <div class="wifi-status-row">
+      <span>📶 WiFi</span>
+      <span id="wifiStatusDisplay">--</span>
     </div>
   </div>
 
@@ -378,7 +385,6 @@
     log('📡 Processing WiFi scan result...');
     
     try {
-      // Parse JSON data
       let networks;
       if (typeof data === 'string') {
         networks = JSON.parse(data);
@@ -420,13 +426,11 @@
       scanResultDiv.innerHTML = html;
       scanResultDiv.style.display = 'block';
       
-      // Attach click event to each item
       document.querySelectorAll('.wifi-scan-item').forEach(item => {
         item.addEventListener('click', () => {
           const ssid = item.getAttribute('data-ssid');
           if (ssid) {
             document.getElementById('netSsid').value = ssid;
-            // Check localStorage for saved password
             const savedPass = localStorage.getItem(`wifi_pass_${ssid}`);
             if (savedPass) {
               document.getElementById('netPass').value = savedPass;
@@ -435,7 +439,6 @@
               document.getElementById('netPass').value = '';
               log(`📝 No saved password for "${ssid}", please enter password`);
             }
-            // Hide scan result after selection
             scanResultDiv.style.display = 'none';
             vibrate();
           }
@@ -466,12 +469,10 @@
     scanResultDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning Wi-Fi networks... Please wait 5-10 seconds</div>';
     scanResultDiv.style.display = 'block';
     
-    // Publish scan command to ESP32
     const topic = `${DEVICE_ID}/wifi/scan`;
     mqttClient.publish(topic, '1');
     log(`📡 WiFi scan requested to: ${topic}`);
     
-    // Auto-hide after 20 seconds if no response
     setTimeout(() => {
       if (scanResultDiv.innerHTML.includes('Scanning')) {
         scanResultDiv.innerHTML = '<div class="scan-status">⚠️ Scan timeout. Make sure device supports WiFi scan and MQTT is connected.</div>';
@@ -732,7 +733,19 @@
   function updateSystemHealth(msg) {
     try {
       const d = JSON.parse(msg);
-      safeTxt('sigVal', (d.rssi||'--')+'%'); safeTxt('upVal', d.uptime||'--'); safeTxt('tempVal', (d.temp||'--')+'°C'); safeTxt('fwVal', d.fw_version||'--');
+      safeTxt('sigVal', (d.rssi||'--')+'%'); 
+      safeTxt('upVal', d.uptime||'--'); 
+      safeTxt('tempVal', (d.temp||'--')+'°C'); 
+      safeTxt('fwVal', d.fw_version||'--');
+      
+      // Display WiFi status with SSID
+      if(d.connected_ssid) {
+        const wifiStatus = d.wifi_status || (d.connected_ssid.length > 0 ? "Online" : "Offline");
+        safeTxt('wifiStatusDisplay', `${wifiStatus} ${d.connected_ssid}`);
+      } else {
+        safeTxt('wifiStatusDisplay', '--');
+      }
+      
       if(d.hw_type) { currentHardware = d.hw_type; safeTxt('hwType', d.hw_type); }
       if(d.max_relay) { maxRelayFromDevice = d.max_relay; safeTxt('maxRelay', d.max_relay); safeTxt('maxRelayLimit', d.max_relay); safeTxt('maxRelayLimitTab', d.max_relay); const inp = $('relayCountInput'); if(inp) inp.max = d.max_relay; }
       const now = Date.now();
@@ -787,18 +800,16 @@
     mqttClient.on('connect', () => { 
       log('MQTT Connected'); 
       setConnectionState(true); 
-      // Subscribe to all required topics
       mqttClient.subscribe(`${DEVICE_ID}/relay/+/state`);
       mqttClient.subscribe(`${DEVICE_ID}/status`);
       mqttClient.subscribe(`${DEVICE_ID}/terminal`);
-      mqttClient.subscribe(`${DEVICE_ID}/wifi/scan_result`); // IMPORTANT: Subscribe to scan result
+      mqttClient.subscribe(`${DEVICE_ID}/wifi/scan_result`);
       log(`Subscribed to ${DEVICE_ID}/wifi/scan_result`);
       mqttClient.publish(`${DEVICE_ID}/cmd/state/request`,'1'); 
       if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } 
     });
     mqttClient.on('message', (topic, msg) => { 
       const t=topic.toString(), m=msg.toString().trim(); 
-      log(`MQTT message: ${t} -> ${m.substring(0, 100)}`);
       if(t.includes('/terminal')) log(m); 
       else if(t.includes('/status')) updateSystemHealth(m); 
       else if(t.includes('/relay/') && t.endsWith('/state')) { const parts = t.split('/'); updateRelayUI(parseInt(parts[2]), m); }
@@ -1113,7 +1124,6 @@
     $('applyRelayConfigBtn').onclick = () => { applyRelayConfig(); };
     $('suggestDefaultPinsBtn').onclick = () => suggestDefaultPins();
     
-    // WiFi buttons
     const scanBtn = document.getElementById('scanWifiBtn');
     if (scanBtn) scanBtn.onclick = () => scanWifi();
     
