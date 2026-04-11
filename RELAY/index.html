@@ -45,46 +45,45 @@
 
   <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer" style="font-size:0.8rem;">🔌 Disconnect MQTT</button>
 
-  <!-- System Health Card -->
-<div class="card app-card hidden" id="healthCard">
-  <div class="health-header" id="healthCardHeader">
-    <h3>📊 System Health</h3>
-    <span id="deviceAliasDisplay" class="device-alias-display">--</span>
-  </div>
-  <div class="card-content" id="healthCardContent">
-    <!-- 4 kolom stat -->
-    <div class="stat-grid">
-      <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
-      <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
-      <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
-      <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
+<!-- System Health Card -->
+  <div class="card app-card hidden" id="healthCard">
+    <div class="card-header" id="healthCardHeader" style="cursor: pointer;">
+      <h3 id="healthCardTitle">📊 System Health of --</h3>
     </div>
+    <div class="card-content" id="healthCardContent">
+      <!-- 4 kolom stat -->
+      <div class="stat-grid">
+        <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
+        <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
+        <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
+        <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
+      </div>
 
-    <!-- Baris informasi device + cloud + wifi (satu baris) -->
-    <div class="device-info-row" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
-      <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
-      <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
-      <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
-      <div id="cloudSyncDisplay">
-        <div class="info-label">Cloud Sync</div>
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <span id="cloudLed" class="led led-off"></span>
-          <span id="cloudText">Offline</span>
+      <!-- Baris informasi device + cloud + wifi (satu baris) -->
+      <div class="device-info-row" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
+        <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
+        <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
+        <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
+        <div id="cloudSyncDisplay">
+          <div class="info-label">Cloud Sync</div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span id="cloudLed" class="led led-off"></span>
+            <span id="cloudText">Offline</span>
+          </div>
+        </div>
+        <div id="wifiDisplay">
+          <div class="info-label">WiFi</div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span id="wifiIcon">📶</span>
+            <span id="wifiText">--</span>
+          </div>
         </div>
       </div>
-      <div id="wifiDisplay">
-        <div class="info-label">WiFi</div>
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <span id="wifiIcon">📶</span>
-          <span id="wifiText">--</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Pin Mapping -->
-    <div><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
+      <!-- Pin Mapping -->
+      <div><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
+    </div>
   </div>
-</div>
 
   <!-- Relay Control Card -->
   <div class="card app-card hidden" id="relayControlCard">
