@@ -318,7 +318,12 @@ async function switchDevice(deviceId) {
   localStorage.setItem('dm_device_id', DEVICE_ID);
   saveDevicesToStorage();
   
-  document.getElementById('deviceIdDisplay').textContent = DEVICE_ID;
+  // Hapus atau amankan referensi ke deviceIdDisplay (sudah dihapus dari HTML)
+  // document.getElementById('deviceIdDisplay') sudah dihapus dari HTML
+  if (document.getElementById('deviceIdDisplay')) {
+    document.getElementById('deviceIdDisplay').textContent = DEVICE_ID;
+  }
+  
   updateAliasDisplay();
   renderDeviceList();
   
@@ -487,7 +492,7 @@ function loadFullConfig() {
       mqttBroker = cfg.broker; mqttPort = cfg.port; mqttUser = cfg.user; mqttPass = cfg.pass;
       DEVICE_ID = cfg.device;
       if (cfg.ghOwner && cfg.ghToken) { ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' }; ghSyncEnabled = true; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); }
-      const deviceIdDisplay = $('deviceIdDisplay'); if (deviceIdDisplay) deviceIdDisplay.textContent = DEVICE_ID;
+      // Device ID display tidak digunakan lagi
       const savedRelayCount = localStorage.getItem('dm_relay_count');
       if (savedRelayCount) { relayCount = parseInt(savedRelayCount); safeVal('relayCountInput', relayCount); }
       return true;
@@ -517,25 +522,13 @@ function updateSystemHealth(msg) {
       return;
     }
 
-    // 1. Update System Health Card
+    // 1. Update System Health Card (stat-grid)
     if (d.rssi !== undefined) safeTxt('sigVal', d.rssi + '%');
     if (d.uptime !== undefined) safeTxt('upVal', d.uptime);
     if (d.temp !== undefined) safeTxt('tempVal', d.temp + '°C');
     if (d.fw_version !== undefined) safeTxt('fwVal', d.fw_version);
 
-    // 2. Update WiFi Status & SSID
-    if (d.wifi_status) {
-      let wifiText = d.wifi_status;
-      if (d.connected_ssid && d.connected_ssid.trim() !== "") {
-        wifiText += ` ${d.connected_ssid}`;
-      }
-      safeTxt('wifiStatusDisplay', wifiText);
-      console.log(`WiFi updated: ${wifiText}`);
-    } else {
-      safeTxt('wifiStatusDisplay', '--');
-    }
-
-    // 3. Update Hardware Info
+    // 2. Update Hardware & Relay Info
     if (d.hw_type) {
       currentHardware = d.hw_type;
       safeTxt('hwType', d.hw_type);
@@ -549,7 +542,7 @@ function updateSystemHealth(msg) {
       if (inp) inp.max = d.max_relay;
     }
 
-    // 4. Update Relay Count (dengan throttle)
+    // 3. Relay count update (dengan throttle)
     const now = Date.now();
     const ignore = (now < ignoreDeviceUpdatesUntil);
     if (ignore && d.relay_count !== undefined) {
@@ -561,7 +554,7 @@ function updateSystemHealth(msg) {
       log(`Relay count updated to ${relayCount} from device`);
     }
 
-    // 5. Update GPIO Pins (relay_pins)
+    // 4. Update GPIO Pins (relay_pins) dan badge
     if (d.relay_pins) {
       console.log('Raw relay_pins from status:', d.relay_pins);
       renderPinBadges(d.relay_pins);
@@ -585,28 +578,19 @@ function updateSystemHealth(msg) {
       }
     }
 
-    // 6. Update Active Relay Count (relay_states)
+    // 5. Update Active Relay (relay_states)
     if (d.relay_states && Array.isArray(d.relay_states)) {
       const activeCount = d.relay_states.filter(state => state === 1 || state === true).length;
-      // Gunakan ID yang benar (activeRelay atau activeRelays)
       const activeRelayElement = document.getElementById('activeRelay');
       if (activeRelayElement) {
         activeRelayElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
       } else {
-        // Fallback jika ID berbeda
         const altElement = document.getElementById('activeRelays');
         if (altElement) altElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
       }
       console.log(`Active relays: ${activeCount} / ${d.relay_count || relayCount}`);
       
-      // Pastikan jumlah tombol relay sesuai
-      const existingButtons = document.querySelectorAll('[id^="btn-relay-"]').length;
-      if (existingButtons !== relayCount) {
-        console.log(`Button count mismatch: existing ${existingButtons}, expected ${relayCount}. Re-initializing...`);
-        initRelayButtons();
-      }
-      
-      // Update internal currentRelayState dan UI tombol relay
+      // Update tombol relay jika perlu
       for (let i = 0; i < d.relay_states.length && i < relayCount; i++) {
         if (currentRelayState[i] !== d.relay_states[i]) {
           currentRelayState[i] = d.relay_states[i];
@@ -617,28 +601,90 @@ function updateSystemHealth(msg) {
             const label = getRelayLabel(i+1);
             btn.textContent = isOn ? `${label} ✓` : label;
             btn.className = isOn ? 'btn-success' : 'btn-secondary';
-          } else {
-            console.warn(`Button for relay ${i+1} not found, re-initializing...`);
-            initRelayButtons();
-            break;
           }
         }
       }
     } else if (d.relay_count && !d.relay_states) {
       const activeRelayElement = document.getElementById('activeRelay');
       if (activeRelayElement) activeRelayElement.textContent = '--';
-      else {
-        const altElement = document.getElementById('activeRelays');
-        if (altElement) altElement.textContent = '--';
-      }
     }
 
-    // 7. Update suggestions
+    // 6. Update Cloud Sync UI (lampu hijau/merah)
+    if (d.gh_sync_status !== undefined) {
+      updateCloudSyncUI(d.gh_sync_status === 'Online');
+    } else if (ghSyncEnabled) {
+      updateCloudSyncUI(true);
+    } else {
+      updateCloudSyncUI(false);
+    }
+
+    // 7. Update WiFi UI (ikon biru/merah + SSID)
+    if (d.wifi_status === 'Online' && d.connected_ssid) {
+      updateWifiUI('Online', d.connected_ssid);
+    } else if (d.wifi_status === 'Online') {
+      updateWifiUI('Online', null);
+    } else {
+      updateWifiUI('Offline', null);
+    }
+
+    // 8. Update suggestions
     updateGPIOSuggestions();
-    
+
   } catch (e) {
     console.error('❌ Failed to parse status message:', e, 'Raw msg:', msg);
   }
+}
+
+// ==================== CLOUD SYNC UI ====================
+// Update Cloud Sync dengan lampu
+function updateCloudSyncUI(online) {
+  const led = document.getElementById('cloudLed');
+  const text = document.getElementById('cloudText');
+  if (led && text) {
+    led.className = online ? 'led led-on' : 'led led-off';
+    text.textContent = online ? 'Online' : 'Offline';
+  }
+}
+
+// Update WiFi dengan ikon berwarna
+function updateWifiUI(status, ssid) {
+  const iconSpan = document.getElementById('wifiIcon');
+  const textSpan = document.getElementById('wifiText');
+  if (!iconSpan || !textSpan) return;
+  if (status === 'Online' && ssid) {
+    iconSpan.className = 'wifi-online';
+    iconSpan.textContent = '📶';
+    textSpan.textContent = ssid;
+  } else if (status === 'Online') {
+    iconSpan.className = 'wifi-online';
+    iconSpan.textContent = '📶';
+    textSpan.textContent = 'Connected';
+  } else {
+    iconSpan.className = 'wifi-offline';
+    iconSpan.textContent = '📶';
+    textSpan.textContent = 'Offline';
+  }
+}
+
+// ==================== EVENT LISTENER DI DOMContentLoaded ====================
+// Di bagian akhir file script.js, setelah semua fungsi didefinisikan, 
+// tambahkan kode berikut di dalam event listener DOMContentLoaded yang sudah ada.
+
+// Cari baris document.addEventListener('DOMContentLoaded', () => { ... });
+// Di dalamnya, setelah inisialisasi lainnya, tambahkan:
+
+// Toggle independen untuk card System Health
+const healthHeader = document.getElementById('healthCardHeader');
+const healthContent = document.getElementById('healthCardContent');
+if (healthHeader && healthContent) {
+  // Set initial state (expanded)
+  healthContent.classList.remove('hidden');
+  healthHeader.style.cursor = 'pointer';
+  healthHeader.addEventListener('click', (e) => {
+    // Jangan toggle jika yang diklik adalah elemen yang memerlukan aksi lain (opsional)
+    if (e.target.closest('#deviceAliasDisplay')) return;
+    healthContent.classList.toggle('hidden');
+  });
 }
 
 function renderPinBadges(pinStr) { 
@@ -653,9 +699,35 @@ function renderPinBadges(pinStr) {
   pins.forEach(p => { 
     const badge = document.createElement('span'); 
     badge.className = 'pin-badge'; 
-    badge.textContent = `GPIO ${p.trim()}`; 
+    badge.textContent = `${p.trim()}`; 
     container.appendChild(badge); 
   }); 
+}
+
+// Update tampilan Cloud Sync
+function updateCloudSyncUI(online) {
+  const led = document.getElementById('cloudLed');
+  const text = document.getElementById('cloudText');
+  if (led && text) {
+    led.className = online ? 'led led-on' : 'led led-off';
+    text.textContent = online ? 'Online' : 'Offline';
+  }
+}
+
+// Update tampilan WiFi
+function updateWifiUI(status, ssid) {
+  const iconSpan = document.getElementById('wifiIcon');
+  const textSpan = document.getElementById('wifiText');
+  if (!iconSpan || !textSpan) return;
+  if (status === 'Online' && ssid) {
+    iconSpan.className = 'wifi-online';
+    iconSpan.textContent = '📶';
+    textSpan.textContent = ssid;
+  } else {
+    iconSpan.className = 'wifi-offline';
+    iconSpan.textContent = '📶';
+    textSpan.textContent = 'Offline';
+  }
 }
 
 function updateGPIOSuggestions() {
@@ -832,14 +904,15 @@ async function applyRelayConfig() {
 }
 
 // ==================== GITHUB SYNC ====================
-function setSyncStatus(online) { 
-  ghSyncEnabled = online; 
-  const statusEl = $('ghSyncStatus'); 
-  if(statusEl) { 
-    statusEl.textContent = online ? '● Online' : '● Offline'; 
-    statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off'; 
-  } 
-  log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE'); 
+function setSyncStatus(online) {
+  ghSyncEnabled = online;
+  const statusEl = $('ghSyncStatus');
+  if(statusEl) {
+    statusEl.textContent = online ? '● Online' : '● Offline';
+    statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off';
+  }
+  updateCloudSyncUI(online);   // <-- tambahkan ini
+  log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE');
 }
 
 async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('Pull schedules: '+e.message); } }

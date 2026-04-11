@@ -45,52 +45,55 @@
 
   <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer" style="font-size:0.8rem;">🔌 Disconnect MQTT</button>
 
-  <div class="card app-card hidden" id="healthCard">
-    <div class="health-header">
-      <h3>📊 System Health</h3>
-      <span id="deviceAliasDisplay" class="device-alias-display">--</span>
-    </div>
+  <!-- System Health Card -->
+<div class="card app-card hidden" id="healthCard">
+  <div class="health-header" id="healthCardHeader">
+    <h3>📊 System Health</h3>
+    <span id="deviceAliasDisplay" class="device-alias-display">--</span>
+  </div>
+  <div class="card-content" id="healthCardContent">
+    <!-- 4 kolom stat -->
     <div class="stat-grid">
       <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
       <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
       <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
       <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
     </div>
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size:0.75rem;">☁️ Cloud Sync</span>
-        <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+
+    <!-- Baris informasi device + cloud + wifi (satu baris) -->
+    <div class="device-info-row" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
+      <div><div class="info-label">Hardware</div><strong id="hwType">--</strong></div>
+      <div><div class="info-label">Max Relay</div><strong id="maxRelay">--</strong></div>
+      <div><div class="info-label">Active Relay</div><strong id="activeRelay">--</strong></div>
+      <div id="cloudSyncDisplay">
+        <div class="info-label">Cloud Sync</div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span id="cloudLed" class="led led-off"></span>
+          <span id="cloudText">Offline</span>
+        </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size:0.75rem;">📶 WiFi</span>
-        <span id="wifiStatusDisplay" style="font-size:0.75rem;">--</span>
+      <div id="wifiDisplay">
+        <div class="info-label">WiFi</div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span id="wifiIcon">📶</span>
+          <span id="wifiText">--</span>
+        </div>
       </div>
     </div>
-  </div>
 
+    <!-- Pin Mapping -->
+    <div><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
+  </div>
+</div>
+
+  <!-- Relay Control Card -->
   <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
     <div class="grid-2"><button class="btn-success" id="allOnBtn" style="font-size:0.8rem;">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" style="font-size:0.8rem;">⏹️ ALL OFF</button></div>
     <div class="grid-4" style="margin-top:15px;" id="relayBtns"></div>
   </div>
 
-  <div class="card collapsible collapsed app-card hidden">
-    <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">☰</button></div>
-    <div class="card-content">
-      <div class="info-panel">
-        <div class="grid-2" style="margin-bottom: 10px;">
-          <div><div class="info-label">Hardware</div><strong id="hwType" style="font-size:0.85rem;">--</strong></div>
-          <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay" style="font-size:0.85rem;">--</strong></div>
-        </div>
-        <div class="grid-2">
-          <div><div class="info-label">Max Relay</div><strong id="maxRelay" style="font-size:0.85rem;">--</strong></div>
-          <div><div class="info-label">Active Relay</div><strong id="activeRelay" style="font-size:0.85rem;">--</strong></div>
-        </div>
-        <div style="margin-top: 10px;"><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
-      </div>  
-    </div>
-  </div>
-
+  <!-- Settings Card (tidak ada perubahan) -->
   <div class="card collapsible collapsed app-card hidden" id="settingsTabCard">
     <div class="card-header"><h3>⚙️ Settings</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
@@ -202,6 +205,7 @@
     </div>
   </div>
 
+  <!-- Event Log Card -->
   <div class="card collapsible collapsed app-card hidden" id="eventLogCard">
     <div class="card-header"><h3>📝 Event Log</h3><button class="toggle-btn">☰</button></div>
     <div class="card-content">
