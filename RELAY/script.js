@@ -36,7 +36,7 @@ const log = msg => {
 };
 
 // Debug log untuk console (developer)
-function debugLog(msg) { console.log(msg); }
+function debugLog(...args) { console.log(...args); }
 
 function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
@@ -521,16 +521,18 @@ function updateSystemHealth(msg) {
       return;
     }
 
+    // === DEFINISIKAN now DAN ignore DI SINI (PALING ATAS) ===
+    const now = Date.now();
+    const ignore = (now < ignoreDeviceUpdatesUntil);
+
     // ========== PERBAIKAN: Sinkronkan relay count secara paksa ==========
     if (d.relay_count !== undefined && d.relay_count !== relayCount) {
       console.log(`Relay count sync: ${relayCount} -> ${d.relay_count}`);
       relayCount = d.relay_count;
       localStorage.setItem('dm_relay_count', relayCount);
-      // Update UI terlepas dari status ignore
       updateRelayUIByCount();
       log(`Relay count updated to ${relayCount} from device`);
     } else if (d.relay_count !== undefined && d.relay_count === relayCount) {
-      // Meskipun sama, pastikan jumlah tombol sudah sesuai (misal setelah reset)
       const existingButtons = document.querySelectorAll('[id^="btn-relay-"]').length;
       if (existingButtons !== relayCount) {
         console.log(`Button count mismatch: existing ${existingButtons}, expected ${relayCount}. Re-initializing...`);
@@ -558,8 +560,7 @@ function updateSystemHealth(msg) {
       if (inp) inp.max = d.max_relay;
     }
 
-    const now = Date.now();
-    const ignore = (now < ignoreDeviceUpdatesUntil);
+    // Gunakan ignore yang sudah didefinisikan
     if (!ignore && d.relay_count !== undefined && d.relay_count != relayCount) {
       relayCount = d.relay_count;
       localStorage.setItem('dm_relay_count', relayCount);
@@ -614,7 +615,7 @@ function updateSystemHealth(msg) {
 
     updateGPIOSuggestions();
   } catch (e) {
-    debugLog('❌ Failed to parse status message:', e);
+    console.error('❌ Error in updateSystemHealth:', e.message, e.stack);
   }
 }
 
@@ -722,14 +723,21 @@ function connectMQTT() {
       }
     }
     else if (t === DEVICE_ID + '/status') {
+      // Log raw message sebelum parsing
+      console.log('RAW STATUS PAYLOAD:', m);
+      console.log('LENGTH:', m.length);
       try {
         const tempJson = JSON.parse(m);
         if (tempJson.device_id && tempJson.device_id !== DEVICE_ID) {
           debugLog(`Ignoring status from wrong device: ${tempJson.device_id}`);
           return;
         }
-      } catch(e) {}
-      updateSystemHealth(m);
+        updateSystemHealth(m);
+      } catch(e) {
+        console.error('❌ Invalid JSON in status:', e.message);
+        console.error('First 200 chars:', m.substring(0,200));
+        // Jangan panggil updateSystemHealth jika JSON invalid
+      }
     }
     else if (t.startsWith(DEVICE_ID + '/relay/') && t.endsWith('/state')) {
       const parts = t.split('/');
