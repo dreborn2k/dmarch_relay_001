@@ -1,6 +1,6 @@
 {
   "device": "DmarchFF_EBCF08",
-  "alias": "Kantor Pusat",
+  "alias": "- Server Room",
   "relayCount": 4,
   "gpio": [
     "12",
@@ -14,5 +14,5 @@
     "Pompa air",
     "Toilet"
   ],
-  "updatedAt": "2026-04-11T13:23:10.094Z"
+  "updatedAt": "2026-04-11T13:39:44.471Z"
 }
