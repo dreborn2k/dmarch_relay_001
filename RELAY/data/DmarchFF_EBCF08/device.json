@@ -1,11 +1,18 @@
 {
   "device": "DmarchFF_EBCF08",
+  "alias": "Kantor Pusat",
   "relayCount": 4,
   "gpio": [
     "12",
     "11",
     "9",
-    "5"
+    "7"
   ],
-  "updatedAt": "2026-04-06T05:55:18.170Z"
+  "relayLabels": [
+    "Kamar 1",
+    "Ac",
+    "Pompa air",
+    "Toilet"
+  ],
+  "updatedAt": "2026-04-11T08:36:39.952Z"
 }
