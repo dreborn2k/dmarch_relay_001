@@ -523,7 +523,7 @@ function updateSystemHealth(msg) {
     if (d.temp !== undefined) safeTxt('tempVal', d.temp + '°C');
     if (d.fw_version !== undefined) safeTxt('fwVal', d.fw_version);
 
-    // 2. Update WiFi Status & SSID (perbaiki agar SSID muncul)
+    // 2. Update WiFi Status & SSID
     if (d.wifi_status) {
       let wifiText = d.wifi_status;
       if (d.connected_ssid && d.connected_ssid.trim() !== "") {
@@ -561,7 +561,7 @@ function updateSystemHealth(msg) {
       log(`Relay count updated to ${relayCount} from device`);
     }
 
-    // 5. Update GPIO Pins (relay_pins) – untuk badge dan input field
+    // 5. Update GPIO Pins (relay_pins)
     if (d.relay_pins) {
       console.log('Raw relay_pins from status:', d.relay_pins);
       renderPinBadges(d.relay_pins);
@@ -588,10 +588,25 @@ function updateSystemHealth(msg) {
     // 6. Update Active Relay Count (relay_states)
     if (d.relay_states && Array.isArray(d.relay_states)) {
       const activeCount = d.relay_states.filter(state => state === 1 || state === true).length;
-      safeTxt('activeRelay', `${activeCount} / ${d.relay_count || relayCount}`);
+      // Gunakan ID yang benar (activeRelay atau activeRelays)
+      const activeRelayElement = document.getElementById('activeRelay');
+      if (activeRelayElement) {
+        activeRelayElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
+      } else {
+        // Fallback jika ID berbeda
+        const altElement = document.getElementById('activeRelays');
+        if (altElement) altElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
+      }
       console.log(`Active relays: ${activeCount} / ${d.relay_count || relayCount}`);
       
-      // Update internal currentRelayState dan UI tombol relay (jika ada perubahan)
+      // Pastikan jumlah tombol relay sesuai
+      const existingButtons = document.querySelectorAll('[id^="btn-relay-"]').length;
+      if (existingButtons !== relayCount) {
+        console.log(`Button count mismatch: existing ${existingButtons}, expected ${relayCount}. Re-initializing...`);
+        initRelayButtons();
+      }
+      
+      // Update internal currentRelayState dan UI tombol relay
       for (let i = 0; i < d.relay_states.length && i < relayCount; i++) {
         if (currentRelayState[i] !== d.relay_states[i]) {
           currentRelayState[i] = d.relay_states[i];
@@ -602,12 +617,20 @@ function updateSystemHealth(msg) {
             const label = getRelayLabel(i+1);
             btn.textContent = isOn ? `${label} ✓` : label;
             btn.className = isOn ? 'btn-success' : 'btn-secondary';
+          } else {
+            console.warn(`Button for relay ${i+1} not found, re-initializing...`);
+            initRelayButtons();
+            break;
           }
         }
       }
     } else if (d.relay_count && !d.relay_states) {
-      // Jika tidak ada relay_states, set active relay sebagai -- (opsional)
-      safeTxt('activeRelay', '--');
+      const activeRelayElement = document.getElementById('activeRelay');
+      if (activeRelayElement) activeRelayElement.textContent = '--';
+      else {
+        const altElement = document.getElementById('activeRelays');
+        if (altElement) altElement.textContent = '--';
+      }
     }
 
     // 7. Update suggestions
@@ -1364,4 +1387,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered')).catch(err => console.log('SW failed')); });
-} 
+}
