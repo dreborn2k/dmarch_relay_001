@@ -28,7 +28,16 @@ const $ = id => document.getElementById(id);
 const safeVal = (id, val) => { const el = $(id); if(el) el.value = val; };
 const safeTxt = (id, txt) => { const el = $(id); if(el) el.textContent = txt; };
 const safeCls = (el, cls, add) => { if(el) el.classList.toggle(cls, add); };
-const log = msg => { const t = $('terminal'); if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; };
+
+// Terminal log untuk user (hanya event penting)
+const log = msg => { 
+  const t = $('terminal'); 
+  if(t) t.innerHTML = '['+new Date().toLocaleTimeString()+'] '+msg+'\n'+t.innerHTML; 
+};
+
+// Debug log untuk console (developer)
+function debugLog(msg) { console.log(msg); }
+
 function vibrate() { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20); }
 
 function getRelayLabel(relayNum) {
@@ -69,20 +78,19 @@ async function hmacSha256(message, secret) {
 async function pubSecure(topic, payloadObj) {
   const device = devices.find(d => d.deviceId === DEVICE_ID);
   if (!device || !device.secret) {
-    log('No secret for this device');
+    debugLog('No secret for this device');
     return false;
   }
   const nonce = generateNonce();
   const timestamp = getTimestamp();
-  console.log(`[DEBUG] Sending timestamp: ${timestamp} (${new Date(timestamp*1000).toISOString()})`);
   const fullPayloadObj = { ...payloadObj, nonce, timestamp };
   const payloadStr = JSON.stringify(fullPayloadObj);
   const sig = await hmacSha256(payloadStr, device.secret);
   const finalPayload = JSON.stringify({ ...fullPayloadObj, sig });
   return new Promise((resolve) => {
     mqttClient.publish(topic, finalPayload, { qos: 1 }, (err) => {
-      if (err) log(`Publish error: ${err}`);
-      else log(`Secure command sent to ${topic}`);
+      if (err) debugLog(`Publish error: ${err}`);
+      else debugLog(`Secure command sent to ${topic}`);
       resolve(!err);
     });
   });
@@ -125,7 +133,7 @@ async function updateDeviceAliasInGitHub(deviceId, newAlias) {
       body: JSON.stringify({ message: `Update alias to ${newAlias}`, content: newContent, sha: data.sha, branch: 'main' })
     });
     if (putRes.ok) {
-      log(`Alias updated in GitHub for ${deviceId} → ${newAlias}`);
+      log(`Alias updated: ${deviceId} → ${newAlias}`);
       device.alias = newAlias;
       saveDevicesToStorage();
       renderDeviceList();
@@ -138,7 +146,7 @@ async function updateDeviceAliasInGitHub(deviceId, newAlias) {
       throw new Error('PUT failed');
     }
   } catch(err) {
-    log(`Failed to update alias in GitHub: ${err.message}`);
+    log(`Failed to update alias: ${err.message}`);
     alert('Failed to save alias to GitHub. Check token and network.');
     return false;
   }
@@ -271,7 +279,7 @@ async function addDeviceFromQR(data) {
     if (confirm(`Device ${deviceId} added. Switch to it now?`)) {
       switchDevice(deviceId);
     } else {
-      log(`Device ${deviceId} added but not activated.`);
+      debugLog(`Device ${deviceId} added but not activated.`);
     }
   } catch(e) {
     alert('Invalid QR data: ' + e.message);
@@ -282,7 +290,6 @@ async function switchDevice(deviceId) {
   const device = devices.find(d => d.deviceId === deviceId);
   if (!device) return;
   
-  // Unsubscribe dari topik device lama jika ada
   if (mqttClient && mqttClient.connected && DEVICE_ID) {
     mqttClient.unsubscribe(`${DEVICE_ID}/relay/+/state`);
     mqttClient.unsubscribe(`${DEVICE_ID}/status`);
@@ -318,18 +325,12 @@ async function switchDevice(deviceId) {
   localStorage.setItem('dm_device_id', DEVICE_ID);
   saveDevicesToStorage();
   
-  // Hapus atau amankan referensi ke deviceIdDisplay (sudah dihapus dari HTML)
-  // document.getElementById('deviceIdDisplay') sudah dihapus dari HTML
-  if (document.getElementById('deviceIdDisplay')) {
-    document.getElementById('deviceIdDisplay').textContent = DEVICE_ID;
-  }
-  
   updateAliasDisplay();
   renderDeviceList();
   
   await loadDeviceConfigFromGitHub();
   connectMQTT();
-  log(`Switched to device ${DEVICE_ID} (${currentDeviceAlias})`);
+  log(`Switched to device ${currentDeviceAlias} (${DEVICE_ID})`);
 }
 
 // ==================== WHITELIST ====================
@@ -492,7 +493,6 @@ function loadFullConfig() {
       mqttBroker = cfg.broker; mqttPort = cfg.port; mqttUser = cfg.user; mqttPass = cfg.pass;
       DEVICE_ID = cfg.device;
       if (cfg.ghOwner && cfg.ghToken) { ghConfig = { owner: cfg.ghOwner, repo: cfg.ghRepo, basePath: cfg.ghBasePath || 'RELAY/data', token: cfg.ghToken, branch: 'main' }; ghSyncEnabled = true; localStorage.setItem('dm_gh_config', JSON.stringify(ghConfig)); }
-      // Device ID display tidak digunakan lagi
       const savedRelayCount = localStorage.getItem('dm_relay_count');
       if (savedRelayCount) { relayCount = parseInt(savedRelayCount); safeVal('relayCountInput', relayCount); }
       return true;
@@ -507,28 +507,44 @@ function getDeviceConfigPath() { const base = getDeviceDataPath(); return base ?
 function updateGhPathDisplay() {}
 
 // ==================== MQTT ====================
-function pub(topic, payload) { if(mqttClient && mqttClient.connected) mqttClient.publish(topic, payload, {qos:0}); else log('⚠️ Disconnected'); }
+function pub(topic, payload) { if(mqttClient && mqttClient.connected) mqttClient.publish(topic, payload, {qos:0}); else debugLog('⚠️ Disconnected'); }
 
-// ==================== UPDATE SYSTEM HEALTH (FIXED) ====================
+// ==================== UPDATE SYSTEM HEALTH (dengan log rapi) ====================
 function updateSystemHealth(msg) {
-  console.log('🔄 updateSystemHealth called, raw msg:', msg.substring(0, 200));
+  debugLog('🔄 updateSystemHealth called');
   try {
     const d = JSON.parse(msg);
-    console.log('Parsed status:', d);
+    debugLog('Parsed status:', d);
 
-    // Filter device ID
     if (d.device_id && d.device_id !== DEVICE_ID) {
-      console.warn(`Ignoring status from wrong device: ${d.device_id} (current ${DEVICE_ID})`);
+      debugLog(`Ignoring status from wrong device: ${d.device_id}`);
       return;
     }
 
-    // 1. Update System Health Card (stat-grid)
+    // ========== PERBAIKAN: Sinkronkan relay count secara paksa ==========
+    if (d.relay_count !== undefined && d.relay_count !== relayCount) {
+      console.log(`Relay count sync: ${relayCount} -> ${d.relay_count}`);
+      relayCount = d.relay_count;
+      localStorage.setItem('dm_relay_count', relayCount);
+      // Update UI terlepas dari status ignore
+      updateRelayUIByCount();
+      log(`Relay count updated to ${relayCount} from device`);
+    } else if (d.relay_count !== undefined && d.relay_count === relayCount) {
+      // Meskipun sama, pastikan jumlah tombol sudah sesuai (misal setelah reset)
+      const existingButtons = document.querySelectorAll('[id^="btn-relay-"]').length;
+      if (existingButtons !== relayCount) {
+        console.log(`Button count mismatch: existing ${existingButtons}, expected ${relayCount}. Re-initializing...`);
+        initRelayButtons();
+      }
+    }
+
+    // Update stat grid
     if (d.rssi !== undefined) safeTxt('sigVal', d.rssi + '%');
     if (d.uptime !== undefined) safeTxt('upVal', d.uptime);
     if (d.temp !== undefined) safeTxt('tempVal', d.temp + '°C');
     if (d.fw_version !== undefined) safeTxt('fwVal', d.fw_version);
 
-    // 2. Update Hardware & Relay Info
+    // Hardware info
     if (d.hw_type) {
       currentHardware = d.hw_type;
       safeTxt('hwType', d.hw_type);
@@ -542,55 +558,33 @@ function updateSystemHealth(msg) {
       if (inp) inp.max = d.max_relay;
     }
 
-    // 3. Relay count update (dengan throttle)
     const now = Date.now();
     const ignore = (now < ignoreDeviceUpdatesUntil);
-    if (ignore && d.relay_count !== undefined) {
-      log(`Ignoring relay_count=${d.relay_count} (manual change active)`);
-    } else if (d.relay_count !== undefined && d.relay_count != relayCount) {
+    if (!ignore && d.relay_count !== undefined && d.relay_count != relayCount) {
       relayCount = d.relay_count;
       localStorage.setItem('dm_relay_count', relayCount);
       updateRelayUIByCount();
-      log(`Relay count updated to ${relayCount} from device`);
+      log(`Relay count updated to ${relayCount}`);
     }
 
-    // 4. Update GPIO Pins (relay_pins) dan badge
+    // GPIO pins
     if (d.relay_pins) {
-      console.log('Raw relay_pins from status:', d.relay_pins);
       renderPinBadges(d.relay_pins);
-      if (!ignore) {
-        if (d.relay_pins !== window.lastGpio) {
-          if (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS) {
-            console.log(`Updating GPIO input field to: ${d.relay_pins}`);
-            safeVal('gpioInput', d.relay_pins);
-            window.lastGpio = d.relay_pins;
-            updateCurrentGpioText();
-            lastGpioSyncTime = now;
-            log(`GPIO updated from device: ${d.relay_pins}`);
-          } else {
-            console.log(`GPIO change throttled (${now - lastGpioSyncTime}ms)`);
-          }
-        } else {
-          console.log('GPIO unchanged');
-        }
-      } else {
-        log(`Ignoring GPIO update (manual change active)`);
+      if (!ignore && d.relay_pins !== window.lastGpio && (now - lastGpioSyncTime >= GPIO_SYNC_THROTTLE_MS)) {
+        safeVal('gpioInput', d.relay_pins);
+        window.lastGpio = d.relay_pins;
+        updateCurrentGpioText();
+        lastGpioSyncTime = now;
+        log(`GPIO pins updated: ${d.relay_pins}`);
       }
     }
 
-    // 5. Update Active Relay (relay_states)
+    // Active relay
     if (d.relay_states && Array.isArray(d.relay_states)) {
       const activeCount = d.relay_states.filter(state => state === 1 || state === true).length;
-      const activeRelayElement = document.getElementById('activeRelay');
-      if (activeRelayElement) {
-        activeRelayElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
-      } else {
-        const altElement = document.getElementById('activeRelays');
-        if (altElement) altElement.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
-      }
-      console.log(`Active relays: ${activeCount} / ${d.relay_count || relayCount}`);
+      const activeRelayEl = document.getElementById('activeRelay') || document.getElementById('activeRelays');
+      if (activeRelayEl) activeRelayEl.textContent = `${activeCount} / ${d.relay_count || relayCount}`;
       
-      // Update tombol relay jika perlu
       for (let i = 0; i < d.relay_states.length && i < relayCount; i++) {
         if (currentRelayState[i] !== d.relay_states[i]) {
           currentRelayState[i] = d.relay_states[i];
@@ -604,21 +598,12 @@ function updateSystemHealth(msg) {
           }
         }
       }
-    } else if (d.relay_count && !d.relay_states) {
-      const activeRelayElement = document.getElementById('activeRelay');
-      if (activeRelayElement) activeRelayElement.textContent = '--';
     }
 
-    // 6. Update Cloud Sync UI (lampu hijau/merah)
-    if (d.gh_sync_status !== undefined) {
-      updateCloudSyncUI(d.gh_sync_status === 'Online');
-    } else if (ghSyncEnabled) {
-      updateCloudSyncUI(true);
-    } else {
-      updateCloudSyncUI(false);
-    }
+    // Cloud Sync UI
+    updateCloudSyncUI(ghSyncEnabled);
 
-    // 7. Update WiFi UI (ikon biru/merah + SSID)
+    // WiFi UI
     if (d.wifi_status === 'Online' && d.connected_ssid) {
       updateWifiUI('Online', d.connected_ssid);
     } else if (d.wifi_status === 'Online') {
@@ -627,16 +612,12 @@ function updateSystemHealth(msg) {
       updateWifiUI('Offline', null);
     }
 
-    // 8. Update suggestions
     updateGPIOSuggestions();
-
   } catch (e) {
-    console.error('❌ Failed to parse status message:', e, 'Raw msg:', msg);
+    debugLog('❌ Failed to parse status message:', e);
   }
 }
 
-// ==================== CLOUD SYNC UI ====================
-// Update Cloud Sync dengan lampu
 function updateCloudSyncUI(online) {
   const led = document.getElementById('cloudLed');
   const text = document.getElementById('cloudText');
@@ -646,7 +627,6 @@ function updateCloudSyncUI(online) {
   }
 }
 
-// Update WiFi dengan ikon berwarna
 function updateWifiUI(status, ssid) {
   const iconSpan = document.getElementById('wifiIcon');
   const textSpan = document.getElementById('wifiText');
@@ -666,27 +646,6 @@ function updateWifiUI(status, ssid) {
   }
 }
 
-// ==================== EVENT LISTENER DI DOMContentLoaded ====================
-// Di bagian akhir file script.js, setelah semua fungsi didefinisikan, 
-// tambahkan kode berikut di dalam event listener DOMContentLoaded yang sudah ada.
-
-// Cari baris document.addEventListener('DOMContentLoaded', () => { ... });
-// Di dalamnya, setelah inisialisasi lainnya, tambahkan:
-
-// Toggle independen untuk card System Health
-const healthHeader = document.getElementById('healthCardHeader');
-const healthContent = document.getElementById('healthCardContent');
-if (healthHeader && healthContent) {
-  // Set initial state (expanded)
-  healthContent.classList.remove('hidden');
-  healthHeader.style.cursor = 'pointer';
-  healthHeader.addEventListener('click', (e) => {
-    // Jangan toggle jika yang diklik adalah elemen yang memerlukan aksi lain (opsional)
-    //if (e.target.closest('#deviceAliasDisplay')) return;
-    healthContent.classList.toggle('hidden');
-  });
-}
-
 function renderPinBadges(pinStr) { 
   const container = $('relayPinsContainer'); 
   if(!container) return; 
@@ -699,35 +658,9 @@ function renderPinBadges(pinStr) {
   pins.forEach(p => { 
     const badge = document.createElement('span'); 
     badge.className = 'pin-badge'; 
-    badge.textContent = `${p.trim()}`; 
+    badge.textContent = p.trim(); 
     container.appendChild(badge); 
   }); 
-}
-
-// Update tampilan Cloud Sync
-function updateCloudSyncUI(online) {
-  const led = document.getElementById('cloudLed');
-  const text = document.getElementById('cloudText');
-  if (led && text) {
-    led.className = online ? 'led led-on' : 'led led-off';
-    text.textContent = online ? 'Online' : 'Offline';
-  }
-}
-
-// Update tampilan WiFi
-function updateWifiUI(status, ssid) {
-  const iconSpan = document.getElementById('wifiIcon');
-  const textSpan = document.getElementById('wifiText');
-  if (!iconSpan || !textSpan) return;
-  if (status === 'Online' && ssid) {
-    iconSpan.className = 'wifi-online';
-    iconSpan.textContent = '📶';
-    textSpan.textContent = ssid;
-  } else {
-    iconSpan.className = 'wifi-offline';
-    iconSpan.textContent = '📶';
-    textSpan.textContent = 'Offline';
-  }
 }
 
 function updateGPIOSuggestions() {
@@ -758,14 +691,8 @@ function setConnectionState(connected) {
 
 function connectMQTT() {
   if (!DEVICE_ID || !mqttBroker) return;
-  
-  // Perbaikan: jika broker HiveMQ Cloud dan port 8883 (MQTT TCP), ubah ke 8884 (WebSocket)
   let wsPort = mqttPort;
-  if (mqttBroker.includes("hivemq.cloud") && wsPort == 8883) {
-    wsPort = 8884;
-    log("Auto-switched MQTT port to 8884 for WebSocket");
-  }
-  
+  if (mqttBroker.includes("hivemq.cloud") && wsPort == 8883) wsPort = 8884;
   const url = `wss://${mqttBroker}:${wsPort}/mqtt`;
   const clientId = 'web_' + Math.random().toString(16).substr(2,8);
   if (mqttClient && mqttClient.connected) mqttClient.end(true);
@@ -773,51 +700,44 @@ function connectMQTT() {
   mqttClient.on('connect', () => { 
     log('MQTT Connected'); 
     setConnectionState(true); 
-    // Subscribe hanya ke topik device aktif
     mqttClient.subscribe(`${DEVICE_ID}/relay/+/state`);
     mqttClient.subscribe(`${DEVICE_ID}/status`);
     mqttClient.subscribe(`${DEVICE_ID}/terminal`);
     mqttClient.subscribe(`${DEVICE_ID}/wifi/scan_result`);
-    log(`Subscribed to ${DEVICE_ID}/+`);
-    // Minta publish status segera
     mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
+    // Tambahkan: minta ulang status setelah 2 detik untuk memastikan sinkron
+    setTimeout(() => {
+      mqttClient.publish(`${DEVICE_ID}/cmd/state/request`, '1');
+    }, 2000);
     if(ghSyncEnabled) { loadFromGitHub(); loadDeviceConfigFromGitHub(); } 
   });
   mqttClient.on('message', (topic, msg) => { 
     const t = topic.toString();
     const m = msg.toString().trim();
-    console.log(`📨 MQTT message: ${t} -> ${m.substring(0, 150)}`);
-    
-    // Filter eksak berdasarkan topik
+    debugLog(`MQTT message: ${t}`);
     if (t === DEVICE_ID + '/terminal') {
-      log(m);
-    } 
+      // Filter pesan yang tidak perlu (Timestamp diff, dll)
+      if (!m.includes('Timestamp diff') && !m.includes('diff (UTC)')) {
+        log(m);
+      }
+    }
     else if (t === DEVICE_ID + '/status') {
-      // Cek device_id dari payload sebelum memproses
       try {
         const tempJson = JSON.parse(m);
         if (tempJson.device_id && tempJson.device_id !== DEVICE_ID) {
-          console.warn(`Ignoring status from wrong device: ${tempJson.device_id} (expected ${DEVICE_ID})`);
+          debugLog(`Ignoring status from wrong device: ${tempJson.device_id}`);
           return;
         }
-      } catch(e) {
-        console.warn('Failed to parse status for device check');
-      }
-      console.log('✅ Processing status update');
+      } catch(e) {}
       updateSystemHealth(m);
     }
     else if (t.startsWith(DEVICE_ID + '/relay/') && t.endsWith('/state')) {
       const parts = t.split('/');
       const relayNum = parseInt(parts[2]);
-      console.log(`Relay ${relayNum} state: ${m}`);
       updateRelayUI(relayNum, m);
     }
     else if (t === DEVICE_ID + '/wifi/scan_result') {
-      console.log('📡 WiFi scan result received');
       handleWifiScanResult(m);
-    }
-    else {
-      console.warn(`Ignoring message from unknown topic: ${t}`);
     }
   });
   mqttClient.on('error', err => { log('MQTT Error'); setConnectionState(false); });
@@ -848,9 +768,14 @@ function initRelayButtons() {
 }
 
 async function sendRelayCommand(num) { 
+  if (num > relayCount) {
+    log(`Relay ${num} not available (max ${relayCount})`);
+    alert(`Relay ${num} tidak tersedia. Maksimal relay adalah ${relayCount}.`);
+    return;
+  }
   console.log(`sendRelayCommand ${num}, DEVICE_ID=${DEVICE_ID}, mqtt connected=${mqttClient?.connected}`);
   if(!mqttClient || !mqttClient.connected) { 
-    alert('MQTT not connected! Please wait for connection.');
+    alert('MQTT not connected!');
     return; 
   }
   const btn = $(`btn-relay-${num}`); 
@@ -867,6 +792,7 @@ function updateRelayUI(num, state) {
   if (currentRelayState[idx] !== isOn) { 
     currentRelayState[idx] = isOn; 
     const label = getRelayLabel(num);
+    log(`${label} turned ${isOn ? 'ON' : 'OFF'}`);
     sendNotif(`🔌 ${label}`, `${label} turned ${isOn ? 'ON' : 'OFF'}`); 
   } 
   btn.dataset.state = isOn ? 'on' : 'off'; 
@@ -904,66 +830,54 @@ async function applyRelayConfig() {
 }
 
 // ==================== GITHUB SYNC ====================
-function setSyncStatus(online) {
-  ghSyncEnabled = online;
-  const statusEl = $('ghSyncStatus');
-  if(statusEl) {
-    statusEl.textContent = online ? '● Online' : '● Offline';
-    statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off';
-  }
-  updateCloudSyncUI(online);   // <-- tambahkan ini
-  log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE');
+function setSyncStatus(online) { 
+  ghSyncEnabled = online; 
+  const statusEl = $('ghSyncStatus'); 
+  if(statusEl) { 
+    statusEl.textContent = online ? '● Online' : '● Offline'; 
+    statusEl.className = online ? 'sync-status sync-on' : 'sync-status sync-off'; 
+  } 
+  updateCloudSyncUI(online);
+  log(online ? 'GitHub Sync: ONLINE' : 'GitHub Sync: OFFLINE'); 
 }
 
-async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`Pull OK (${schedules.length} schedules)`); } } } catch(e) { log('Pull schedules: '+e.message); } }
+async function loadFromGitHub() { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(res.ok) { const data = await res.json(), content = JSON.parse(atob(data.content)); if(content.device === DEVICE_ID && Array.isArray(content.schedules)) { schedules = mergeScheduleArrays(schedules, content.schedules); saveSchedulesLocal(); renderSchedules(); log(`Schedules loaded from GitHub`); } } } catch(e) { debugLog('Pull schedules: '+e.message); } }
 
 async function loadDeviceConfigFromGitHub() {
-  if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) {
-    log('GitHub sync not enabled or missing token/device');
-    return;
-  }
+  if (!ghSyncEnabled || !ghConfig.token || !DEVICE_ID) return;
   const path = getDeviceConfigPath();
-  if (!path) {
-    log('Invalid device config path');
-    return;
-  }
+  if (!path) return;
   try {
     const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`;
-    log(`Loading device config from ${url}`);
     const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } });
     if (res.ok) {
       const data = await res.json();
       const config = JSON.parse(atob(data.content));
       if (config.device === DEVICE_ID) {
         let changed = false;
-        // Relay count
         if (config.relayCount && config.relayCount !== relayCount) {
           relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
           localStorage.setItem('dm_relay_count', relayCount);
           changed = true;
-          log(`Loaded relayCount from GitHub: ${relayCount}`);
+          log(`Relay count loaded from GitHub: ${relayCount}`);
         }
-        // GPIO pins
         if (config.gpio && config.gpio.length) {
           const gpioStr = config.gpio.join(',');
-          const currentGpio = $('gpioInput').value;
-          if (gpioStr !== currentGpio) {
+          if (gpioStr !== $('gpioInput').value) {
             safeVal('gpioInput', gpioStr);
             window.lastGpio = gpioStr;
             updateCurrentGpioText();
             changed = true;
-            log(`Loaded GPIO from GitHub: ${gpioStr}`);
+            log(`GPIO loaded from GitHub: ${gpioStr}`);
           }
         }
-        // Relay labels
         if (config.relayLabels && Array.isArray(config.relayLabels)) {
           if (JSON.stringify(relayLabels) !== JSON.stringify(config.relayLabels)) {
             relayLabels = [...config.relayLabels];
             changed = true;
-            log(`Loaded ${relayLabels.length} relay labels from GitHub`);
+            log(`Relay labels loaded from GitHub`);
           }
         }
-        // Alias
         if (config.alias && config.alias !== currentDeviceAlias) {
           currentDeviceAlias = config.alias;
           const devIndex = devices.findIndex(d => d.deviceId === DEVICE_ID);
@@ -974,7 +888,7 @@ async function loadDeviceConfigFromGitHub() {
           updateAliasDisplay();
           renderDeviceList();
           changed = true;
-          log(`Loaded alias from GitHub: ${config.alias}`);
+          log(`Alias loaded from GitHub: ${config.alias}`);
         }
         if (changed) {
           updateRelayUIByCount();
@@ -983,20 +897,13 @@ async function loadDeviceConfigFromGitHub() {
           updateSchedulerRelaySelect();
           renderSchedules();
           log('Device config applied from GitHub');
-        } else {
-          log('Device config unchanged from GitHub');
         }
-      } else {
-        log(`Device ID mismatch: config.device=${config.device}, DEVICE_ID=${DEVICE_ID}`);
       }
     } else if (res.status === 404) {
-      log('device.json not found in GitHub, creating default');
       await saveDeviceConfigToGitHub(0, true);
-    } else {
-      log(`Failed to load device.json: ${res.status}`);
     }
   } catch(e) {
-    log(`device.json load error: ${e.message}`);
+    debugLog(`device.json load error: ${e.message}`);
   }
 }
 
@@ -1021,18 +928,18 @@ async function saveDeviceConfigToGitHub(retry = 0, forceLabelSave = false) {
     if (sha) body.sha = sha;
     const putRes = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (putRes.ok) { log('Device config saved to GitHub'); return true; }
-    if (putRes.status === 409 && retry < 2) { log(`Conflict, retrying (${retry+1}/2)...`); await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1, forceLabelSave); }
+    if (putRes.status === 409 && retry < 2) { await new Promise(r => setTimeout(r, 500)); return saveDeviceConfigToGitHub(retry + 1, forceLabelSave); }
     throw new Error(`HTTP ${putRes.status}`);
-  } catch (err) { log(`Save device config error: ${err.message}`); return false; }
+  } catch (err) { debugLog(`Save device config error: ${err.message}`); return false; }
 }
 
-async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { log(`Conflict #${retry+1}`); return await pushToGitHub(retry+1); } } catch(e) { log('Push schedules: '+e.message); } }
+async function pushToGitHub(retry=0) { if(!ghSyncEnabled||!ghConfig.token||!DEVICE_ID||retry>=3) return; const path = getSchedulerPath(); if (!path) return; try { const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${path}`; let sha = null; const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}` } }); if(getRes.ok) sha = (await getRes.json()).sha; const clean = schedules.map(s=>{ const {_source,...c}=JSON.parse(JSON.stringify(s)); return c; }); const payload = { device: DEVICE_ID, schedules: clean, updatedAt: new Date().toISOString() }; const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))); const body = { message: `Sync @ ${new Date().toLocaleTimeString()}`, content, branch: 'main' }; if(sha) body.sha = sha; const res = await fetch(url, { method:'PUT', headers:{'Authorization':`token ${ghConfig.token}`,'Content-Type':'application/json'}, body: JSON.stringify(body) }); if(res.ok) { log('Schedules saved to GitHub'); return; } if(res.status===409||res.status===422) { return await pushToGitHub(retry+1); } } catch(e) { debugLog('Push schedules: '+e.message); } }
 
 // ==================== SCHEDULER ====================
 function initScheduler() { document.querySelectorAll('.day-btn').forEach(btn=>{ btn.onclick=function(){ this.classList.toggle('active'); vibrate(); }; }); renderSchedules(); startSchedulerEngine(); }
-function addSchedule() { if (!DEVICE_ID) { alert('Set Device ID first'); return; } vibrate(); const time = $('schTime').value, relay = $('schRelay').value, action = $('schAction').value; const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day)); if(!time||activeDays.length===0) return alert('Time & active days required!'); const newSch = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() }; schedules.push(newSch); saveSchedules(); renderSchedules(); log(`Schedule: ${getRelayLabel(relay)} ${action=='1'?'ON':'OFF'} @ ${time}`); }
-function toggleSchedule(id) { const sch = schedules.find(s=>s.id===id); if(sch){ sch.enabled=!sch.enabled; sch._modified=new Date().toISOString(); saveSchedules(); renderSchedules(); } }
-function deleteSchedule(id) { if(confirm('Delete schedule?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); } }
+function addSchedule() { if (!DEVICE_ID) { alert('Set Device ID first'); return; } vibrate(); const time = $('schTime').value, relay = $('schRelay').value, action = $('schAction').value; const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day)); if(!time||activeDays.length===0) return alert('Time & active days required!'); const newSch = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() }; schedules.push(newSch); saveSchedules(); renderSchedules(); log(`Schedule added: ${getRelayLabel(relay)} ${action=='1'?'ON':'OFF'} at ${time}`); }
+function toggleSchedule(id) { const sch = schedules.find(s=>s.id===id); if(sch){ sch.enabled=!sch.enabled; sch._modified=new Date().toISOString(); saveSchedules(); renderSchedules(); log(`Schedule ${sch.enabled ? 'enabled' : 'disabled'}: ${getRelayLabel(sch.relay)} at ${sch.time}`); } }
+function deleteSchedule(id) { if(confirm('Delete schedule?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); log('Schedule deleted'); } }
 function mergeScheduleArrays(localArr, serverArr) { const map = new Map(); (serverArr||[]).forEach(s=>{ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(clean.id,clean); }); (localArr||[]).forEach(s=>{ const existing=map.get(s.id); const isNewer = s._modified && (!existing?._modified || s._modified > existing._modified); if(!existing||isNewer){ const clean=JSON.parse(JSON.stringify(s)); delete clean._source; map.set(s.id,clean); } }); return Array.from(map.values()).sort((a,b)=>a.time.localeCompare(b.time)); }
 function saveSchedules() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); if(ghSyncEnabled && navigator.onLine && ghConfig.token && DEVICE_ID) { clearTimeout(ghSyncTimeout); ghSyncTimeout = setTimeout(()=>pushToGitHub(), 1000+Math.random()*150); } }
 function saveSchedulesLocal() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
@@ -1051,8 +958,8 @@ function renderSchedules() {
     list.appendChild(div); 
   }); 
 }
-function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('Scheduler running'); }
-function checkSchedules() { if (!DEVICE_ID) return; const now = new Date(), curTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`, curDay = now.getDay(), dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`; schedules.forEach(sch=>{ if(!sch.enabled || sch.time!==curTime || !sch.days.includes(curDay)) return; const key = `${sch.id}_${dateKey}`; if(lastTriggered[sch.id]===key) return; lastTriggered[sch.id]=key; if(mqttClient && mqttClient.connected) { pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action); log(`[AUTO] ${getRelayLabel(sch.relay)} ${sch.action=='1'?'ON':'OFF'} @ ${curTime}`); sendNotif(`⏰ Auto: ${getRelayLabel(sch.relay)} ${sch.action=='1'?'ON':'OFF'}`,`Schedule ${curTime}`); } }); }
+function startSchedulerEngine() { if(schedulerInterval) clearInterval(schedulerInterval); schedulerInterval = setInterval(checkSchedules, 30000); log('Scheduler engine started'); }
+function checkSchedules() { if (!DEVICE_ID) return; const now = new Date(), curTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`, curDay = now.getDay(), dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`; schedules.forEach(sch=>{ if(!sch.enabled || sch.time!==curTime || !sch.days.includes(curDay)) return; const key = `${sch.id}_${dateKey}`; if(lastTriggered[sch.id]===key) return; lastTriggered[sch.id]=key; if(mqttClient && mqttClient.connected) { pub(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action); log(`[AUTO] ${getRelayLabel(sch.relay)} ${sch.action=='1'?'ON':'OFF'} triggered`); sendNotif(`⏰ Schedule`, `${getRelayLabel(sch.relay)} turned ${sch.action=='1'?'ON':'OFF'} (scheduled)`); } }); }
 
 // ==================== NOTIFICATIONS ====================
 function saveNotifConfig() { notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } }; localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig)); if(ghSyncEnabled) pushToGitHub(); }
@@ -1060,13 +967,13 @@ function updateTgUI() { const b=$('tgStatusBadge'),c=$('tgConfig'),d=$('tgConnec
 function initNotifUI() {
   const tg = notifConfig.tg||{}; if(tg.token && tg.chatId){ safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected = tg.connected || false; }
   safeCls($('tgToggle'),'active',tgEnabled); updateTgUI();
-  $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`Telegram: ${tgEnabled?'ON':'OFF'}`); vibrate(); };
+  $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); updateTgUI(); saveNotifConfig(); log(`Telegram notifications ${tgEnabled?'enabled':'disabled'}`); vibrate(); };
 }
 function editTelegramConfig() { const tgConfigDiv = $('tgConfig'); const tgConnectedDiv = $('tgConnected'); if (tgConfigDiv) tgConfigDiv.classList.remove('hidden'); if (tgConnectedDiv) tgConnectedDiv.classList.add('hidden'); safeVal('tgToken', notifConfig.tg?.token && notifConfig.tg.token !== '••••••••' ? notifConfig.tg.token : ''); safeVal('tgChatId', notifConfig.tg?.chatId || ''); const badge = $('tgStatusBadge'); if (badge) { badge.textContent = '⚙️ Editing'; badge.className = 'notif-status status-inactive'; } }
-function saveTelegramConfig() { vibrate(); let token = $('tgToken').value.trim(); let chatId = $('tgChatId').value.trim(); if(!token) return alert('Bot Token required!'); if(!chatId) return alert('Chat ID required!'); notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false }; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay', chatId); updateTgUI(); alert('Telegram config saved'); }
-async function testTelegram() { if (!notifConfig.tg?.token || !notifConfig.tg?.chatId) { alert('Save Telegram config first'); return; } try { const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: `<b>✅ dMarch Test</b>\nDevice: ${DEVICE_ID}\nTime: ${new Date().toLocaleString()}`, parse_mode: 'HTML' }) }); const result = await response.json(); if (response.ok && result.ok) { tgConnected = true; notifConfig.tg.connected = true; saveNotifConfig(); updateTgUI(); log('Telegram test OK'); alert('Test message sent!'); } else throw new Error(result.description); } catch (e) { tgConnected = false; notifConfig.tg.connected = false; saveNotifConfig(); updateTgUI(); log(`Telegram test failed: ${e.message}`); alert(`Test failed: ${e.message}`); } }
+function saveTelegramConfig() { vibrate(); let token = $('tgToken').value.trim(); let chatId = $('tgChatId').value.trim(); if(!token) return alert('Bot Token required!'); if(!chatId) return alert('Chat ID required!'); notifConfig.tg = { token, chatId, enabled: tgEnabled, connected: false }; saveNotifConfig(); safeVal('tgToken','••••••••'); safeTxt('tgChatDisplay', chatId); updateTgUI(); alert('Telegram config saved'); log('Telegram configuration updated'); }
+async function testTelegram() { if (!notifConfig.tg?.token || !notifConfig.tg?.chatId) { alert('Save Telegram config first'); return; } try { const response = await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: `<b>✅ dMarch Test</b>\nDevice: ${DEVICE_ID}\nTime: ${new Date().toLocaleString()}`, parse_mode: 'HTML' }) }); const result = await response.json(); if (response.ok && result.ok) { tgConnected = true; notifConfig.tg.connected = true; saveNotifConfig(); updateTgUI(); log('Telegram test successful'); alert('Test message sent!'); } else throw new Error(result.description); } catch (e) { tgConnected = false; notifConfig.tg.connected = false; saveNotifConfig(); updateTgUI(); log(`Telegram test failed: ${e.message}`); alert(`Test failed: ${e.message}`); } }
 async function fetchChatId() { const token = $('tgToken').value.trim(); if(!token) return alert('Enter Bot Token first'); try { const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`); const data = await res.json(); if(data.ok && data.result && data.result[0] && data.result[0].message && data.result[0].message.chat && data.result[0].message.chat.id) { safeVal('tgChatId', data.result[0].message.chat.id); alert('Chat ID found!'); } else alert('Send a message to the bot first, then try again.'); } catch(e) { alert('Failed to fetch Chat ID'); } }
-async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { log(`Telegram send error: ${e.message}`); } } }
+async function sendNotif(title, message) { const timestamp = new Date().toLocaleString('en-US'); const fullMsg = `<b>${title}</b>\n${message}\n\n<i>Device: ${DEVICE_ID}</i>\n<i>Time: ${timestamp}</i>`; if (tgEnabled && tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId) { try { await fetch(`https://api.telegram.org/bot${notifConfig.tg.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: notifConfig.tg.chatId, text: fullMsg, parse_mode: 'HTML', disable_web_page_preview: true }) }); } catch(e) { debugLog(`Telegram send error: ${e.message}`); } } }
 
 // ==================== LABELS UI ====================
 function renderRelayLabelsInputs() {
@@ -1130,11 +1037,11 @@ function initQRScanner() {
   if (startCameraBtn) {
     startCameraBtn.onclick = async function() {
       if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        alert("🚨 Akses Kamera Ditolak: Browser HP hanya mengizinkan kamera pada koneksi HTTPS (Secure Context).");
+        alert("🚨 Camera access requires HTTPS (Secure Context).");
         return;
       }
       if (qrScanner) {
-        try { await qrScanner.stop(); } catch(e) { console.warn("Scanner stop error:", e); }
+        try { await qrScanner.stop(); } catch(e) {}
         qrScanner.clear();
       }
       const readerDiv = document.getElementById('reader');
@@ -1144,11 +1051,7 @@ function initQRScanner() {
       qrScanner.start({ facingMode: "environment" }, config, onQRSuccess, (errorMessage) => {})
         .catch(err => {
           console.error("Camera Start Error:", err);
-          if (err.includes("NotAllowedError") || err.includes("Permission")) {
-            alert("❌ Izin Kamera Ditolak. Silakan cek pengaturan privasi browser Anda dan izinkan akses kamera.");
-          } else {
-            alert("❌ Gagal mengakses kamera: " + err);
-          }
+          alert("❌ Failed to access camera: " + err);
         });
     };
   }
@@ -1163,7 +1066,7 @@ function initQRScanner() {
         qrScanner = null;
       }
       const readerDiv = document.getElementById('reader');
-      if (readerDiv) readerDiv.innerHTML = '<p style="text-align:center; padding:20px;">Memproses gambar...</p>';
+      if (readerDiv) readerDiv.innerHTML = '<p style="text-align:center; padding:20px;">Processing image...</p>';
       try {
         const tempScanner = new Html5Qrcode("reader");
         const decodedText = await tempScanner.scanFile(file, true);
@@ -1173,7 +1076,7 @@ function initQRScanner() {
         if (readerDiv) readerDiv.innerHTML = '';
       } catch(err) {
         console.error("QR Scan File Error:", err);
-        alert('❌ Gagal membaca QR: Foto terlalu buram atau file terlalu besar. Coba gunakan hasil Screenshot yang lebih tajam.');
+        alert('❌ Failed to read QR code from image.');
         if (readerDiv) readerDiv.innerHTML = '';
         qrFileInput.value = '';
       }
@@ -1185,14 +1088,10 @@ function initQRScanner() {
 function handleWifiScanResult(data) {
   const scanResultDiv = document.getElementById('wifiScanResult');
   if (!scanResultDiv) return;
-  log('📡 Processing WiFi scan result...');
   try {
     let networks;
-    if (typeof data === 'string') {
-      networks = JSON.parse(data);
-    } else {
-      networks = data;
-    }
+    if (typeof data === 'string') networks = JSON.parse(data);
+    else networks = data;
     if (!Array.isArray(networks)) throw new Error('Invalid format');
     if (networks.length === 0) {
       scanResultDiv.innerHTML = '<div class="scan-status">📡 No WiFi networks found</div>';
@@ -1223,19 +1122,15 @@ function handleWifiScanResult(data) {
         if (ssid) {
           document.getElementById('netSsid').value = ssid;
           const savedPass = localStorage.getItem(`wifi_pass_${ssid}`);
-          if (savedPass) {
-            document.getElementById('netPass').value = savedPass;
-            log(`🔐 Auto-filled password for "${ssid}" from saved credentials`);
-          } else {
-            document.getElementById('netPass').value = '';
-          }
+          if (savedPass) document.getElementById('netPass').value = savedPass;
+          else document.getElementById('netPass').value = '';
           scanResultDiv.style.display = 'none';
           vibrate();
         }
       });
     });
   } catch(e) {
-    log(`❌ WiFi scan result error: ${e.message}`);
+    debugLog(`WiFi scan result error: ${e.message}`);
     scanResultDiv.innerHTML = '<div class="scan-status">❌ Failed to parse scan result</div>';
     scanResultDiv.style.display = 'block';
   }
@@ -1247,15 +1142,15 @@ function scanWifi() {
     return;
   }
   const scanDiv = document.getElementById('wifiScanResult');
-  scanDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning... (max 20 detik)</div>';
+  scanDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning...</div>';
   scanDiv.style.display = 'block';
   const topic = `${DEVICE_ID}/wifi/scan`;
   mqttClient.publish(topic, '1');
-  log(`📡 Scan request sent to ${topic}`);
+  log(`WiFi scan requested`);
   if (window.scanTimeout) clearTimeout(window.scanTimeout);
   window.scanTimeout = setTimeout(() => {
     if (scanDiv.innerHTML.includes('Scanning...')) {
-      scanDiv.innerHTML = '<div class="scan-status">⚠️ Timeout - no response. Check MQTT connection.</div>';
+      scanDiv.innerHTML = '<div class="scan-status">⚠️ Timeout - no response.</div>';
       log('⚠️ WiFi scan timeout');
     }
   }, 20000);
@@ -1266,7 +1161,7 @@ function saveWifiPassword() {
   const pass = document.getElementById('netPass').value;
   if (ssid && pass) {
     localStorage.setItem(`wifi_pass_${ssid}`, pass);
-    log(`💾 WiFi password for "${ssid}" saved locally`);
+    debugLog(`WiFi password saved locally for ${ssid}`);
   }
 }
 
@@ -1395,13 +1290,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const forceApBtn = document.getElementById('forceApBtn');
   if (forceApBtn) {
     forceApBtn.onclick = async () => {
-      if (!DEVICE_ID) {
-        alert('No active device');
-        return;
-      }
-      if (confirm('⚠️ Force SoftAP mode will disconnect device from current WiFi and restart. You will need to reconnect to device\'s AP (dMarch-Pro-Config) for setup. Continue?')) {
+      if (!DEVICE_ID) { alert('No active device'); return; }
+      if (confirm('Force SoftAP mode will disconnect device from current WiFi and restart. Continue?')) {
         mqttClient.publish(DEVICE_ID + '/force_ap', '1');
-        alert('Command sent. Device will restart in AP mode shortly.');
+        alert('Command sent. Device will restart in AP mode.');
       }
     };
   }
@@ -1456,6 +1348,25 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const gpioInputElem = $('gpioInput');
   if (gpioInputElem) gpioInputElem.addEventListener('input', updateCurrentGpioText);
+  
+  // Toggle independen untuk card System Health
+  const healthHeader = document.getElementById('healthCardHeader');
+  const healthContent = document.getElementById('healthCardContent');
+  if (healthHeader && healthContent) {
+    healthHeader.style.cursor = 'pointer';
+    healthHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#deviceAliasDisplay')) return;
+      healthContent.classList.toggle('hidden');
+      const parentCard = healthHeader.closest('.card');
+      if (parentCard) {
+        if (healthContent.classList.contains('hidden')) {
+          parentCard.classList.add('collapsed');
+        } else {
+          parentCard.classList.remove('collapsed');
+        }
+      }
+    });
+  }
 });
 
 if ('serviceWorker' in navigator) {
