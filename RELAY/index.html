@@ -1,437 +1,226 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>dMarch Relay Pro | Professional IoT Relay Controller</title>
-  <style>
-    :root {
-      --bg: #0f1115; --card-bg: #1a1d24; --border: #2d313a;
-      --primary: #007bff; --success: #28a745; --danger: #dc3545;
-      --text: #e0e0e0; --text-dim: #8892a0; --input-bg: #22262e;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; padding: 16px; }
-    .container { max-width: 900px; margin: 0 auto; }
-    h1, h2, h3 { color: #fff; margin-bottom: 12px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
-    details { background: var(--input-bg); padding: 10px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; }
-    summary { font-weight: 600; color: #fff; }
-    input, select, button { font-family: inherit; }
-    input, select { width: 100%; padding: 10px; margin: 6px 0; background: var(--input-bg); border: 1px solid var(--border); color: #fff; border-radius: 6px; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s; }
-    button:hover { opacity: 0.9; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-success { background: var(--success); color: #fff; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-secondary { background: #555; color: #fff; }
-    .relay-btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px; margin: 6px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; cursor: pointer; min-width: 110px; transition: 0.2s; }
-    .relay-btn:hover { background: #2a2d35; border-color: #007bff; }
-    .relay-btn.active { background: #143a23; border-color: var(--success); }
-    #eventLog { background: #0d0f13; padding: 10px; border-radius: 6px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.85em; color: #aaa; }
-    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dc3545; margin-right: 6px; }
-    .status-dot.online { background: var(--success); }
-    .hint { font-size: 0.8em; color: var(--text-dim); margin: 4px 0; }
-    #labelEditor { background: #15181e; padding: 12px; border-radius: 8px; border: 1px dashed #444; }
-    #labelInputsContainer > div { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    #labelInputsContainer span { min-width: 70px; color: #8892a0; font-size: 0.9em; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
-    .modal-content { background: var(--card-bg); padding: 20px; border-radius: 10px; max-width: 400px; width: 90%; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>dMarch Relay Pro | Secure IoT Relay Controller</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="dMarch Relay">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
+  
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <div class="container">
-  <header style="text-align:center; margin-bottom:20px;">
+  <div class="card header-card">
     <h1>🔌 dMarch Relay Pro</h1>
-    <p style="color:var(--text-dim)">Professional IoT Control Panel</p>
-  </header>
+    <p class="subtitle">Secure IoT Relay Control Panel</p>
+  </div>
 
-  <!-- Setup -->
-  <div class="card">
+  <div class="card" id="connCard">
     <h3>🔗 Setup Device</h3>
-    <p>Scan QR code or upload image to configure MQTT and GitHub sync.</p>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <button class="btn-primary" onclick="document.getElementById('qrModal').style.display='flex'">📷 Scan QR / Upload Image</button>
-      <button class="btn-secondary">🔄 Refresh Whitelist</button>
-      <button class="btn-success">📱 Install App</button>
+    <p style="margin-bottom:15px; font-size:0.8rem; color:#94a3b8;">Scan QR code or upload image to configure MQTT and GitHub sync.</p>
+    <button class="btn-qr" id="showQrBtn">📷 Scan QR / Upload Image</button>
+    <div class="form-group" style="margin-top:12px;">
+      <button class="btn-secondary" id="refreshWhitelistBtn" type="button" style="font-size:0.8rem;">🔄 Refresh Whitelist</button>
+      <span id="whitelistStatus" style="margin-left:8px; font-size:0.65rem;"></span>
     </div>
-    <p class="hint" style="margin-top:8px;">Status: <span style="color:var(--danger)">● Not configured</span></p>
+    <div id="pwaInstallContainer" class="install-prompt" style="display:none;">
+      <button id="installPwaBtn" class="btn-primary">📱 Install App</button>
+      <p>Install to home screen for quick access</p>
+    </div>
+    <p id="connStatus" style="margin-top:12px; font-size:0.8rem;">Status: Not configured</p>
   </div>
 
-  <!-- Health & Info -->
-  <div class="grid-2">
-    <div class="card">
+  <button id="disconnectBtn" class="btn-danger hidden disconnect-spacer" style="font-size:0.8rem;">🔌 Disconnect MQTT</button>
+
+  <div class="card app-card hidden" id="healthCard">
+    <div class="health-header">
       <h3>📊 System Health</h3>
-      <p>📶 Signal: <strong>--</strong> | ⏱️ Uptime: <strong>--</strong></p>
-      <p>🌡️ Temp: <strong>--°C</strong> | 📟 FW: <strong>v1.0</strong></p>
-      <p>☁️ Cloud Sync: <span class="status-dot"></span> Offline</p>
+      <span id="deviceAliasDisplay" class="device-alias-display">--</span>
     </div>
-    <div class="card">
-      <h3>🖥️ Device Information</h3>
-      <details>
-        <summary>Hardware & Network</summary>
-        <p>Device ID: <strong>--</strong> | Max Relay: <strong>16</strong></p>
-        <p>Active Relay: <strong id="activeRelayCount">4</strong> | Pin Mapping: <strong>--</strong></p>
-      </details>
+    <div class="stat-grid">
+      <div><div class="stat-val" id="sigVal">--</div><div class="stat-lbl">📶 Signal</div></div>
+      <div><div class="stat-val" id="upVal">--</div><div class="stat-lbl">⏱️ Uptime</div></div>
+      <div><div class="stat-val" id="tempVal">--°C</div><div class="stat-lbl">🌡️ Temp</div></div>
+      <div><div class="stat-val" id="fwVal">--</div><div class="stat-lbl">📟 FW</div></div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size:0.75rem;">☁️ Cloud Sync</span>
+        <span id="ghSyncStatus" class="sync-status sync-off">● Offline</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size:0.75rem;">📶 WiFi</span>
+        <span id="wifiStatusDisplay" style="font-size:0.75rem;">--</span>
+      </div>
     </div>
   </div>
 
-  <!-- Relay Control -->
-  <div class="card">
+  <div class="card app-card hidden" id="relayControlCard">
     <h3>⚡ Relay Control</h3>
-    <div style="margin-bottom:10px;">
-      <button class="btn-primary" onclick="addLog('⚡ ALL RELAYS ON')">▶️ ALL ON</button>
-      <button class="btn-danger" onclick="addLog('⏹️ ALL RELAYS OFF')">⏹️ ALL OFF</button>
-    </div>
-    <div id="relayButtonsContainer" style="display:flex; flex-wrap:wrap; gap:8px;">
-      <!-- Dynamic Buttons -->
-    </div>
+    <div class="grid-2"><button class="btn-success" id="allOnBtn" style="font-size:0.8rem;">▶️ ALL ON</button><button class="btn-danger" id="allOffBtn" style="font-size:0.8rem;">⏹️ ALL OFF</button></div>
+    <div class="grid-4" style="margin-top:15px;" id="relayBtns"></div>
   </div>
 
-  <!-- NTP Settings -->
-  <div class="card">
-    <h3>🕐 NTP Settings</h3>
-    <details>
-      <summary>NTP Server Configuration</summary>
-      <input type="text" placeholder="id.pool.ntp.org" value="id.pool.ntp.org">
-      <select>
-        <option>pool.ntp.org</option><option>time.google.com</option>
-      </select>
-      <input type="number" placeholder="Timezone (hour)" value="7">
-      <button class="btn-success">💾 Save NTP</button>
-    </details>
-  </div>
-
-  <!-- Relay Configuration -->
-  <div class="card" id="relayConfigSection">
-    <h3>🔌 Relay Configuration</h3>
-    <details>
-      <summary>Number of Relays (1 - 16)</summary>
-      <p class="hint">Changing this will restart the device</p>
-      <input type="number" id="relayCountInput" min="1" max="16" value="4">
-    </details>
-    <details>
-      <summary>GPIO Pins (comma separated)</summary>
-      <input type="text" id="gpioInput" placeholder="e.g., 5,4,14,12,13">
-      <button class="btn-secondary" onclick="document.getElementById('gpioInput').value='5,4,14,12,13'">💡 Suggest Default Pins</button>
-      <button class="btn-success" onclick="addLog('✅ Relay & GPIO Applied. Restarting...')">✅ Apply Relay & GPIO</button>
-    </details>
-
-    <!-- FITUR EDIT LABEL RELAY -->
-    <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #444;">
-      <button id="btnEditLabels" onclick="toggleLabelEditor()" class="btn-primary">✏️ Edit Label Relay</button>
-      
-      <div id="labelEditor" style="display:none; margin-top:10px;">
-        <h4 style="margin-bottom:8px; color:#fff;">🏷️ Pengaturan Label Relay</h4>
-        <div id="labelInputsContainer"></div>
-        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn-success" onclick="saveRelayLabels()">💾 Simpan & Sinkronkan</button>
-          <button class="btn-secondary" onclick="toggleLabelEditor()">❌ Batal</button>
+  <div class="card collapsible collapsed app-card hidden">
+    <div class="card-header"><h3>🖥️ Device Information</h3><button class="toggle-btn">☰</button></div>
+    <div class="card-content">
+      <div class="info-panel">
+        <div class="grid-2" style="margin-bottom: 10px;">
+          <div><div class="info-label">Hardware</div><strong id="hwType" style="font-size:0.85rem;">--</strong></div>
+          <div><div class="info-label">Device ID</div><strong id="deviceIdDisplay" style="font-size:0.85rem;">--</strong></div>
         </div>
+        <div class="grid-2">
+          <div><div class="info-label">Max Relay</div><strong id="maxRelay" style="font-size:0.85rem;">--</strong></div>
+          <div><div class="info-label">Active Relay</div><strong id="activeRelay" style="font-size:0.85rem;">--</strong></div>
+        </div>
+        <div style="margin-top: 10px;"><div class="info-label">Pin Mapping</div><div class="badge-container" id="relayPinsContainer"></div></div>
+      </div>  
+    </div>
+  </div>
+
+  <div class="card collapsible collapsed app-card hidden" id="settingsTabCard">
+    <div class="card-header"><h3>⚙️ Settings</h3><button class="toggle-btn">☰</button></div>
+    <div class="card-content">
+      <div class="settings-dropdown">
+        <div class="dropdown-selected" id="dropdownSelected">
+          <span><span class="item-icon">⚙️</span> <span id="selectedLabel">Config</span></span>
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <div class="dropdown-item active" data-panel="panel-config"><span class="item-icon">⚙️</span><span class="item-label">Config</span></div>
+          <div class="dropdown-item" data-panel="panel-labels"><span class="item-icon">🏷️</span><span class="item-label">Labels</span></div>
+          <div class="dropdown-item" data-panel="panel-scheduler"><span class="item-icon">⏰</span><span class="item-label">Scheduler</span></div>
+          <div class="dropdown-item" data-panel="panel-notif"><span class="item-icon">🔔</span><span class="item-label">Notif</span></div>
+          <div class="dropdown-item" data-panel="panel-wifi"><span class="item-icon">📶</span><span class="item-label">Wi-Fi</span></div>
+          <div class="dropdown-item" data-panel="panel-ntp"><span class="item-icon">🕐</span><span class="item-label">NTP</span></div>
+          <div class="dropdown-item" data-panel="panel-system"><span class="item-icon">🔄</span><span class="item-label">System</span></div>
+          <div class="dropdown-item" data-panel="panel-devices"><span class="item-icon">📱</span><span class="item-label">Devices</span></div>
+          <div class="dropdown-item" data-panel="panel-about"><span class="item-icon">ℹ️</span><span class="item-label">About</span></div>
+        </div>
+      </div>
+      
+      <div id="panel-config" class="settings-panel active">
+        <div class="form-group">
+          <label>Number of Relays (1 - <span id="maxRelayLimitTab">16</span>)</label>
+          <input id="relayCountInput" type="number" min="1" max="16" value="5">
+          <small style="color:#64748b; font-size:0.7rem;">Changing this will restart the device</small>
+        </div>
+        <div class="form-group">
+          <label>🔌 GPIO Pins (comma separated)</label>
+          <input id="gpioInput" placeholder="e.g., 12,14,27,26,25" list="gpioSuggestions">
+          <datalist id="gpioSuggestions"></datalist>
+          <div class="gpio-suggest">
+            <button type="button" id="suggestDefaultPinsBtn" class="btn-link">💡 Suggest Default Pins</button>
+            <div id="currentGpioText" class="current-pins"></div>
+          </div>
+        </div>
+        <button class="btn-primary" id="applyRelayConfigBtn">✅ Apply Relay & GPIO (Restart)</button>
+      </div>
+      
+      <div id="panel-labels" class="settings-panel">
+        <div id="relayLabelsContainer" class="labels-grid-2"></div>
+        <button class="btn-primary" id="saveLabelsBtn" style="margin-top: 15px;">💾 Save Labels to GitHub</button>
+        <p style="font-size:0.65rem; color:#64748b; margin-top:8px;">Labels stored in device.json</p>
+      </div>
+      
+      <div id="panel-scheduler" class="settings-panel">
+        <div class="grid-2">
+          <div class="form-group"><label>Relay Target</label><select id="schRelay"></select></div>
+          <div class="form-group"><label>Action</label><select id="schAction"><option value="1">ON</option><option value="0">OFF</option></select></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>Time</label><input type="time" id="schTime" value="12:00"></div>
+          <div class="form-group"><div class="form-label-text">Active Days</div><div class="day-grid" id="daySelector"><button class="day-btn" data-day="1">Mon</button><button class="day-btn" data-day="2">Tue</button><button class="day-btn" data-day="3">Wed</button><button class="day-btn" data-day="4">Thu</button><button class="day-btn" data-day="5">Fri</button><button class="day-btn" data-day="6">Sat</button><button class="day-btn" data-day="0">Sun</button></div></div>
+        </div>
+        <button class="btn-primary" id="addScheduleBtn">➕ Add Schedule</button>
+        <div id="scheduleList" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      
+      <div id="panel-notif" class="settings-panel">
+        <div class="notif-card"><div class="notif-header"><div><span style="font-size:0.85rem;">📱 Telegram</span><span id="tgStatusBadge" class="notif-status status-inactive">Inactive</span></div><label class="toggle-switch" id="tgToggle"></label></div>
+        <div id="tgConfig" class="notif-config hidden"><div class="form-group"><label>Bot Token</label><input id="tgToken" type="password"></div><div class="form-group"><label>Chat ID</label><input id="tgChatId"></div><div class="notif-actions"><button class="btn-success btn-notif" id="saveTelegramBtn">💾 Save</button><button class="btn-secondary btn-notif" id="testTelegramBtn">🧪 Test</button><button class="btn-secondary btn-notif" id="fetchChatIdBtn">🔍 Auto-Detect</button></div><span id="tgMsg"></span></div>
+        <div id="tgConnected" class="hidden"><div style="display:flex; justify-content:space-between; font-size:0.75rem;"><span>Token: <span class="config-mask">••••••••</span> | Chat: <span id="tgChatDisplay"></span></span><div><button class="btn-sm btn-secondary" id="editTelegramBtn">✏️ Edit</button><button class="btn-sm btn-secondary" id="testTelegramConnectedBtn">🧪 Test</button></div></div></div></div>
+        <div class="notif-card"><div class="notif-header"><div><span style="font-size:0.85rem;">📡 Gotify</span><span id="gotifyStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="gotifyToggle"></label></div></div>
+        <div class="notif-card"><div class="notif-header"><div><span style="font-size:0.85rem;">💬 WhatsApp</span><span id="waStatusBadge" class="notif-status status-inactive">Coming Soon</span></div><label class="toggle-switch disabled" id="waToggle"></label></div></div>
+      </div>
+      
+      <div id="panel-wifi" class="settings-panel">
+        <div class="form-group"><label>SSID</label><input id="netSsid" placeholder="Wi-Fi SSID"></div>
+        <div class="form-group"><label>Password</label><input id="netPass" type="password" placeholder="Wi-Fi Password"></div>
+        <div class="grid-2" style="gap: 10px; margin-bottom: 10px;">
+          <button class="btn-primary" id="scanWifiBtn">📡 Scan Wi-Fi</button>
+          <button class="btn-success" id="updateNetBtn">💾 Update WiFi</button>
+        </div>
+        <button class="btn-danger" id="resetNetBtn" style="margin-top:0;">🔄 Reset AP</button>
+        <div id="wifiScanResult" class="wifi-scan-list" style="display: none;"></div>
+      </div>
+      
+      <div id="panel-ntp" class="settings-panel">
+        <div class="grid-2">
+          <div class="form-group"><label>NTP Server</label><select id="ntpSelect"><option>id.pool.ntp.org</option><option>pool.ntp.org</option><option>time.google.com</option></select></div>
+          <div class="form-group"><label>Timezone (hour)</label><input id="tzInput" value="7" type="number"></div>
+        </div>
+        <button class="btn-primary" id="saveNTPBtn">💾 Save NTP</button>
+      </div>
+      
+      <div id="panel-system" class="settings-panel">
+        <div class="grid-2" style="margin-top:8px;">
+          <button class="btn-primary" id="otaBtn">⬇️ OTA Update</button>
+          <button class="btn-danger" id="restartBtn">🔄 Restart Device</button>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn-warning" id="forceApBtn" style="background:#f59e0b; color:#000; width:100%;">📡 Force SoftAP Mode</button>
+          <p style="font-size:0.7rem; color:#64748b; margin-top:5px;">⚠️ Reset WiFi credentials & restart to AP mode. Reconnect to "dMarch-Pro-Config" for setup.</p>
+        </div>
+      </div>
+
+      <div id="panel-devices" class="settings-panel">
+        <div id="deviceListContainer"></div>
+        <button class="btn-primary" id="addDeviceBtn">➕ Add Device (QR/Upload)</button>
+        <p style="font-size:0.7rem; margin-top:8px;">Current active device: <strong id="activeDeviceName"></strong></p>
+        <p style="font-size:0.65rem; color:#64748b; margin-top:8px;">Alias is saved to device.json on GitHub. Switch device will reload all settings.</p>
+      </div>
+      
+      <div id="panel-about" class="settings-panel">
+        <p style="font-size:0.85rem;"><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
+        <p style="font-size:0.8rem;">✔ Multi-device isolated data<br>✔ Cloud backup (GitHub)<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO & Labels</p>
+        <div style="text-align:center; margin-top:15px;"><a href="https://wa.me/628551291055" target="_blank" class="contact-wa">📱 Contact us on WhatsApp</a><p style="margin-top:8px; font-size:0.65rem;">Design & Build by <strong>d'marchFF Engineering</strong></p></div>
       </div>
     </div>
   </div>
 
-  <!-- Relay Scheduler -->
-  <div class="card" id="relaySchedulerSection">
-    <h3>⏰ Relay Scheduler</h3>
-    <details open>
-      <summary>Relay Target & Schedule</summary>
-      <label style="font-size:0.9em; color:#aaa;">Target Relay:</label>
-      <select id="schedulerRelaySelect"></select>
-      
-      <label style="font-size:0.9em; color:#aaa;">Action:</label>
-      <select id="schedulerAction">
-        <option value="ON">🟢 ON</option>
-        <option value="OFF">🔴 OFF</option>
-      </select>
-      
-      <label style="font-size:0.9em; color:#aaa;">Time:</label>
-      <input type="time" id="schedulerTime">
-      
-      <label style="font-size:0.9em; color:#aaa; margin-top:6px; display:block;">Active Days:</label>
-      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Mon</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Tue</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Wed</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Thu</label>
-        <label><input type="checkbox" checked style="width:auto; margin-right:4px;"> Fri</label>
-        <label><input type="checkbox" style="width:auto; margin-right:4px;"> Sat</label>
-        <label><input type="checkbox" style="width:auto; margin-right:4px;"> Sun</label>
-      </div>
-      <button class="btn-success" onclick="addSchedule()">➕ Add Schedule</button>
-    </details>
-  </div>
-
-  <!-- Notifications & Network -->
-  <div class="grid-2">
-    <div class="card">
-      <h3>🔔 Notifications</h3>
-      <details>
-        <summary>📱 Telegram</summary>
-        <input type="password" placeholder="Bot Token">
-        <input type="text" placeholder="Chat ID">
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn-success">💾 Save</button>
-          <button class="btn-secondary">🧪 Test</button>
-        </div>
-      </details>
-    </div>
-    <div class="card">
-      <h3>🌐 Network</h3>
-      <details>
-        <summary>WiFi Configuration</summary>
-        <input type="text" placeholder="SSID">
-        <input type="password" placeholder="Password">
-        <button class="btn-success">💾 Update WiFi</button>
-        <button class="btn-danger" style="margin-top:6px;">🔄 Reset AP</button>
-      </details>
+  <div class="card collapsible collapsed app-card hidden" id="eventLogCard">
+    <div class="card-header"><h3>📝 Event Log</h3><button class="toggle-btn">☰</button></div>
+    <div class="card-content">
+      <div class="terminal" id="terminal"></div>
+      <button class="btn-secondary" id="clearLogBtn" style="margin-top:8px; font-size:0.75rem;">🗑️ Clear Log</button>
     </div>
   </div>
 
-  <!-- System & Location -->
-  <div class="grid-2">
-    <div class="card">
-      <h3>🔄 System</h3>
-      <details>
-        <summary>Maintenance</summary>
-        <button class="btn-primary" style="width:100%; margin-bottom:6px;">⬇️ OTA Update</button>
-        <button class="btn-danger" style="width:100%;" onclick="addLog('🔄 Device Restarting...')">🔄 Restart Device</button>
-      </details>
-    </div>
-    <div class="card">
-      <h3>🌍 Location & Time</h3>
-      <details>
-        <summary>Geo Data</summary>
-        <p>🕐 Local Time: <strong>--:--:--</strong></p>
-        <p>📍 Lat: -- | Lon: --</p>
-        <button class="btn-secondary" onclick="addLog('🔄 Refreshing Location...')">🔄 Refresh Location</button>
-      </details>
-    </div>
+  <div id="locationInfo" class="location-info" style="display: none;">
+    <span id="locText"></span>
+    <button class="refresh-loc-btn" id="refreshLocationBtn" title="Refresh location">🔄</button>
   </div>
 
-  <!-- Event Log -->
-  <div class="card">
-    <h3>📝 Event Log</h3>
-    <div id="eventLog"></div>
-    <button class="btn-secondary" style="margin-top:8px;" onclick="document.getElementById('eventLog').innerHTML=''">🗑️ Clear Log</button>
-  </div>
-
-  <footer style="text-align:center; padding:16px; color:#666; font-size:0.8em;">
-    <p>© 2026 dMarchFF | Industrial IoT Solutions</p>
-  </footer>
+  <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
 
-<!-- QR Modal -->
-<div id="qrModal" class="modal">
-  <div class="modal-content">
-    <h3>📷 Scan QR / Upload</h3>
-    <p>QR must contain JSON with: <code>broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken</code></p>
-    <button class="btn-primary" onclick="document.getElementById('qrModal').style.display='none'">📷 Camera</button>
-    <button class="btn-secondary" onclick="document.getElementById('qrModal').style.display='none'">📁 Image</button>
-    <button class="btn-danger" style="margin-top:10px;" onclick="document.getElementById('qrModal').style.display='none'">❌ Close</button>
-  </div>
-</div>
+<div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:12px; font-size:1.1rem;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg">QR must contain JSON with broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken, secret</p></div></div>
 
-<script>
-/**
- * dMarch Relay Pro - Relay Label Management & GitHub Sync
- */
-(function() {
-  const KEYS = {
-    LABELS: 'dMarch_relayLabels',
-    COUNT: 'dMarch_relayCount',
-    GITHUB: 'dMarch_githubConfig' // Format: {ghOwner, ghRepo, ghToken, ghBasePath}
-  };
-
-  // 🔹 Inisialisasi saat halaman dimuat
-  document.addEventListener('DOMContentLoaded', () => {
-    initRelayLabels();
-    setupRelayCountListener();
-    addLog('🚀 System initialized. Ready.');
-  });
-
-  // 🔹 Helper: Log
-  window.addLog = function(msg) {
-    const log = document.getElementById('eventLog');
-    if(!log) return;
-    const time = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.style.padding = '4px 0'; entry.style.borderBottom = '1px solid #333';
-    entry.textContent = `[${time}] ${msg}`;
-    log.prepend(entry);
-  };
-
-  // 🔹 Ambil & Validasi Jumlah Relay
-  function getRelayCount() {
-    return parseInt(localStorage.getItem(KEYS.COUNT) || '4');
-  }
-
-  // 🔹 Load Labels dari LocalStorage
-  function getRelayLabels() {
-    let labels = JSON.parse(localStorage.getItem(KEYS.LABELS) || '[]');
-    const count = getRelayCount();
-    // Pastikan panjang array sesuai jumlah relay
-    while(labels.length < count) labels.push(`Relay ${labels.length + 1}`);
-    labels.length = count;
-    localStorage.setItem(KEYS.LABELS, JSON.stringify(labels));
-    return labels;
-  }
-
-  // 🔹 Inisialisasi UI
-  function initRelayLabels() {
-    const labels = getRelayLabels();
-    renderRelayButtons(labels);
-    renderSchedulerDropdown(labels);
-  }
-
-  // 🔹 Render Tombol Kontrol
-  function renderRelayButtons(labels) {
-    const container = document.getElementById('relayButtonsContainer');
-    if(!container) return;
-    container.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'relay-btn';
-      btn.textContent = lbl;
-      btn.dataset.index = i;
-      btn.onclick = () => toggleRelay(i, lbl);
-      container.appendChild(btn);
-    });
-  }
-
-  // 🔹 Render Dropdown Scheduler
-  function renderSchedulerDropdown(labels) {
-    const select = document.getElementById('schedulerRelaySelect');
-    if(!select) return;
-    const currentVal = select.value;
-    select.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      const opt = document.createElement('option');
-      opt.value = i; opt.textContent = lbl;
-      select.appendChild(opt);
-    });
-    if(currentVal !== '' && currentVal < labels.length) select.value = currentVal;
-  }
-
-  // 🔹 Toggle Relay (Simulasi)
-  window.toggleRelay = function(idx, name) {
-    addLog(`🔄 ${name} toggled (State: ${Math.random() > 0.5 ? 'ON' : 'OFF'})`);
-  };
-
-  // 🔹 Toggle Editor Label
-  window.toggleLabelEditor = function() {
-    const editor = document.getElementById('labelEditor');
-    const btn = document.getElementById('btnEditLabels');
-    const isHidden = editor.style.display === 'none';
-    editor.style.display = isHidden ? 'block' : 'none';
-    btn.textContent = isHidden ? '🔄 Tutup Editor' : '✏️ Edit Label Relay';
-    if(isHidden) renderLabelInputs();
-  };
-
-  // 🔹 Render Input Fields
-  function renderLabelInputs() {
-    const container = document.getElementById('labelInputsContainer');
-    const labels = getRelayLabels();
-    container.innerHTML = '';
-    labels.forEach((lbl, i) => {
-      container.innerHTML += `
-        <div>
-          <span>Relay ${i+1}:</span>
-          <input type="text" id="lbl_${i}" value="${lbl}" placeholder="Relay ${i+1}">
-        </div>`;
-    });
-  }
-
-  // 🔹 Simpan & Sinkronkan
-  window.saveRelayLabels = async function() {
-    const labels = [];
-    for(let i=0; i<getRelayCount(); i++) {
-      const val = document.getElementById(`lbl_${i}`).value.trim();
-      labels.push(val || `Relay ${i+1}`);
-    }
-    localStorage.setItem(KEYS.LABELS, JSON.stringify(labels));
-    initRelayLabels(); // Update UI
-    toggleLabelEditor();
-    addLog('✅ Label relay disimpan di LocalStorage.');
-    await syncToGitHub(labels);
-  };
-
-  // 🔹 Sinkronisasi ke GitHub
-  async function syncToGitHub(labels) {
-    const cfgStr = localStorage.getItem(KEYS.GITHUB);
-    if(!cfgStr) { addLog('⚠️ Konfigurasi GitHub belum diatur. Gunakan QR/Setup.'); return; }
-    
-    let cfg;
-    try { cfg = JSON.parse(cfgStr); } catch(e) { addLog('❌ Format config GitHub rusak.'); return; }
-    if(!cfg.ghToken || !cfg.ghOwner || !cfg.ghRepo) {
-      addLog('⚠️ Token/Repo GitHub tidak lengkap.'); return;
-    }
-
-    const filePath = `${cfg.ghBasePath || 'config'}/relay_labels.json`;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(labels, null, 2))));
-    const url = `https://api.github.com/repos/${cfg.ghOwner}/${cfg.ghRepo}/contents/${filePath}`;
-
-    try {
-      addLog('☁️ Menghubungkan ke GitHub...');
-      // 1. Ambil SHA file saat ini
-      const getRes = await fetch(url, {
-        headers: { 'Authorization': `token ${cfg.ghToken}`, 'Accept': 'application/vnd.github.v3+json' }
-      });
-      let sha = '';
-      if(getRes.ok) {
-        const data = await getRes.json();
-        sha = data.sha || '';
-      }
-
-      // 2. Upload/Push update
-      const putRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${cfg.ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Update relay labels via dMarch Pro', content, sha })
-      });
-
-      if(putRes.ok) {
-        addLog('☁️ Label berhasil disinkronkan ke GitHub.');
-      } else {
-        const err = await putRes.json();
-        addLog(`❌ Gagal sinkron: ${err.message || putRes.status}`);
-      }
-    } catch(e) {
-      addLog(`❌ Error jaringan/GitHub: ${e.message}`);
-    }
-  }
-
-  // 🔹 Listener Perubahan Jumlah Relay
-  function setupRelayCountListener() {
-    const countInput = document.getElementById('relayCountInput');
-    if(!countInput) return;
-    
-    countInput.addEventListener('change', (e) => {
-      const newCount = parseInt(e.target.value);
-      if(newCount >= 1 && newCount <= 16) {
-        localStorage.setItem(KEYS.COUNT, newCount);
-        document.getElementById('activeRelayCount').textContent = newCount;
-        getRelayLabels(); // Re-sync array size
-        initRelayLabels();
-        addLog(`🔢 Jumlah relay diubah menjadi ${newCount}.`);
-      }
-    });
-  }
-
-  window.addSchedule = function() {
-    const target = document.getElementById('schedulerRelaySelect').options[document.getElementById('schedulerRelaySelect').selectedIndex].text;
-    const time = document.getElementById('schedulerTime').value;
-    if(!time) { addLog('⚠️ Waktu jadwal belum diisi.'); return; }
-    addLog(`⏰ Jadwal dibuat: ${target} -> ${time}`);
-  };
-
-  // Expose modal close globally
-  window.closeQrModal = () => document.getElementById('qrModal').style.display = 'none';
-})();
-</script>
-
+<!-- JavaScript -->
+<script src="script.js"></script>
 </body>
 </html>
