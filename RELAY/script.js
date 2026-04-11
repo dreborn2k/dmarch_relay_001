@@ -39,10 +39,10 @@ function getRelayLabel(relayNum) {
 }
 
 function updateAliasDisplay() {
-  const aliasSpan = document.getElementById('deviceAliasDisplay');
-  if (aliasSpan) {
+  const titleSpan = document.getElementById('healthCardTitle');
+  if (titleSpan) {
     const displayName = currentDeviceAlias && currentDeviceAlias.trim() !== "" ? currentDeviceAlias : DEVICE_ID;
-    aliasSpan.textContent = displayName;
+    titleSpan.innerHTML = `📊 System Health of ${displayName}`;
   }
 }
 
@@ -682,7 +682,7 @@ if (healthHeader && healthContent) {
   healthHeader.style.cursor = 'pointer';
   healthHeader.addEventListener('click', (e) => {
     // Jangan toggle jika yang diklik adalah elemen yang memerlukan aksi lain (opsional)
-    if (e.target.closest('#deviceAliasDisplay')) return;
+    //if (e.target.closest('#deviceAliasDisplay')) return;
     healthContent.classList.toggle('hidden');
   });
 }
