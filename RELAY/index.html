@@ -30,7 +30,7 @@
 
   <div class="card" id="connCard">
     <h3>🔗 Setup Device</h3>
-    <p style="margin-bottom:15px; font-size:0.8rem; color:#94a3b8;">Scan QR code or upload image to configure MQTT and GitHub sync.</p>
+    <p style="margin-bottom:15px; font-size:0.8rem; color:#94a3b8;">Scan QR code or upload image to login.</p>
     <button class="btn-qr" id="showQrBtn">📷 Scan QR / Upload Image</button>
     <div class="form-group" style="margin-top:12px;">
       <button class="btn-secondary" id="refreshWhitelistBtn" type="button" style="font-size:0.8rem;">🔄 Refresh Whitelist</button>
@@ -134,7 +134,7 @@
       
       <div id="panel-labels" class="settings-panel">
         <div id="relayLabelsContainer" class="labels-grid-2"></div>
-        <button class="btn-primary" id="saveLabelsBtn" style="margin-top: 15px;">💾 Save Labels to GitHub</button>
+        <button class="btn-primary" id="saveLabelsBtn" style="margin-top: 15px;">💾 Save Labels to Server</button>
         <p style="font-size:0.65rem; color:#64748b; margin-top:8px;">Labels stored in device.json</p>
       </div>
       
@@ -193,12 +193,12 @@
         <div id="deviceListContainer"></div>
         <button class="btn-primary" id="addDeviceBtn">➕ Add Device (QR/Upload)</button>
         <p style="font-size:0.7rem; margin-top:8px;">Current active device: <strong id="activeDeviceName"></strong></p>
-        <p style="font-size:0.65rem; color:#64748b; margin-top:8px;">Alias is saved to device.json on GitHub. Switch device will reload all settings.</p>
+        <p style="font-size:0.65rem; color:#64748b; margin-top:8px;">Alias is saved to Server. Switch device will reload all settings.</p>
       </div>
       
       <div id="panel-about" class="settings-panel">
         <p style="font-size:0.85rem;"><strong>dMarch Relay Pro</strong> – Enterprise-grade IoT relay controller.</p>
-        <p style="font-size:0.8rem;">✔ Multi-device isolated data<br>✔ Cloud backup (GitHub)<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO & Labels</p>
+        <p style="font-size:0.8rem;">✔ Multi-device isolated data<br>✔ Cloud backup<br>✔ Real-time MQTT control<br>✔ Scheduled tasks & Telegram alerts<br>✔ Customizable GPIO & Labels</p>
         <div style="text-align:center; margin-top:15px;"><a href="https://wa.me/628551291055" target="_blank" class="contact-wa">📱 Contact us on WhatsApp</a><p style="margin-top:8px; font-size:0.65rem;">Design & Build by <strong>d'marchFF Engineering</strong></p></div>
       </div>
     </div>
@@ -221,7 +221,7 @@
   <div class="footer">© 2026 dMarchFF | Industrial IoT Solutions</div>
 </div>
 
-<div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:12px; font-size:1.1rem;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg">QR must contain JSON with broker, port, user, pass, device, ghOwner, ghRepo, ghBasePath, ghToken, secret</p></div></div>
+<div id="qrModal"><div class="modal-box"><h3 style="text-align:center; margin-bottom:12px; font-size:1.1rem;">📷 Scan QR / Upload</h3><div id="reader"></div><div class="qr-actions"><button class="btn-primary" id="startCameraBtn">📷 Camera</button><label class="btn-secondary" for="qrFileInput" style="display:inline-block; text-align:center;">📁 Image</label><input type="file" id="qrFileInput" accept="image/*"></div><p class="qr-msg">QR downloaded from first setup</p></div></div>
 
 <!-- JavaScript -->
 <script src="script.js"></script>
