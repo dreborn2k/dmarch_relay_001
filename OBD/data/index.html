@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>D'marcFF ADAS v5.1 - OBD2 Full</title>
+    <link rel="stylesheet" href="/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body class="stealth-mode">
+
+<div class="dashboard-wrapper">
+    <header class="status-bar">
+        <div class="header-left">
+            <i class="indicator-icon far fa-arrow-alt-circle-left" id="ind-turn-left"></i>
+        </div>
+        <div class="header-center">
+            <div class="clock-center" id="live-clock">--:--:--</div>
+            <div class="calendar" id="live-calendar">--, -- ----</div>
+        </div>
+        <div class="header-right">
+            <div class="indicators">
+                <i class="indicator-icon fas fa-square-p" id="ind-handbrake"></i>
+                <i class="indicator-icon fas fa-engine" id="ind-checkengine"></i>
+                <i class="indicator-icon fas fa-temperature-low" id="ind-temp"></i>
+                <i class="indicator-icon fas fa-car-battery" id="ind-battery"></i>
+                <i class="indicator-icon fas fa-oil-can" id="ind-oil"></i>
+            </div>
+            <i class="indicator-icon far fa-arrow-alt-circle-right" id="ind-turn-right"></i>
+        </div>
+    </header>
+
+    <main class="content-grid">
+        <!-- Kolom KIRI (2 kolom) -->
+        <aside class="side-col left-col">
+            <div class="data-card small-card">
+                <label>ECT TEMP</label>
+                <div class="val-group"><span id="val-ect">--</span><span class="unit">°C</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-ect" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>THROTTLE</label>
+                <div class="val-group"><span id="val-tps">--</span><span class="unit">%</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-tps" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>MAF</label>
+                <div class="val-group"><span id="val-maf">--</span><span class="unit">g/s</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-maf" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>INTAKE AIR</label>
+                <div class="val-group"><span id="val-iat">--</span><span class="unit">°C</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-iat" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>ENGINE LOAD</label>
+                <div class="val-group"><span id="val-load">--</span><span class="unit">%</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-load" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>OIL TEMP</label>
+                <div class="val-group"><span id="val-oil">--</span><span class="unit">°C</span></div>
+            </div>
+            <div class="data-card small-card">
+                <label>MAP</label>
+                <div class="val-group"><span id="val-map">--</span><span class="unit">kPa</span></div>
+            </div>
+        </aside>
+
+        <!-- Kolom TENGAH: Gauge + Radar -->
+        <section class="center-col">
+            <div class="gauge-container">
+                <div class="gauge-box">
+                    <canvas id="gauge-canvas" width="400" height="400"></canvas>
+                    <img src="car.png" alt="car top view" class="car-top-view">
+                    <div class="center-stack">
+                        <div class="speed-main"><h1 id="speed-val">0</h1><span>Km/h</span></div>
+                    </div>
+                    <div id="rpm-label" class="rpm-floating">750</div>
+                    <div class="wave-sensor safe sensor-front-center" id="waveFrontCenter"></div>
+                    <div class="wave-sensor safe sensor-front-left" id="waveFrontLeft"></div>
+                    <div class="wave-sensor safe sensor-front-right" id="waveFrontRight"></div>
+                    <div class="wave-sensor safe sensor-rear-left" id="waveRearLeft"></div>
+                    <div class="wave-sensor safe sensor-rear-right" id="waveRearRight"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Kolom KANAN (2 kolom) -->
+        <aside class="side-col right-col">
+            <div class="data-card small-card">
+                <label>FRONT RADAR</label>
+                <div class="val-group"><span id="radar-front-val">--</span><span class="unit">m</span></div>
+            </div>
+            <div class="data-card small-card">
+                <label>FUEL RATE</label>
+                <div class="val-group"><span id="val-fuel">--</span><span class="unit">L/h</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-fuel" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>FUEL LEVEL</label>
+                <div class="val-group"><span id="val-fuel-level">--</span><span class="unit">%</span></div>
+            </div>
+            <div class="data-card small-card">
+                <label>VOLTAGE</label>
+                <div class="val-group"><span id="val-volt">--</span><span class="unit">V</span></div>
+                <div class="h-bar"><div class="h-fill" id="fill-volt" style="width:0%"></div></div>
+            </div>
+            <div class="data-card small-card">
+                <label>STFT (B1)</label>
+                <div class="val-group"><span id="val-stft1">--</span><span class="unit">%</span></div>
+            </div>
+            <div class="data-card small-card">
+                <label>LTFT (B1)</label>
+                <div class="val-group"><span id="val-ltft1">--</span><span class="unit">%</span></div>
+            </div>
+            <div class="data-card small-card" id="trip-dist-card">
+                <label>TRIP DISTANCE</label>
+                <div class="val-group"><span id="trip-dist">0.0</span><span class="unit">km</span></div>
+            </div>
+            <div class="data-card small-card" id="trip-time-card">
+                <label>TRIP TIME</label>
+                <div class="val-group"><span id="trip-time">00:00:00</span></div>
+            </div>
+            <div class="data-card small-card">
+                <label>INSTANT KM/L</label>
+                <div class="val-group"><span id="instant-kml">--</span><span class="unit">km/L</span></div>
+            </div>
+            <div class="data-card small-card" id="avg-kml-card">
+                <label>AVG KM/L (Trip)</label>
+                <div class="val-group"><span id="avg-kml">--</span><span class="unit">km/L</span></div>
+            </div>
+        </aside>
+    </main>
+
+    <div class="extra-grid">
+        <div class="extra-card"><h4>⚙️ Timing & Throttle</h4>
+            <div>Timing: <span id="val-timing">--</span>°</div>
+            <div>Rel Throttle: <span id="val-rel-throttle">--</span>%</div>
+            <div>Cmd Throttle: <span id="val-cmd-throttle">--</span>%</div>
+            <div>Abs Load: <span id="val-abs-load">--</span>%</div>
+        </div>
+        <div class="extra-card"><h4>🌡️ Catalyst Temps</h4>
+            <div>B1S1: <span id="cat-b1s1">--</span>°C</div>
+            <div>B1S2: <span id="cat-b1s2">--</span>°C</div>
+            <div>B2S1: <span id="cat-b2s1">--</span>°C</div>
+            <div>B2S2: <span id="cat-b2s2">--</span>°C</div>
+        </div>
+        <div class="extra-card"><h4>⛽ Fuel Rail Pressures</h4>
+            <div>Rail: <span id="rail-press">--</span>kPa</div>
+            <div>Gauge: <span id="rail-gauge">--</span>kPa</div>
+            <div>Absolute: <span id="rail-abs">--</span>kPa</div>
+        </div>
+        <div class="extra-card"><h4>🌫️ EGR & EVAP</h4>
+            <div>EGR: <span id="egr">--</span>%</div>
+            <div>EGR Err: <span id="egr-err">--</span>%</div>
+            <div>Evap Purge: <span id="evap">--</span>%</div>
+            <div>Evap Vapor: <span id="evap-vap">--</span>Pa</div>
+        </div>
+        <div class="extra-card"><h4>🧪 O2 Sensors</h4>
+            <div>O2S1 Trim: <span id="o2s1-trim">--</span>%</div>
+            <div>O2S1 Volt: <span id="o2s1-volt">--</span>V</div>
+            <div>O2S2 Trim: <span id="o2s2-trim">--</span>%</div>
+            <div>O2S2 Volt: <span id="o2s2-volt">--</span>V</div>
+        </div>
+        <div class="extra-card"><h4>📊 Fuel & Environment</h4>
+            <div>Ethanol: <span id="ethanol">--</span>%</div>
+            <div>Ambient: <span id="ambient">--</span>°C</div>
+            <div>Fuel Type: <span id="fuel-type">--</span></div>
+            <div>OBD Std: <span id="obd-std">--</span></div>
+        </div>
+        <div class="extra-card"><h4>🔋 Hybrid & Distance</h4>
+            <div>Hybrid: <span id="hybrid">--</span>%</div>
+            <div>Dist MIL: <span id="dist-mil">--</span>km</div>
+            <div>Dist clear: <span id="dist-clear">--</span>km</div>
+            <div>Warm-ups: <span id="warmups">--</span></div>
+        </div>
+    </div>
+
+    <footer class="footer-bar secondary-footer">
+        <div class="footer-grid">
+            <div class="footer-item"><span class="footer-label">RUNTIME</span><span class="footer-value" id="runtime">--</span><span class="unit">s</span></div>
+            <div class="radar-badges">
+                <div class="radar-badge" id="radar-fl-badge">FL <span class="radar-status" id="radar-fl-status">●</span></div>
+                <div class="radar-badge" id="radar-fc-badge">FC <span class="radar-status" id="radar-fc-status">●</span></div>
+                <div class="radar-badge" id="radar-fr-badge">FR <span class="radar-status" id="radar-fr-status">●</span></div>
+                <div class="radar-badge" id="radar-lb-badge">LB <span class="radar-status" id="radar-lb-status">●</span></div>
+                <div class="radar-badge" id="radar-rb-badge">RB <span class="radar-status" id="radar-rb-status">●</span></div>
+            </div>
+        </div>
+        <div class="footer-right">
+            <div class="badge" id="update-badge">🔧 Update</div>
+            <div class="badge-group">
+                <div class="badge" id="obd-badge">OBD2</div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Modal OTA Update + Warning Settings -->
+<div id="updateModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="modal-tabs">
+            <button class="tab-btn active" data-tab="firmware">Firmware</button>
+            <button class="tab-btn" data-tab="spiffs">SPIFFS Files</button>
+            <button class="tab-btn" data-tab="warning">Warning Settings</button>
+        </div>
+        <div id="firmware-tab" class="tab-content active">
+            <h3>Update Firmware</h3>
+            <p>Pilih file .bin hasil kompilasi (Sketch > Export Compiled Binary)</p>
+            <form id="firmware-form" enctype="multipart/form-data">
+                <input type="file" id="firmware-file" accept=".bin">
+                <button type="submit">Upload & Update</button>
+            </form>
+            <div id="firmware-progress"></div>
+        </div>
+        <div id="spiffs-tab" class="tab-content">
+            <h3>Update File SPIFFS</h3>
+            <p>Upload file satu per satu. File akan langsung menggantikan yang lama.</p>
+            <div class="spiffs-grid">
+                <div class="spiffs-form">
+                    <label>index.html</label>
+                    <input type="file" id="spiffs-file-index" accept=".html">
+                    <button class="spiffs-upload" data-file="index.html">Upload</button>
+                </div>
+                <div class="spiffs-form">
+                    <label>style.css</label>
+                    <input type="file" id="spiffs-file-css" accept=".css">
+                    <button class="spiffs-upload" data-file="style.css">Upload</button>
+                </div>
+                <div class="spiffs-form">
+                    <label>app.js</label>
+                    <input type="file" id="spiffs-file-js" accept=".js">
+                    <button class="spiffs-upload" data-file="app.js">Upload</button>
+                </div>
+                <div class="spiffs-form">
+                    <label>car.png</label>
+                    <input type="file" id="spiffs-file-png" accept=".png">
+                    <button class="spiffs-upload" data-file="car.png">Upload</button>
+                </div>
+                <div class="spiffs-form">
+                    <label>css/all.min.css</label>
+                    <input type="file" id="spiffs-file-cssfile" accept=".css">
+                    <button class="spiffs-upload" data-file="css/all.min.css">Upload</button>
+                </div>
+                <div class="spiffs-form">
+                    <label>webfonts/*.woff2</label>
+                    <input type="file" id="spiffs-file-woff2" accept=".woff2">
+                    <button class="spiffs-upload" data-file="webfonts/">Upload</button>
+                </div>
+            </div>
+            <div id="spiffs-progress"></div>
+        </div>
+        <div id="warning-tab" class="tab-content">
+            <div class="warning-header">
+                <h3>Pengaturan Batas Peringatan (Warning Threshold)</h3>
+                <div class="warning-buttons">
+                    <button id="save-warning-settings" class="save-btn">Simpan</button>
+                    <button id="reset-warning-default" class="reset-btn">Reset</button>
+                </div>
+            </div>
+            <p>Kosongkan input untuk menonaktifkan warning.</p>
+            <div class="warning-settings-grid" id="warning-settings-grid"></div>
+            <div id="warning-settings-status"></div>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
