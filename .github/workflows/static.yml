@@ -1,52 +1,26 @@
-name: Deploy all projects to Pages
+name: Deploy to Cloudflare Workers
 
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Build all projects
-        run: |
-          # 1. Buat folder sementara untuk deployment
-          mkdir -p deploy_root
-          
-          # 2. Salin SEMUA isi repositori ke folder deploy_root
-          # Menggunakan rsync agar folder .git dan deploy_root sendiri tidak ikut tersalin
-          rsync -av --exclude='.git' --exclude='.github' --exclude='deploy_root' . deploy_root/
-          
-          # 3. Verifikasi index.html utama
-          if [ ! -f "deploy_root/index.html" ]; then
-            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>dMarch Projects Hub</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;text-align:center;padding:50px;}a{color:#38bdf8;display:block;margin:10px;text-decoration:none;font-weight:bold;}a:hover{text-decoration:underline;}</style></head><body><h1>DMARCFF ROBOTIC HUB</h1><p>Project tidak memiliki index.html di root.</p><hr><a href="./Relay4Ch/">🔌 Relay4Ch Panel</a><a href="./Queue/">⏳ Queue Panel</a><a href="./RELAY/">🔘 RELAY Panel</a></body></html>' > deploy_root/index.html
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          # Pastikan path ini merujuk ke folder yang sudah kita isi tadi
-          path: './deploy_root'
+          node-version: '18'
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy to Cloudflare Workers
+        run: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

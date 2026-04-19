@@ -347,7 +347,7 @@ async function isDeviceWhitelisted(deviceId) {
     } catch(e) { localStorage.removeItem(cacheKey); }
   }
   if (!whitelist) {
-    const url = 'https://raw.githubusercontent.com/dreborn2k/dmarchFF/main/RELAY/config/whitelist.json';
+    const url = '/RELAY/api/whitelist';
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
