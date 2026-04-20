@@ -280,6 +280,110 @@ function updateConnectionStatus() {
 }
 setInterval(updateConnectionStatus, 2000);
 
+
+// ========== DIAGNOSIS DTC ==========
+async function fetchDTC() {
+    const container = document.getElementById('dtc-list');
+    const statusDiv = document.getElementById('dtc-status');
+    if (!container) return;
+    container.innerHTML = '<p>Membaca DTC...</p>';
+    try {
+        const res = await fetch('/dtc');
+        const data = await res.json();
+        if (data.dtcs && data.dtcs.length > 0) {
+            let html = `<p>Ditemukan ${data.dtcs.length} kode error:</p>`;
+            for (const code of data.dtcs) {
+                const details = getDTCDetails(code);
+                html += `
+                    <div class="dtc-item">
+                        <div class="dtc-code">${code}</div>
+                        <div class="dtc-explanation">📖 ${details.description}</div>
+                        <div class="dtc-causes">🔧 Kemungkinan penyebab: ${details.possibleCauses.join(', ')}</div>
+                        <div class="dtc-suggestion">💡 Saran: ${details.suggestion}</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+            statusDiv.innerHTML = `<span style="color:#facc15;">⚠️ Lampu Check Engine MENYALA</span>`;
+        } else {
+            container.innerHTML = '<p>✅ Tidak ada kode error (DTC).</p>';
+            statusDiv.innerHTML = `<span style="color:#22c55e;">✅ Lampu Check Engine MATI</span>`;
+        }
+    } catch(err) {
+        container.innerHTML = '<p>❌ Gagal membaca DTC. Periksa koneksi ke ESP32.</p>';
+        statusDiv.innerHTML = '';
+    }
+}
+
+async function clearDTC() {
+    if (confirm("Yakin ingin menghapus semua kode error (DTC)? Ini akan mematikan lampu Check Engine jika masalah sudah diperbaiki.")) {
+        const statusDiv = document.getElementById('dtc-status');
+        statusDiv.innerHTML = 'Menghapus DTC...';
+        try {
+            const res = await fetch('/clear-dtc', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'success') {
+                statusDiv.innerHTML = '<span style="color:#22c55e;">✅ DTC berhasil dihapus! Refresh halaman untuk melihat perubahan.</span>';
+                setTimeout(() => fetchDTC(), 2000);
+            } else {
+                statusDiv.innerHTML = '<span style="color:#ef4444;">❌ Gagal menghapus DTC.</span>';
+            }
+        } catch(err) {
+            statusDiv.innerHTML = '<span style="color:#ef4444;">❌ Error komunikasi.</span>';
+        }
+    }
+}
+
+// Tambahkan event listener untuk tab diagnosis (jika belum ada)
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tabId = btn.getAttribute('data-tab');
+        if (tabId === 'diagnosis') {
+            fetchDTC();
+        }
+    });
+});
+// Juga tambahkan event untuk tombol refresh dan clear (jika elemen ada)
+document.getElementById('refresh-dtc')?.addEventListener('click', fetchDTC);
+document.getElementById('clear-dtc')?.addEventListener('click', clearDTC);
+
+async function uploadSpiffsFile(file, targetPath, progressDiv) {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const url = "/update-spiffs?path=" + encodeURIComponent(targetPath);
+
+    progressDiv.innerText = "0%";
+    progressDiv.style.color = "#facc15";
+
+    xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressDiv.innerText = `Uploading ${percent}%`;
+        }
+    };
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            progressDiv.innerText = "✅ Upload sukses!";
+            progressDiv.style.color = "#22c55e";
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            progressDiv.innerText = "❌ Upload gagal!";
+            progressDiv.style.color = "#ef4444";
+        }
+    };
+
+    xhr.onerror = function () {
+        progressDiv.innerText = "❌ Error koneksi!";
+        progressDiv.style.color = "#ef4444";
+    };
+
+    xhr.open("POST", url, true);
+    xhr.send(formData);
+}
+
 // ========== POLLING DATA ==========
 let lastFetchSpeed = 0;
 let lastFetchFuelRate = 0;
@@ -486,35 +590,7 @@ if (firmwareForm) {
     });
 }
 
-async function uploadSpiffsFile(file, targetPath, progressDiv) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const url = '/update-spiffs?path=' + encodeURIComponent(targetPath);
-    progressDiv.innerText = `Uploading ${file.name}...`;
-    progressDiv.style.color = '#facc15';
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const res = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-            progressDiv.innerText = `${file.name} uploaded! Refresh page.`;
-            progressDiv.style.color = '#22c55e';
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            const text = await res.text();
-            progressDiv.innerText = `Failed: ${text}`;
-            progressDiv.style.color = '#ef4444';
-        }
-    } catch(err) {
-        progressDiv.innerText = `Error: ${err.message}`;
-        progressDiv.style.color = '#ef4444';
-    }
-}
+
 
 document.querySelectorAll('.spiffs-upload').forEach(btn => {
     btn.addEventListener('click', async (e) => {

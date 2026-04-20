@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>D'marcFF ADAS v5.1 - OBD2 Full</title>
+    <title>D'marcFF ADAS v1.0 </title>
     <link rel="stylesheet" href="/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:,">
@@ -199,7 +199,7 @@
     </footer>
 </div>
 
-<!-- Modal OTA Update + Warning Settings -->
+<!-- Modal OTA Update + Warning Settings + Diagnosis -->
 <div id="updateModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -207,6 +207,7 @@
             <button class="tab-btn active" data-tab="firmware">Firmware</button>
             <button class="tab-btn" data-tab="spiffs">SPIFFS Files</button>
             <button class="tab-btn" data-tab="warning">Warning Settings</button>
+            <button class="tab-btn" data-tab="diagnosis">Diagnosis</button>
         </div>
         <div id="firmware-tab" class="tab-content active">
             <h3>Update Firmware</h3>
@@ -266,9 +267,23 @@
             <div class="warning-settings-grid" id="warning-settings-grid"></div>
             <div id="warning-settings-status"></div>
         </div>
+        <div id="diagnosis-tab" class="tab-content">
+            <div class="diagnosis-header">
+                <h3>Diagnostic Trouble Codes (DTC)</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button id="refresh-dtc" class="save-btn">Refresh DTC</button>
+                    <button id="clear-dtc" class="reset-btn" style="background:#ef4444;">Clear DTC</button>
+                </div>
+            </div>
+            <div id="dtc-list" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                <p>Tekan Refresh untuk membaca kode error.</p>
+            </div>
+            <div id="dtc-status"></div>
+        </div>
     </div>
 </div>
 
+<script src="dtc_database.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

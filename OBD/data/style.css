@@ -703,3 +703,67 @@ canvas {
         grid-template-columns: 1fr;
     }
 }
+
+.dtc-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.dtc-code {
+    font-weight: bold;
+    color: #facc15;
+    font-size: 1.1rem;
+}
+.dtc-explanation, .dtc-causes, .dtc-suggestion {
+    margin-top: 5px;
+    font-size: 0.8rem;
+}
+.dtc-causes { color: #94a3b8; }
+.dtc-suggestion { color: #22c55e; }
+.diagnosis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+/* Diagnosis tab - scrollable list */
+#dtc-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 10px;
+}
+.dtc-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.dtc-code {
+    font-weight: bold;
+    color: #facc15;
+    font-size: 1rem;
+}
+.dtc-explanation, .dtc-causes, .dtc-suggestion {
+    margin-top: 6px;
+    font-size: 0.8rem;
+}
+.dtc-causes {
+    color: #94a3b8;
+}
+.dtc-suggestion {
+    color: #22c55e;
+}
+.diagnosis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
