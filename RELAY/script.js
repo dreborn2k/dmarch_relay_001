@@ -712,12 +712,12 @@ async function saveRelayLabelsToCloud() {
   const newLabels = collectLabelsFromInputs();
   relayLabels = newLabels;
 
-  // Ambil nilai dari UI (relayCount dan gpio)
+  // Ambil nilai relayCount dan gpio dari UI
   const currentRelayCount = relayCount;
   const gpioRaw = $('gpioInput')?.value.trim() || "";
   const gpio = gpioRaw ? gpioRaw.split(',').map(p=>p.trim()) : [];
 
-  // Buat config lengkap tanpa perlu membaca file lama
+  // Langsung kirim seluruh konfigurasi (tanpa GET)
   const config = {
     device: DEVICE_ID,
     relayCount: currentRelayCount,
