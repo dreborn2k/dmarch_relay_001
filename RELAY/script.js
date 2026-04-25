@@ -711,14 +711,25 @@ async function saveRelayLabelsToCloud() {
   if (!DEVICE_ID) { alert('No active device'); return; }
   const newLabels = collectLabelsFromInputs();
   relayLabels = newLabels;
-  const res = await fetch(`${WORKER_URL}/api/device/${DEVICE_ID}/device.json`);
-  let config = {};
-  if (res.ok) config = await res.json();
-  config.device = DEVICE_ID;
-  config.relayLabels = relayLabels;
-  config.updatedAt = new Date().toISOString();
+
+  // Ambil nilai dari UI (relayCount dan gpio)
+  const currentRelayCount = relayCount;
+  const gpioRaw = $('gpioInput')?.value.trim() || "";
+  const gpio = gpioRaw ? gpioRaw.split(',').map(p=>p.trim()) : [];
+
+  // Buat config lengkap tanpa perlu membaca file lama
+  const config = {
+    device: DEVICE_ID,
+    relayCount: currentRelayCount,
+    gpio: gpio,
+    relayLabels: relayLabels,
+    updatedAt: new Date().toISOString()
+  };
+
   const saveRes = await fetch(`${WORKER_URL}/api/device/${DEVICE_ID}/device.json`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config)
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
   });
   if (saveRes.ok) {
     log('Relay labels saved to cloud');
@@ -726,7 +737,9 @@ async function saveRelayLabelsToCloud() {
     updateSchedulerRelaySelect();
     renderSchedules();
     alert('Labels saved');
-  } else alert('Failed to save labels');
+  } else {
+    alert('Failed to save labels');
+  }
 }
 function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
