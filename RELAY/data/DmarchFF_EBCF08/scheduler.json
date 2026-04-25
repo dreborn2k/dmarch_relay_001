@@ -28,7 +28,21 @@
       ],
       "enabled": true,
       "_modified": "2026-04-25T12:02:30.921Z"
+    },
+    {
+      "id": "moeai34g3xvw",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1,
+        3,
+        5,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-25T12:02:32.656Z"
     }
   ],
-  "updatedAt": "2026-04-25T12:02:30.921Z"
+  "updatedAt": "2026-04-25T12:02:32.656Z"
 }
