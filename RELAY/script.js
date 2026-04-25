@@ -267,7 +267,7 @@ async function addDeviceFromQR(data) {
       return;
     }
     
-    const newDevice = {
+   const newDevice = {
       deviceId: deviceId,
       alias: deviceId,
       mqttBroker: jsonData.broker,
@@ -275,7 +275,7 @@ async function addDeviceFromQR(data) {
       mqttUser: jsonData.user,
       mqttPass: jsonData.pass,
       workerUrl: jsonData.workerUrl,
-      // tidak ada ghToken, ghOwner, dll
+      secret: jsonData.secret   // <-- TAMBAHKAN INI
     };
     devices.push(newDevice);
     saveDevicesToStorage();
