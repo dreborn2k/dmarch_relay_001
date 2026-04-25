@@ -1,6 +1,46 @@
 // ==================== GLOBALS ====================
 const WORKER_URL = "https://dmarchff.dreborn2k.workers.dev";
+// ==================== HMAC & SECURE PUBLISH ====================
+function generateNonce() {
+  return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+}
 
+function getTimestamp() {
+  return Math.floor(Date.now() / 1000);
+}
+
+async function hmacSha256(message, secret) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(message);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function pubSecure(topic, payloadObj) {
+  const device = devices.find(d => d.deviceId === DEVICE_ID);
+  if (!device || !device.secret) {
+    console.log('No secret for this device');
+    return false;
+  }
+  const nonce = generateNonce();
+  const timestamp = getTimestamp();
+  const fullPayloadObj = { ...payloadObj, nonce, timestamp };
+  const payloadStr = JSON.stringify(fullPayloadObj);
+  const sig = await hmacSha256(payloadStr, device.secret);
+  const finalPayload = JSON.stringify({ ...fullPayloadObj, sig });
+  console.log(`Publishing secure to ${topic}:`, finalPayload);
+  return new Promise((resolve) => {
+    mqttClient.publish(topic, finalPayload, { qos: 1 }, (err) => {
+      if (err) console.log(`Publish error: ${err}`);
+      else console.log(`Secure command sent to ${topic}`);
+      resolve(!err);
+    });
+  });
+}
 let mqttClient = null, qrScanner = null;
 let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
 let schedulerInterval = null, lastTriggered = {};
@@ -512,8 +552,7 @@ async function sendRelayCommand(num) {
   const btn = $(`btn-relay-${num}`);
   if(!btn) return;
   const newState = btn.dataset.state === 'on' ? 0 : 1;
-  const topic = `${DEVICE_ID}/relay/${num}/cmd`;
-  mqttClient.publish(topic, String(newState), {qos:1});
+  await pubSecure(`${DEVICE_ID}/relay/${num}/cmd`, { state: newState });
 }
 
 function updateRelayUIByCount() { 
@@ -547,8 +586,8 @@ async function applyRelayConfig() {
   if (pins.length !== newCount) { alert(`GPIO count (${pins.length}) != relays (${newCount})`); return; }
   if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { alert(`Relay count must be 1-${maxRelayFromDevice}`); return; }
   if (mqttClient?.connected) {
-    mqttClient.publish(`${DEVICE_ID}/config/relayCount`, String(newCount), {qos:1});
-    mqttClient.publish(`${DEVICE_ID}/gpio/update`, gpioRaw, {qos:1});
+    await pubSecure(`${DEVICE_ID}/config/relayCount`, { count: newCount });
+    await pubSecure(`${DEVICE_ID}/gpio/update`, { pins: gpioRaw });
   }
   localStorage.setItem('dm_relay_count', newCount);
   relayCount = newCount;
@@ -830,17 +869,17 @@ document.addEventListener('DOMContentLoaded', () => {
   $('showQrBtn').onclick = openQR;
   $('qrModal').onclick = function(e) { if(e.target === this) closeQR(); };
   $('disconnectBtn').onclick = () => { if(mqttClient) mqttClient.end(true); };
-  $('allOnBtn').onclick = () => { if(DEVICE_ID) mqttClient?.publish(`${DEVICE_ID}/all/on`, '1'); };
-  $('allOffBtn').onclick = () => { if(DEVICE_ID) mqttClient?.publish(`${DEVICE_ID}/all/off`, '1'); };
+  $('allOnBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/all/on`, { state: 1 }); };
+  $('allOffBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/all/off`, { state: 1 }); };
   $('saveNTPBtn').onclick = () => { if(DEVICE_ID) { mqttClient?.publish(`${DEVICE_ID}/ntp/set`, $('ntpSelect').value); mqttClient?.publish(`${DEVICE_ID}/timezone/set`, $('tzInput').value); } };
   $('applyRelayConfigBtn').onclick = applyRelayConfig;
   $('suggestDefaultPinsBtn').onclick = suggestDefaultPins;
   $('scanWifiBtn').onclick = scanWifi;
-  $('updateNetBtn').onclick = () => { const ssid = $('netSsid').value.trim(); if(ssid && DEVICE_ID) { localStorage.setItem(`wifi_pass_${ssid}`, $('netPass').value); mqttClient?.publish(`${DEVICE_ID}/network/update`, JSON.stringify({ssid, pass: $('netPass').value})); alert('Sent'); } };
-  $('resetNetBtn').onclick = () => { if(confirm('Reset WiFi to AP mode?')) mqttClient?.publish(`${DEVICE_ID}/network/reset`, '1'); };
-  $('otaBtn').onclick = () => { if(DEVICE_ID) mqttClient?.publish(`${DEVICE_ID}/system/ota`, '1'); };
-  $('restartBtn').onclick = () => { if(DEVICE_ID) mqttClient?.publish(`${DEVICE_ID}/system/restart`, '1'); };
-  $('forceApBtn').onclick = () => { if(DEVICE_ID && confirm('Force AP mode?')) mqttClient?.publish(`${DEVICE_ID}/force_ap`, '1'); };
+  $('updateNetBtn').onclick = async () => { const ssid = $('netSsid').value.trim(); if(ssid && DEVICE_ID) { localStorage.setItem(`wifi_pass_${ssid}`, $('netPass').value); await pubSecure(`${DEVICE_ID}/network/update`, { ssid, pass: $('netPass').value }); alert('Sent'); } };
+  $('resetNetBtn').onclick = async () => { if(confirm('Reset WiFi to AP mode?')) await pubSecure(`${DEVICE_ID}/network/reset`, { cmd: 1 }); };
+  $('otaBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/system/ota`, { cmd: 1 }); };
+  $('restartBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/system/restart`, { cmd: 1 }); };
+  $('forceApBtn').onclick = async () => { if(DEVICE_ID && confirm('Force AP mode?')) await pubSecure(`${DEVICE_ID}/force_ap`, { cmd: 1 }); };
   $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t) t.innerHTML=''; };
   $('saveLabelsBtn').onclick = saveRelayLabelsToCloud;
   $('addScheduleBtn').onclick = addSchedule;
