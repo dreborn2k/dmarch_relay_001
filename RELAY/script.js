@@ -589,10 +589,26 @@ async function applyRelayConfig() {
   if (mqttClient?.connected) {
     await pubSecure(`${DEVICE_ID}/config/relayCount`, { count: newCount });
     await pubSecure(`${DEVICE_ID}/gpio/update`, { pins: gpioRaw });
+    
+    // ===== TAMBAHAN: Simpan ke Worker =====
+    const configToSave = {
+      device: DEVICE_ID,
+      relayCount: newCount,
+      gpio: pins,
+      relayLabels: relayLabels,
+      updatedAt: new Date().toISOString()
+    };
+    const saveResult = await saveDeviceConfigToWorker(DEVICE_ID, configToSave);
+    if (saveResult) {
+      log('Device config saved to Worker (device.json)');
+    } else {
+      log('Failed to save device config to Worker');
+    }
+    // ======================================
   }
   localStorage.setItem('dm_relay_count', newCount);
   relayCount = newCount;
-  updateRelayUIByCount(); // update UI segera
+  updateRelayUIByCount();
   log(`Relay config applied: ${newCount} relays, GPIO: ${gpioRaw}`);
   alert('Configuration sent. Device may restart.');
 }
