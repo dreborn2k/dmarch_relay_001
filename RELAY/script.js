@@ -125,9 +125,20 @@ async function loadSchedulerFromWorker(deviceId) {
 }
 async function saveSchedulerToWorker(deviceId) {
   try {
-    const payload = { device: deviceId, schedules: schedules.map(s => { const {_source,...rest}=s; return rest; }), updatedAt: new Date().toISOString() };
+    const payload = { 
+      device: deviceId, 
+      schedules: schedules.map(s => { 
+        const { _source, ...rest } = s; 
+        return rest; 
+      }), 
+      updatedAt: new Date().toISOString() 
+    };
+    
+    // PASTIKAN URL MENGARAH KE scheduler.json
     const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/scheduler.json`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(payload) 
     });
     return res.ok;
   } catch(e) { return false; }
