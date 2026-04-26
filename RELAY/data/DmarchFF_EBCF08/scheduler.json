@@ -22,7 +22,24 @@
       ],
       "enabled": true,
       "_modified": "2026-04-26T05:25:28.966Z"
+    },
+    {
+      "id": "mofc5qrbgdf1",
+      "time": "12:00",
+      "relay": "1",
+      "action": "1",
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        0
+      ],
+      "enabled": true,
+      "_modified": "2026-04-26T05:36:42.167Z"
     }
   ],
-  "updatedAt": "2026-04-26T05:34:22.958Z"
+  "updatedAt": "2026-04-26T05:36:42.168Z"
 }
