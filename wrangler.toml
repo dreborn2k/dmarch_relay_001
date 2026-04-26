@@ -2,5 +2,9 @@ name = "dmarchff"
 main = "worker.js"
 compatibility_date = "2024-04-01"
 
+[[kv_namespaces]]
+binding = "DMARCHRELAY_DATA"
+id = "bda1df1b2b2e445aac4f854df730ebda"
+
 [vars]
 # Pastikan GITHUB_TOKEN tidak didefinisikan di sini jika sudah ada di Secrets Dashboard
