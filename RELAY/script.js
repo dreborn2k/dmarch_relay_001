@@ -4,7 +4,6 @@ const WORKER_URL = "https://dmarchff.dreborn2k.workers.dev";
 let mqttClient = null, qrScanner = null;
 let schedules = JSON.parse(localStorage.getItem('dm_schedules') || '[]');
 let schedulerInterval = null, lastTriggered = {};
-let deviceConfigCache = {};
 let notifConfig = JSON.parse(localStorage.getItem('dm_notif_config') || '{}');
 let tgEnabled = notifConfig.tg?.enabled||false, tgConnected = notifConfig.tg?.connected||false;
 let relayCount = parseInt(localStorage.getItem('dm_relay_count') || '5');
@@ -40,70 +39,46 @@ function updateAliasDisplay() {
 }
 
 // ==================== HMAC & SECURE PUBLISH ====================
-function generateNonce() {
-  return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-}
-
-function getTimestamp() {
-  return Math.floor(Date.now() / 1000);
-}
-
+function generateNonce() { return Math.random().toString(36).substring(2, 15) + Date.now().toString(36); }
+function getTimestamp() { return Math.floor(Date.now() / 1000); }
 async function hmacSha256(message, secret) {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const messageData = encoder.encode(message);
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-  );
+  const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
   return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
-
 async function pubSecure(topic, payloadObj) {
   const device = devices.find(d => d.deviceId === DEVICE_ID);
-  if (!device || !device.secret) {
-    console.log('No secret for this device');
-    return false;
-  }
+  if (!device || !device.secret) return false;
   const nonce = generateNonce();
   const timestamp = getTimestamp();
   const fullPayloadObj = { ...payloadObj, nonce, timestamp };
   const payloadStr = JSON.stringify(fullPayloadObj);
   const sig = await hmacSha256(payloadStr, device.secret);
-  const finalPayload = JSON.stringify({ ...fullPayloadObj, sig });
   return new Promise((resolve) => {
-    mqttClient.publish(topic, finalPayload, { qos: 1 }, (err) => {
-      if (err) console.log(`Publish error: ${err}`);
-      else console.log(`Secure command sent to ${topic}`);
-      resolve(!err);
-    });
+    mqttClient.publish(topic, JSON.stringify({ ...fullPayloadObj, sig }), { qos: 1 }, (err) => resolve(!err));
   });
 }
 
-// ==================== DEVICE API via WORKER ====================
+// ==================== DEVICE API ====================
 async function loadDeviceConfigFromWorker(deviceId) {
   try {
     const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/device.json`);
-    if (res.status === 404) {
-      console.log(`Device config not found for ${deviceId}, will create later`);
-      return false;
-    }
+    if (res.status === 404) return false;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const config = await res.json();
     if (config.device === deviceId) {
       if (config.relayCount && config.relayCount !== relayCount) {
         relayCount = Math.min(maxRelayFromDevice, Math.max(1, config.relayCount));
         localStorage.setItem('dm_relay_count', relayCount);
-        log(`Relay count loaded from config: ${relayCount}`);
         updateRelayUIByCount();
       }
       if (config.gpio && config.gpio.length) {
         const gpioStr = config.gpio.join(',');
-        if (gpioStr !== $('gpioInput')?.value) {
-          safeVal('gpioInput', gpioStr);
-          window.lastGpio = gpioStr;
-          updateCurrentGpioText();
-        }
+        if (gpioStr !== $('gpioInput')?.value) safeVal('gpioInput', gpioStr);
+        updateCurrentGpioText();
       }
       if (config.relayLabels && Array.isArray(config.relayLabels)) {
         relayLabels = [...config.relayLabels];
@@ -112,8 +87,8 @@ async function loadDeviceConfigFromWorker(deviceId) {
       }
       if (config.alias && config.alias !== currentDeviceAlias) {
         currentDeviceAlias = config.alias;
-        const devIndex = devices.findIndex(d => d.deviceId === deviceId);
-        if (devIndex !== -1) devices[devIndex].alias = config.alias;
+        const idx = devices.findIndex(d => d.deviceId === deviceId);
+        if (idx !== -1) devices[idx].alias = config.alias;
         saveDevicesToStorage();
         updateAliasDisplay();
         renderDeviceList();
@@ -122,21 +97,17 @@ async function loadDeviceConfigFromWorker(deviceId) {
       renderSchedules();
       return true;
     }
-  } catch(e) { debugLog('loadDeviceConfig error', e); }
+  } catch(e) { debugLog(e); }
   return false;
 }
-
 async function saveDeviceConfigToWorker(deviceId, config) {
   try {
     const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/device.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config)
     });
     return res.ok;
-  } catch(e) { debugLog('saveDeviceConfig error', e); return false; }
+  } catch(e) { return false; }
 }
-
 async function loadSchedulerFromWorker(deviceId) {
   try {
     const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/scheduler.json`);
@@ -147,23 +118,19 @@ async function loadSchedulerFromWorker(deviceId) {
       schedules = mergeScheduleArrays(schedules, data.schedules);
       saveSchedulesLocal();
       renderSchedules();
-      log(`Schedules loaded from cloud`);
       return true;
     }
-  } catch(e) { debugLog('loadScheduler error', e); }
+  } catch(e) { debugLog(e); }
   return false;
 }
-
 async function saveSchedulerToWorker(deviceId) {
   try {
     const payload = { device: deviceId, schedules: schedules.map(s => { const {_source,...rest}=s; return rest; }), updatedAt: new Date().toISOString() };
     const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/scheduler.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     });
     return res.ok;
-  } catch(e) { debugLog('saveScheduler error', e); return false; }
+  } catch(e) { return false; }
 }
 
 // ==================== DEVICE MANAGER ====================
@@ -172,32 +139,25 @@ function loadDevicesFromStorage() {
   if (stored) {
     try {
       devices = JSON.parse(stored);
-      devices = devices.map(d => {
-        const { ghToken, ghOwner, ghRepo, ghBasePath, ...rest } = d;
-        return rest;
-      });
+      devices = devices.map(({ ghToken, ghOwner, ghRepo, ghBasePath, ...rest }) => rest);
     } catch(e) { devices = []; }
   }
   currentDeviceId = localStorage.getItem('dm_current_device_id');
-  if (!currentDeviceId && devices.length > 0) currentDeviceId = devices[0].deviceId;
+  if (!currentDeviceId && devices.length) currentDeviceId = devices[0].deviceId;
   renderDeviceList();
 }
-
 function saveDevicesToStorage() {
   localStorage.setItem('dm_devices', JSON.stringify(devices));
   if (currentDeviceId) localStorage.setItem('dm_current_device_id', currentDeviceId);
 }
-
 async function updateDeviceAliasInWorker(deviceId, newAlias) {
   const res = await fetch(`${WORKER_URL}/api/device/${deviceId}/device.json`);
   if (!res.ok) return false;
   let config = await res.json();
   config.alias = newAlias;
   config.updatedAt = new Date().toISOString();
-  const saveRes = await fetch(`${WORKER_URL}/api/device/${deviceId}/device.json`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config)
-  });
-  if (saveRes.ok) {
+  const ok = await saveDeviceConfigToWorker(deviceId, config);
+  if (ok) {
     const device = devices.find(d => d.deviceId === deviceId);
     if (device) device.alias = newAlias;
     saveDevicesToStorage();
@@ -206,17 +166,14 @@ async function updateDeviceAliasInWorker(deviceId, newAlias) {
       currentDeviceAlias = newAlias;
       updateAliasDisplay();
     }
-    log(`Alias updated: ${deviceId} → ${newAlias}`);
-    return true;
   }
-  return false;
+  return ok;
 }
-
 function renderDeviceList() {
   const container = document.getElementById('deviceListContainer');
   if (!container) return;
   if (!devices.length) {
-    container.innerHTML = '<p style="color:#64748b;">No devices added. Click "Add Device" to start.</p>';
+    container.innerHTML = '<p>No devices added. Click "Add Device" to start.</p>';
     document.getElementById('activeDeviceName').innerText = '-';
     return;
   }
@@ -235,20 +192,17 @@ function renderDeviceList() {
             <button class="btn-sm btn-danger delete-device-btn" data-id="${dev.deviceId}" ${devices.length === 1 ? 'disabled' : ''}>🗑️</button>
           </div>
         </div>
-        <div style="font-size:0.7rem; margin-top:8px;">MQTT: ${dev.mqttBroker}:${dev.mqttPort}</div>
       </div>
     `;
   });
   container.innerHTML = html;
   document.getElementById('activeDeviceName').innerText = devices.find(d => d.deviceId === currentDeviceId)?.alias || currentDeviceId;
-  
   document.querySelectorAll('.device-alias-input').forEach(input => {
     input.addEventListener('change', async (e) => {
-      const deviceId = input.getAttribute('data-id');
+      const id = input.getAttribute('data-id');
       const newAlias = input.value.trim();
-      if (newAlias && newAlias !== devices.find(d => d.deviceId === deviceId)?.alias) {
-        await updateDeviceAliasInWorker(deviceId, newAlias);
-      } else if (!newAlias) input.value = devices.find(d => d.deviceId === deviceId)?.alias || deviceId;
+      if (newAlias && newAlias !== devices.find(d => d.deviceId === id)?.alias) await updateDeviceAliasInWorker(id, newAlias);
+      else if (!newAlias) input.value = devices.find(d => d.deviceId === id)?.alias || id;
     });
   });
   document.querySelectorAll('.switch-device-btn').forEach(btn => {
@@ -258,11 +212,10 @@ function renderDeviceList() {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-id');
       if (devices.length === 1) return alert('Cannot delete the only device.');
-      if (confirm(`Delete device "${id}"? Local only.`)) deleteDevice(id);
+      if (confirm(`Delete device "${id}"?`)) deleteDevice(id);
     });
   });
 }
-
 function deleteDevice(deviceId) {
   if (deviceId === currentDeviceId) {
     const other = devices.find(d => d.deviceId !== deviceId);
@@ -272,70 +225,43 @@ function deleteDevice(deviceId) {
   devices = devices.filter(d => d.deviceId !== deviceId);
   saveDevicesToStorage();
   renderDeviceList();
-  log(`Device ${deviceId} removed`);
 }
-
 async function addDeviceFromQR(data) {
   try {
-    let jsonData;
-    try { jsonData = JSON.parse(data); } catch(e) { 
-      let fixed = data.replace(/"device":\s*([^",\n\}]+)/, '"device":"$1"');
-      jsonData = JSON.parse(fixed);
-    }
+    let jsonData = JSON.parse(data);
     if (!jsonData.broker || !jsonData.port || !jsonData.user || !jsonData.pass || !jsonData.device) throw new Error('Missing MQTT fields');
     if (!jsonData.workerUrl) throw new Error('Missing workerUrl');
     if (!jsonData.secret) throw new Error('Missing secret');
-    
     let deviceRaw = jsonData.device;
     if (!deviceRaw.startsWith('DmarchFF_')) deviceRaw = 'DmarchFF_' + deviceRaw;
     const deviceId = deviceRaw;
-    
     const whitelistRes = await fetch(`${WORKER_URL}/RELAY/api/whitelist`);
     if (whitelistRes.ok) {
       const whitelist = await whitelistRes.json();
-      if (!whitelist.includes(deviceId)) {
-        alert(`Device ${deviceId} not whitelisted.`);
-        return;
-      }
-    } else {
-      alert('Cannot verify whitelist');
+      if (!whitelist.includes(deviceId)) { alert(`Device ${deviceId} not whitelisted.`); return; }
+    } else { alert('Cannot verify whitelist'); return; }
+    if (devices.find(d => d.deviceId === deviceId)) {
+      if (confirm(`Device ${deviceId} exists. Switch?`)) switchDevice(deviceId);
       return;
     }
-    
-    const existing = devices.find(d => d.deviceId === deviceId);
-    if (existing) {
-      if (confirm(`Device ${deviceId} already exists. Switch?`)) switchDevice(deviceId);
-      return;
-    }
-    
-    const newDevice = {
-      deviceId: deviceId,
-      alias: deviceId,
-      mqttBroker: jsonData.broker,
-      mqttPort: jsonData.port,
-      mqttUser: jsonData.user,
-      mqttPass: jsonData.pass,
-      workerUrl: jsonData.workerUrl,
-      secret: jsonData.secret
-    };
-    devices.push(newDevice);
+    devices.push({
+      deviceId, alias: deviceId, mqttBroker: jsonData.broker, mqttPort: jsonData.port,
+      mqttUser: jsonData.user, mqttPass: jsonData.pass, workerUrl: jsonData.workerUrl, secret: jsonData.secret
+    });
     saveDevicesToStorage();
     renderDeviceList();
     if (confirm(`Device ${deviceId} added. Switch now?`)) switchDevice(deviceId);
   } catch(e) { alert('Invalid QR: ' + e.message); }
 }
-
 async function switchDevice(deviceId) {
   const device = devices.find(d => d.deviceId === deviceId);
   if (!device) return;
-  
   if (mqttClient?.connected) {
     mqttClient.unsubscribe(`${DEVICE_ID}/relay/+/state`);
     mqttClient.unsubscribe(`${DEVICE_ID}/status`);
     mqttClient.unsubscribe(`${DEVICE_ID}/terminal`);
     mqttClient.end(true);
   }
-  
   DEVICE_ID = device.deviceId;
   mqttBroker = device.mqttBroker;
   mqttPort = device.mqttPort;
@@ -343,49 +269,25 @@ async function switchDevice(deviceId) {
   mqttPass = device.mqttPass;
   currentDeviceId = deviceId;
   currentDeviceAlias = device.alias || deviceId;
-  
-  localStorage.setItem('dm_full_config', JSON.stringify({
-    broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID
-  }));
+  localStorage.setItem('dm_full_config', JSON.stringify({ broker: mqttBroker, port: mqttPort, user: mqttUser, pass: mqttPass, device: DEVICE_ID }));
   saveDevicesToStorage();
-  
   updateAliasDisplay();
   renderDeviceList();
-  
   await loadDeviceConfigFromWorker(DEVICE_ID);
   await loadSchedulerFromWorker(DEVICE_ID);
   updateRelayUIByCount();
-  
   connectMQTT();
-  log(`Switched to ${currentDeviceAlias} (${DEVICE_ID})`);
-}
-
-// ==================== WHITELIST REFRESH ====================
-async function refreshWhitelist() {
-  localStorage.removeItem('dm_whitelist_cache');
-  const statusEl = $('whitelistStatus');
-  if (statusEl) statusEl.textContent = '🔄 Refreshing...';
-  try {
-    const res = await fetch(`${WORKER_URL}/RELAY/api/whitelist`);
-    if (res.ok) {
-      const whitelist = await res.json();
-      localStorage.setItem('dm_whitelist_cache', JSON.stringify({ list: whitelist, timestamp: Date.now() }));
-      if (statusEl) statusEl.textContent = '✅ Whitelist refreshed';
-    } else throw new Error();
-  } catch(e) { if(statusEl) statusEl.textContent = '❌ Failed'; }
-  setTimeout(() => { if(statusEl) statusEl.textContent = ''; }, 2000);
 }
 
 // ==================== MQTT ====================
 function updateSystemHealth(msg) {
   try {
     const d = JSON.parse(msg);
-    if (d.device_id && d.device_id !== DEVICE_ID) return;
+    if (d.device_id !== DEVICE_ID) return;
     if (d.relay_count !== undefined && d.relay_count !== relayCount) {
       relayCount = d.relay_count;
       localStorage.setItem('dm_relay_count', relayCount);
       updateRelayUIByCount();
-      log(`Relay count updated to ${relayCount}`);
     }
     safeTxt('sigVal', (d.rssi ?? '--') + '%');
     safeTxt('upVal', d.uptime ?? '--');
@@ -417,7 +319,6 @@ function updateSystemHealth(msg) {
     updateGPIOSuggestions();
   } catch(e) { console.error(e); }
 }
-
 function updateCloudSyncUI(online) {
   const led = document.getElementById('cloudLed');
   const text = document.getElementById('cloudText');
@@ -426,28 +327,19 @@ function updateCloudSyncUI(online) {
     text.textContent = online ? 'Online' : 'Offline';
   }
 }
-
 function updateWifiUI(status, ssid) {
   const iconSpan = document.getElementById('wifiIcon');
   const textSpan = document.getElementById('wifiText');
-  if (!iconSpan || !textSpan) return;
-  if (status === 'Online' && ssid) {
-    iconSpan.className = 'wifi-online';
-    textSpan.textContent = ssid;
-  } else if (status === 'Online') {
-    iconSpan.className = 'wifi-online';
-    textSpan.textContent = 'Connected';
-  } else {
-    iconSpan.className = 'wifi-offline';
-    textSpan.textContent = 'Offline';
+  if (iconSpan && textSpan) {
+    iconSpan.className = status === 'Online' ? 'wifi-online' : 'wifi-offline';
+    textSpan.textContent = status === 'Online' ? (ssid || 'Connected') : 'Offline';
   }
 }
-
 function renderPinBadges(pinStr) {
   const container = $('relayPinsContainer');
   if(!container) return;
   container.innerHTML = '';
-  if(!pinStr || pinStr === '--') { container.innerHTML = '<span style="color:#94a3b8;">--</span>'; return; }
+  if(!pinStr || pinStr === '--') { container.innerHTML = '<span>--</span>'; return; }
   pinStr.split(',').forEach(p => {
     const badge = document.createElement('span');
     badge.className = 'pin-badge';
@@ -455,20 +347,17 @@ function renderPinBadges(pinStr) {
     container.appendChild(badge);
   });
 }
-
 function updateCurrentGpioText() {
   const container = $('currentGpioText');
   if (!container) return;
   const gpioRaw = $('gpioInput')?.value.trim() || '';
-  if (!gpioRaw) { container.textContent = 'Current: --'; return; }
-  container.textContent = `Current: ${gpioRaw}`;
+  container.textContent = gpioRaw ? `Current: ${gpioRaw}` : 'Current: --';
 }
-
 function setConnectionState(connected) {
   safeCls($('connCard'), 'hidden', connected);
   safeCls($('disconnectBtn'), 'hidden', !connected);
   document.querySelectorAll('.app-card').forEach(c=>safeCls(c,'hidden',!connected));
-  safeTxt('connStatus', connected?'Status: Connected':'Status: Not configured');
+  safeTxt('connStatus', connected?'Connected':'Not configured');
   if(connected) {
     currentRelayState = new Array(relayCount).fill(false);
     const locDiv = document.getElementById('locationInfo');
@@ -478,15 +367,13 @@ function setConnectionState(connected) {
     if (locDiv) locDiv.style.display = 'none';
   }
 }
-
 function connectMQTT() {
   if (!DEVICE_ID || !mqttBroker) return;
   let wsPort = mqttPort;
   if (mqttBroker.includes("hivemq.cloud") && wsPort == 8883) wsPort = 8884;
   const url = `wss://${mqttBroker}:${wsPort}/mqtt`;
-  const clientId = 'web_' + Math.random().toString(16).substr(2,8);
   if (mqttClient?.connected) mqttClient.end(true);
-  mqttClient = mqtt.connect(url, {clientId, username:mqttUser, password:mqttPass, clean:true, reconnectPeriod:0});
+  mqttClient = mqtt.connect(url, { clientId: 'web_' + Math.random().toString(16).substr(2,8), username: mqttUser, password: mqttPass, clean: true, reconnectPeriod: 0 });
   mqttClient.on('connect', () => {
     log('MQTT Connected');
     setConnectionState(true);
@@ -504,8 +391,7 @@ function connectMQTT() {
     } else if (t === `${DEVICE_ID}/status`) {
       updateSystemHealth(m);
     } else if (t.startsWith(`${DEVICE_ID}/relay/`) && t.endsWith('/state')) {
-      const parts = t.split('/');
-      const relayNum = parseInt(parts[2]);
+      const relayNum = parseInt(t.split('/')[2]);
       const isOn = (m === '1');
       const btn = $(`btn-relay-${relayNum}`);
       if (btn) {
@@ -518,17 +404,14 @@ function connectMQTT() {
       handleWifiScanResult(m);
     }
   });
-  mqttClient.on('error', err => { log('MQTT Error'); setConnectionState(false); });
+  mqttClient.on('error', () => { log('MQTT Error'); setConnectionState(false); });
   mqttClient.on('close', () => { log('Disconnected'); setConnectionState(false); });
 }
 
 // ==================== RELAY UI ====================
 function initRelayButtons() {
   const box = $('relayBtns');
-  if(!box) {
-    console.error('Element relayBtns not found!');
-    return;
-  }
+  if(!box) return;
   box.innerHTML = '';
   currentRelayState = new Array(relayCount).fill(false);
   for(let i=1; i<=relayCount; i++) {
@@ -537,12 +420,11 @@ function initRelayButtons() {
     btn.className = 'btn-secondary';
     btn.dataset.state = 'off';
     btn.textContent = getRelayLabel(i);
-    btn.onclick = (function(relayNum) { return function() { sendRelayCommand(relayNum); vibrate(); }; })(i);
+    btn.onclick = (r => () => sendRelayCommand(r))(i);
     box.appendChild(btn);
   }
   updateSchedulerRelaySelect();
 }
-
 async function sendRelayCommand(num) {
   if (!mqttClient?.connected) { alert('MQTT not connected!'); return; }
   const btn = $(`btn-relay-${num}`);
@@ -550,15 +432,12 @@ async function sendRelayCommand(num) {
   const newState = btn.dataset.state === 'on' ? 0 : 1;
   await pubSecure(`${DEVICE_ID}/relay/${num}/cmd`, { state: newState });
 }
-
-function updateRelayUIByCount() { 
-  safeVal('relayCountInput', relayCount); 
-  initRelayButtons(); 
-  updateSchedulerRelaySelect(); 
+function updateRelayUIByCount() {
+  safeVal('relayCountInput', relayCount);
+  initRelayButtons();
+  updateSchedulerRelaySelect();
   renderRelayLabelsInputs();
-  log(`UI updated to ${relayCount} relays`); 
 }
-
 function updateSchedulerRelaySelect() {
   const sel = $('schRelay');
   if(!sel) return;
@@ -573,26 +452,17 @@ function updateSchedulerRelaySelect() {
   if(cur && cur <= relayCount) sel.value = cur;
   else sel.value = '1';
 }
-
 async function applyRelayConfig() {
   if (!DEVICE_ID) { alert('Set Device ID first'); return; }
   const newCount = parseInt($('relayCountInput').value);
   const gpioRaw = $('gpioInput').value.trim();
   const pins = gpioRaw.split(',').map(p=>p.trim()).filter(p=>p);
-  if (pins.length !== newCount) { alert(`GPIO count (${pins.length}) != relays (${newCount})`); return; }
+  if (pins.length !== newCount) { alert(`GPIO count mismatch`); return; }
   if (isNaN(newCount) || newCount < 1 || newCount > maxRelayFromDevice) { alert(`Relay count must be 1-${maxRelayFromDevice}`); return; }
   if (mqttClient?.connected) {
     await pubSecure(`${DEVICE_ID}/config/relayCount`, { count: newCount });
     await pubSecure(`${DEVICE_ID}/gpio/update`, { pins: gpioRaw });
-    
-    // Simpan ke Worker
-    const configToSave = {
-      device: DEVICE_ID,
-      relayCount: newCount,
-      gpio: pins,
-      relayLabels: relayLabels,
-      updatedAt: new Date().toISOString()
-    };
+    const configToSave = { device: DEVICE_ID, relayCount: newCount, gpio: pins, relayLabels, updatedAt: new Date().toISOString() };
     await saveDeviceConfigToWorker(DEVICE_ID, configToSave);
   }
   localStorage.setItem('dm_relay_count', newCount);
@@ -614,18 +484,16 @@ function addSchedule() {
   const time = $('schTime').value, relay = $('schRelay').value, action = $('schAction').value;
   const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(b=>parseInt(b.dataset.day));
   if(!time || activeDays.length===0) return alert('Time & days required');
-  const newSch = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() };
-  schedules.push(newSch);
+  schedules.push({ id: Date.now().toString(36)+Math.random().toString(36).substr(2,4), time, relay, action, days: activeDays, enabled: true, _modified: new Date().toISOString() });
   saveSchedules();
   renderSchedules();
-  log(`Schedule added: ${getRelayLabel(relay)} ${action=='1'?'ON':'OFF'} at ${time}`);
 }
 function toggleSchedule(id) {
   const sch = schedules.find(s=>s.id===id);
-  if(sch){ sch.enabled=!sch.enabled; sch._modified=new Date().toISOString(); saveSchedules(); renderSchedules(); }
+  if(sch) { sch.enabled = !sch.enabled; sch._modified = new Date().toISOString(); saveSchedules(); renderSchedules(); }
 }
 function deleteSchedule(id) {
-  if(confirm('Delete schedule?')){ schedules=schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); }
+  if(confirm('Delete schedule?')) { schedules = schedules.filter(s=>s.id!==id); saveSchedules(); renderSchedules(); }
 }
 function mergeScheduleArrays(localArr, serverArr) {
   const map = new Map();
@@ -635,23 +503,21 @@ function mergeScheduleArrays(localArr, serverArr) {
 }
 function saveSchedules() {
   localStorage.setItem('dm_schedules', JSON.stringify(schedules));
-  if (DEVICE_ID) {
-    saveSchedulerToWorker(DEVICE_ID).catch(e=>debugLog('sync scheduler error', e));
-  }
+  if (DEVICE_ID) saveSchedulerToWorker(DEVICE_ID).catch(e=>debugLog(e));
 }
 function saveSchedulesLocal() { localStorage.setItem('dm_schedules', JSON.stringify(schedules)); }
 function renderSchedules() {
   const list = $('scheduleList');
   if(!list) return;
   list.innerHTML = '';
-  if(schedules.length===0) { list.innerHTML='<p style="color:#64748b;text-align:center;">No schedules yet.</p>'; return; }
+  if(schedules.length===0) { list.innerHTML='<p>No schedules yet.</p>'; return; }
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   schedules.forEach(sch=>{
     const daysStr = sch.days.map(d=>dayNames[d]).join(',');
     const relayLabel = getRelayLabel(parseInt(sch.relay));
     const div = document.createElement('div');
     div.className='schedule-item';
-    div.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span> ${relayLabel} → ${sch.action=='1'?'ON':'OFF'}<br><span style="font-size:0.65rem;">📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button class="btn-sm btn-del" onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`;
+    div.innerHTML = `<div class="sch-info"><span class="sch-time">🕐 ${sch.time}</span> ${relayLabel} → ${sch.action=='1'?'ON':'OFF'}<br><span>📅 ${daysStr}</span></div><div class="sch-actions"><div class="toggle-switch ${sch.enabled?'active':''}" onclick="toggleSchedule('${sch.id}')"></div><button onclick="deleteSchedule('${sch.id}')">🗑️</button></div>`;
     list.appendChild(div);
   });
 }
@@ -667,14 +533,11 @@ function checkSchedules() {
     const key = `${sch.id}_${dateKey}`;
     if(lastTriggered[sch.id]===key) return;
     lastTriggered[sch.id]=key;
-    if(mqttClient?.connected) {
-      mqttClient.publish(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action);
-      log(`[AUTO] ${getRelayLabel(sch.relay)} ${sch.action=='1'?'ON':'OFF'} triggered`);
-    }
+    if(mqttClient?.connected) mqttClient.publish(`${DEVICE_ID}/relay/${sch.relay}/cmd`, sch.action);
   });
 }
 
-// ==================== LABELS (DIPERBAIKI: LANGSUNG POST, TANPA GET) ====================
+// ==================== LABELS ====================
 function renderRelayLabelsInputs() {
   const container = $('relayLabelsContainer');
   if (!container) return;
@@ -700,39 +563,22 @@ async function saveRelayLabelsToCloud() {
   if (!DEVICE_ID) { alert('No active device'); return; }
   const newLabels = collectLabelsFromInputs();
   relayLabels = newLabels;
-  
-  // Ambil relayCount dan gpio dari UI
   const currentRelayCount = relayCount;
   const gpioRaw = $('gpioInput')?.value.trim() || "";
   const gpio = gpioRaw ? gpioRaw.split(',').map(p=>p.trim()) : [];
-  
-  // Langsung POST, tanpa GET sebelumnya
-  const config = {
-    device: DEVICE_ID,
-    relayCount: currentRelayCount,
-    gpio: gpio,
-    relayLabels: relayLabels,
-    updatedAt: new Date().toISOString()
-  };
-  
-  const saveRes = await fetch(`${WORKER_URL}/api/device/${DEVICE_ID}/device.json`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config)
-  });
-  if (saveRes.ok) {
-    log('Relay labels saved to cloud');
+  const config = { device: DEVICE_ID, relayCount: currentRelayCount, gpio, relayLabels, updatedAt: new Date().toISOString() };
+  const ok = await saveDeviceConfigToWorker(DEVICE_ID, config);
+  if (ok) {
+    log('Labels saved');
     initRelayButtons();
     updateSchedulerRelaySelect();
     renderSchedules();
     alert('Labels saved');
-  } else {
-    alert('Failed to save labels');
-  }
+  } else alert('Failed to save labels');
 }
-function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m)); }
 
-// ==================== NOTIF (partial) ====================
+// ==================== NOTIF ====================
 function initNotifUI() {
   const tg = notifConfig.tg||{};
   if(tg.token && tg.chatId){ safeVal('tgToken','••••••••'); safeVal('tgChatId',tg.chatId); safeTxt('tgChatDisplay',tg.chatId); tgConnected = tg.connected || false; }
@@ -740,8 +586,8 @@ function initNotifUI() {
   const update = () => {
     const b=$('tgStatusBadge'), c=$('tgConfig'), d=$('tgConnected');
     if(!tgEnabled){ b.textContent='Inactive'; b.className='notif-status status-inactive'; c.classList.add('hidden'); d.classList.add('hidden'); }
-    else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='● Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); }
-    else { b.textContent='⚙️ Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); }
+    else if(tgConnected && notifConfig.tg?.token && notifConfig.tg?.chatId){ b.textContent='Active'; b.className='notif-status status-active'; c.classList.add('hidden'); d.classList.remove('hidden'); }
+    else { b.textContent='Config'; b.className='notif-status status-inactive'; c.classList.remove('hidden'); d.classList.add('hidden'); }
   };
   $('tgToggle').onclick = function(){ tgEnabled=!tgEnabled; this.classList.toggle('active',tgEnabled); update(); saveNotifConfig(); };
   update();
@@ -750,12 +596,12 @@ function saveNotifConfig() {
   notifConfig = { tg: { token: notifConfig.tg?.token, chatId: notifConfig.tg?.chatId, enabled: tgEnabled, connected: tgConnected } };
   localStorage.setItem('dm_notif_config', JSON.stringify(notifConfig));
 }
-function saveTelegramConfig() { /* sama */ }
-function testTelegram() { /* sama */ }
-function fetchChatId() { /* sama */ }
-function editTelegramConfig() { /* sama */ }
+function saveTelegramConfig() {}
+function testTelegram() {}
+function fetchChatId() {}
+function editTelegramConfig() {}
 
-// ==================== QR SCANNER & UI INIT ====================
+// ==================== QR SCANNER ====================
 function openQR() { $('qrModal').style.display = 'flex'; }
 function closeQR() { $('qrModal').style.display = 'none'; if(qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner = null; } }
 function onQRSuccess(decodedText) { addDeviceFromQR(decodedText); closeQR(); }
@@ -789,41 +635,74 @@ function initQRScanner() {
 function scanWifi() {
   if (!mqttClient?.connected) { alert('MQTT not connected.'); return; }
   const scanDiv = document.getElementById('wifiScanResult');
-  scanDiv.innerHTML = '<div class="scan-status scan-loading">⏳ Scanning...</div>';
+  scanDiv.innerHTML = '<div>Scanning...</div>';
   scanDiv.style.display = 'block';
   mqttClient.publish(`${DEVICE_ID}/wifi/scan`, '1');
-  setTimeout(() => { if(scanDiv.innerHTML.includes('Scanning...')) scanDiv.innerHTML = '<div class="scan-status">Timeout</div>'; }, 20000);
+  setTimeout(() => { if(scanDiv.innerHTML.includes('Scanning...')) scanDiv.innerHTML = '<div>Timeout</div>'; }, 20000);
 }
 function handleWifiScanResult(data) {
   const scanDiv = document.getElementById('wifiScanResult');
   try {
     let networks = JSON.parse(data);
-    if (!networks.length) { scanDiv.innerHTML = '<div class="scan-status">No networks</div>'; return; }
+    if (!networks.length) { scanDiv.innerHTML = '<div>No networks</div>'; return; }
     let html = '';
-    networks.forEach(net => {
-      html += `<div class="wifi-scan-item" data-ssid="${escapeHtml(net.ssid)}"><span class="wifi-name">${escapeHtml(net.ssid)}</span><span class="wifi-signal">${net.rssi} dBm</span></div>`;
-    });
+    networks.forEach(net => { html += `<div class="wifi-scan-item" data-ssid="${escapeHtml(net.ssid)}"><span>${escapeHtml(net.ssid)}</span><span>${net.rssi} dBm</span></div>`; });
     scanDiv.innerHTML = html;
     document.querySelectorAll('.wifi-scan-item').forEach(item => {
       item.addEventListener('click', () => {
-        const ssid = item.getAttribute('data-ssid');
-        document.getElementById('netSsid').value = ssid;
-        const saved = localStorage.getItem(`wifi_pass_${ssid}`);
-        if(saved) document.getElementById('netPass').value = saved;
+        document.getElementById('netSsid').value = item.getAttribute('data-ssid');
         scanDiv.style.display = 'none';
       });
     });
-  } catch(e) { scanDiv.innerHTML = '<div class="scan-status">Invalid response</div>'; }
+  } catch(e) { scanDiv.innerHTML = '<div>Invalid response</div>'; }
 }
 
-// ==================== DROPDOWN, ACCORDION, PWA ====================
-function initDropdown() { /* ... asli ... */ }
+// ==================== DROPDOWN, ACCORDION ====================
+function initDropdown() {
+  const selected = document.getElementById('dropdownSelected');
+  const menu = document.getElementById('dropdownMenu');
+  if (!selected || !menu) return;
+  const items = document.querySelectorAll('.dropdown-item');
+  const panels = document.querySelectorAll('.settings-panel');
+  const selectedLabel = document.getElementById('selectedLabel');
+  function switchPanel(panelId, itemElement) {
+    panels.forEach(p => p.classList.remove('active'));
+    document.getElementById(panelId)?.classList.add('active');
+    const icon = itemElement?.querySelector('.item-icon')?.innerHTML || '⚙️';
+    const label = itemElement?.querySelector('.item-label')?.innerHTML || 'Config';
+    if (selectedLabel) selectedLabel.innerHTML = label;
+    const firstSpan = selected.querySelector('span:first-child');
+    if (firstSpan) firstSpan.innerHTML = `<span class="item-icon">${icon}</span> <span>${label}</span>`;
+    items.forEach(i => i.classList.remove('active'));
+    if (itemElement) itemElement.classList.add('active');
+  }
+  items.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panelId = item.getAttribute('data-panel');
+      if (panelId) switchPanel(panelId, item);
+      menu.classList.remove('show');
+      selected.classList.remove('open');
+    });
+  });
+  selected.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+    selected.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!selected.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.remove('show');
+      selected.classList.remove('open');
+    }
+  });
+}
 function initAccordion() {
   document.querySelectorAll('.card.collapsible').forEach(card => {
     const header = card.querySelector('.card-header');
     if (!header) return;
     if (header._clickHandler) header.removeEventListener('click', header._clickHandler);
-    const handler = () => card.classList.toggle('collapsed');
+    const handler = (e) => { e.stopPropagation(); card.classList.toggle('collapsed'); };
     header.addEventListener('click', handler);
     header._clickHandler = handler;
   });
@@ -849,22 +728,15 @@ function suggestDefaultPins() {
   else defaultPinsAll = [12,14,27,26,25];
   let pinCount = relayCount;
   if(pinCount > defaultPinsAll.length) pinCount = defaultPinsAll.length;
-  const suggested = defaultPinsAll.slice(0, pinCount);
-  $('gpioInput').value = suggested.join(',');
+  $('gpioInput').value = defaultPinsAll.slice(0, pinCount).join(',');
   updateCurrentGpioText();
-  log(`Suggested GPIO: ${suggested.join(',')}`);
 }
 function initLocationInfo() {
   const locSpan = document.getElementById('locText');
-  if(locSpan) {
-    setInterval(() => {
-      const now = new Date();
-      locSpan.innerHTML = `🕐 ${now.toLocaleTimeString()} &nbsp; 🌐 ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
-    }, 1000);
-  }
+  if(locSpan) setInterval(() => { locSpan.innerHTML = `🕐 ${new Date().toLocaleTimeString()} &nbsp; 🌐 ${Intl.DateTimeFormat().resolvedOptions().timeZone}`; }, 1000);
 }
 
-// ==================== DOMContentLoaded ====================
+// ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
   initAccordion();
   initLocationInfo();
@@ -873,7 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initQRScanner();
   initNotifUI();
   initScheduler();
-  
+
   $('refreshWhitelistBtn').onclick = refreshWhitelist;
   $('showQrBtn').onclick = openQR;
   $('qrModal').onclick = function(e) { if(e.target === this) closeQR(); };
@@ -885,10 +757,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('suggestDefaultPinsBtn').onclick = suggestDefaultPins;
   $('scanWifiBtn').onclick = scanWifi;
   $('updateNetBtn').onclick = async () => { const ssid = $('netSsid').value.trim(); if(ssid && DEVICE_ID) { localStorage.setItem(`wifi_pass_${ssid}`, $('netPass').value); await pubSecure(`${DEVICE_ID}/network/update`, { ssid, pass: $('netPass').value }); alert('Sent'); } };
-  $('resetNetBtn').onclick = async () => { if(confirm('Reset WiFi to AP mode?')) await pubSecure(`${DEVICE_ID}/network/reset`, { cmd: 1 }); };
+  $('resetNetBtn').onclick = async () => { if(confirm('Reset WiFi?')) await pubSecure(`${DEVICE_ID}/network/reset`, { cmd: 1 }); };
   $('otaBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/system/ota`, { cmd: 1 }); };
   $('restartBtn').onclick = async () => { if(DEVICE_ID) await pubSecure(`${DEVICE_ID}/system/restart`, { cmd: 1 }); };
-  $('forceApBtn').onclick = async () => { if(DEVICE_ID && confirm('Force AP mode?')) await pubSecure(`${DEVICE_ID}/force_ap`, { cmd: 1 }); };
+  $('forceApBtn').onclick = async () => { if(DEVICE_ID && confirm('Force AP?')) await pubSecure(`${DEVICE_ID}/force_ap`, { cmd: 1 }); };
   $('clearLogBtn').onclick = () => { const t=$('terminal'); if(t) t.innerHTML=''; };
   $('saveLabelsBtn').onclick = saveRelayLabelsToCloud;
   $('addScheduleBtn').onclick = addSchedule;
@@ -898,19 +770,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('editTelegramBtn').onclick = editTelegramConfig;
   $('testTelegramConnectedBtn').onclick = testTelegram;
   $('addDeviceBtn').onclick = openQR;
-  
+
   loadDevicesFromStorage();
   if (devices.length === 0) {
     $('connCard').classList.remove('hidden');
     document.querySelectorAll('.app-card').forEach(c => c.classList.add('hidden'));
-  } else if (currentDeviceId) {
-    switchDevice(currentDeviceId);
-  } else if (devices.length > 0) {
-    switchDevice(devices[0].deviceId);
-  }
-  
+  } else if (currentDeviceId) switchDevice(currentDeviceId);
+  else if (devices.length) switchDevice(devices[0].deviceId);
+
   if ($('gpioInput')) $('gpioInput').addEventListener('input', updateCurrentGpioText);
-  
   const healthHeader = document.getElementById('healthCardHeader');
   const healthContent = document.getElementById('healthCardContent');
   if (healthHeader && healthContent) {
@@ -918,3 +786,17 @@ document.addEventListener('DOMContentLoaded', () => {
     healthHeader.addEventListener('click', () => healthContent.classList.toggle('hidden'));
   }
 });
+async function refreshWhitelist() {
+  localStorage.removeItem('dm_whitelist_cache');
+  const statusEl = $('whitelistStatus');
+  if (statusEl) statusEl.textContent = '🔄 Refreshing...';
+  try {
+    const res = await fetch(`${WORKER_URL}/RELAY/api/whitelist`);
+    if (res.ok) {
+      const whitelist = await res.json();
+      localStorage.setItem('dm_whitelist_cache', JSON.stringify({ list: whitelist, timestamp: Date.now() }));
+      if (statusEl) statusEl.textContent = '✅ Refreshed';
+    } else throw new Error();
+  } catch(e) { if(statusEl) statusEl.textContent = '❌ Failed'; }
+  setTimeout(() => { if(statusEl) statusEl.textContent = ''; }, 2000);
+}
