@@ -1,3 +1,7 @@
 name = "dmarchff"
 main = "worker.js"
 compatibility_date = "2024-01-01"
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
