@@ -563,18 +563,30 @@ async function saveRelayLabelsToCloud() {
   if (!DEVICE_ID) { alert('No active device'); return; }
   const newLabels = collectLabelsFromInputs();
   relayLabels = newLabels;
+  
   const currentRelayCount = relayCount;
   const gpioRaw = $('gpioInput')?.value.trim() || "";
   const gpio = gpioRaw ? gpioRaw.split(',').map(p=>p.trim()) : [];
-  const config = { device: DEVICE_ID, relayCount: currentRelayCount, gpio, relayLabels, updatedAt: new Date().toISOString() };
+
+  // PERBAIKAN: Sertakan 'alias' agar tidak hilang saat refresh
+  const config = { 
+    device: DEVICE_ID, 
+    relayCount: currentRelayCount, 
+    gpio: gpio, 
+    relayLabels: relayLabels,
+    alias: currentDeviceAlias, // Tambahkan baris ini
+    updatedAt: new Date().toISOString() 
+  };
+
   const ok = await saveDeviceConfigToWorker(DEVICE_ID, config);
   if (ok) {
-    log('Labels saved');
+    log('Labels & Alias saved to cloud');
     initRelayButtons();
-    updateSchedulerRelaySelect();
-    renderSchedules();
-    alert('Labels saved');
-  } else alert('Failed to save labels');
+    updateAliasDisplay(); // Update tampilan seketika
+    alert('Settings synchronized with GitHub');
+  } else {
+    alert('Failed to save to cloud');
+  }
 }
 function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m)); }
 
