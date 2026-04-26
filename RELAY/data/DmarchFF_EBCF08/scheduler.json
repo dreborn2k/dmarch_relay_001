@@ -1,17 +1,5 @@
 {
   "device": "DmarchFF_EBCF08",
-  "schedules": [
-    {
-      "id": "mof8z1lkomzg",
-      "time": "12:00",
-      "relay": "1",
-      "action": "1",
-      "days": [
-        1
-      ],
-      "enabled": true,
-      "_modified": "2026-04-26T04:07:30.776Z"
-    }
-  ],
-  "updatedAt": "2026-04-26T04:07:30.776Z"
+  "schedules": [],
+  "updatedAt": "2026-04-26T04:11:48.018Z"
 }
